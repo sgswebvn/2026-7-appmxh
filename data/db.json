@@ -1,0 +1,284 @@
+{
+  "channels": [
+    {
+      "id": "UCR-HbHtw5s3fU7i3LQtvFxg",
+      "title": "Hieu Truong",
+      "customUrl": "@hieutruong-o3w",
+      "description": "",
+      "thumbnailUrl": "https://yt3.ggpht.com/ytc/AIdro_mOOgQ2hqo_8db1L3DjyuhCoR3sEsRjEbbW34gOXd4maa9Sgm2SsTXc4jkocSqBJa1XlQ=s88-c-k-c0x00ffffff-no-rj",
+      "subscriberCount": "0",
+      "videoCount": "0",
+      "viewCount": "0",
+      "email": "hieucv2004@gmail.com",
+      "tokens": {
+        "access_token": "ya29.a0AdMD6EjnksMWpm73MiekBoMguZkckfJbenZf43Mb1nHb1qVjbCAuZUQrxkCiYHg7o2nMwZFO4gfC7hE5UxIvGAoPPNDUqGoGd5aXKTCTIpOBVgPHlWUWz_ClZjyk7RNxukoaf2b1ho7ixHiHwPPJnwF6raBE_ZgOurnLEaq3IAblr2ncdWwUWIUlmJH1Gl8TeOsi16IaCgYKAeISARMSFQHGX2MioZSwxy6fPGHZ_6eYpsOlaw0206",
+        "refresh_token": "1//0gf2-1b-i3T_sCgYIARAAGBASNwF-L9IrBdMWbUQyUq3twq00tPkKnPooV6ZQx4AFFi-h65wMO17i_lUP90rz0v4IWXrms606V60",
+        "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload",
+        "token_type": "Bearer",
+        "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImYxMGY4NzQwNWE5NzljMWRmMzZkZjI2NjA2NzM0ZjMzY2Q4NWMyNzEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDMwNDU1NzMwMTg0LXY5YWpnODY2N3EzaDFkMHZjb2R0cDJlcjVpbWRoZWtwLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTAzMDQ1NTczMDE4NC12OWFqZzg2NjdxM2gxZDB2Y29kdHAyZXI1aW1kaGVrcC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMDM5NjEyNTU3NTM0Njk2Mjk5NSIsImVtYWlsIjoiaGlldWN2MjAwNEBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFzaCI6IlpUd2FKT3JMMHdYYkFMYzkxLWlhZ3ciLCJuYW1lIjoiSGlldSBUcnVvbmciLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS2hCXzA4NnlGTVpZcXpmQklndExlcHBDVWRoUDFTZWN1ajZsemFBbk9rOTVJbUtBPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IkhpZXUgVHJ1b25nIiwiaWF0IjoxNzg2Nzk2NTU3LCJleHAiOjE3ODY4MDAxNTd9.32STJC7_1253_SKuNgKKCAr6Lu6JdGPigA7inqdsHVdY6nqr2_biFdwnLdYJw97pFDoUc8qyoWvwb9wy4E-xe2N8nqmIIOiQsUD6fVxZPJgLEgg56Av4Pf84vxofByxtRrhZfKURCNbWQWOKNazaCGdoTmk_98TnTIXdBRWt59iyfZFhdo3bgu3D0sU2IGVIAgOcBqez28mC1fTEqivmRyT-sETmsrz4ICxP1B2a90IwE1-QwVnIFdrmkpoWseFTJdnIrfVovPul6mGoL516-fAWlZfyhozvRa-H0llUqgNgpPm5y0jwvDTY0H_dros5-p-MwkPXwiGwcAtjLG1bTg",
+        "refresh_token_expires_in": 604799,
+        "expiry_date": 1786800155136
+      },
+      "createdAt": "2026-08-15T12:22:36.540Z"
+    }
+  ],
+  "history": [],
+  "quotaUsage": {
+    "date": "2026-08-15",
+    "unitsUsed": 1600,
+    "limit": 10000
+  },
+  "users": [
+    {
+      "_id": "f798a16f-0940-4705-a275-2c1e623f1bda",
+      "id": "57a5e600-920e-4665-85e7-8dfb3ac4988c",
+      "email": "admin@test.com",
+      "password": "$2b$10$8VoZG.zXxJoqnVKClsOqR.NCOFHRDZSy5rA.xzA7I2gYdzAQ2usue",
+      "name": "Demo Creator Pro",
+      "geminiApiKey": "",
+      "role": "user",
+      "createdAt": "2026-08-15T12:34:51.737Z"
+    },
+    {
+      "_id": "fc026a77-824d-429a-95c8-bd2bfa25d632",
+      "id": "abbd1e20-4bea-4705-a660-9a0be6dd6fcd",
+      "email": "creator_vip@youtube.com",
+      "password": "$2b$10$ylseZ79jEDi1mbbvbrpbqO4qKsLcIoaKcS.PXZk3aKJ4T5xF/YUG6",
+      "name": "VIP Creator",
+      "geminiApiKey": "",
+      "role": "user",
+      "createdAt": "2026-08-15T12:41:56.784Z"
+    },
+    {
+      "_id": "73e7ef57-408f-4e71-8751-b852234c58fc",
+      "id": "9555c081-bbd9-44d3-8ab8-f5650606fbb9",
+      "email": "hieucv2004@gmail.com",
+      "password": "$2b$10$FnDKP1InwleboAGY/wb88ezjktEY4RXqQ.jypDvft85AEEBrd7dVK",
+      "name": "hieucv2004@gmail.com",
+      "geminiApiKey": "",
+      "role": "user",
+      "createdAt": "2026-08-15T12:43:10.027Z"
+    }
+  ],
+  "geminiDrafts": [
+    {
+      "topic": "Top 5 công nghệ AI mới nhất 2026",
+      "generatedTitles": [
+        {
+          "title": "SỐC! 5 Công Nghệ AI Này Sẽ LÀM CHỦ Thế Giới Năm 2026 (Bạn Không Thể Bỏ Lỡ!)",
+          "hookType": "Bất ngờ / Cảnh báo",
+          "clickScore": 96
+        },
+        {
+          "title": "Đột Phá! Đây Là TOP 5 AI MỚI NHẤT 2026 Sẽ Thay Đổi Cuộc Sống Bạn Mãi Mãi",
+          "hookType": "Gây tò mò",
+          "clickScore": 94
+        },
+        {
+          "title": "Hé Lộ Bí Mật: 5 Công Nghệ AI 2026 Mà Bạn Cần BIẾT Ngay Để Không Bị Tụt Lại!",
+          "hookType": "Hướng dẫn / Bí mật",
+          "clickScore": 93
+        },
+        {
+          "title": "Tận Mắt Xem: AI Năm 2026 Sẽ Biến Đổi Cuộc Sống Bạn Như Thế Nào? (5 Ứng Dụng Thực Tế)",
+          "hookType": "Trải nghiệm thực tế",
+          "clickScore": 92
+        },
+        {
+          "title": "Bạn Có Tin AI Sẽ LÀM ĐƯỢC ĐIỀU NÀY Năm 2026? TOP 5 Công Nghệ Vượt Xa Tưởng Tượng!",
+          "hookType": "Đặt câu hỏi / Kích thích tò mò",
+          "clickScore": 91
+        }
+      ],
+      "generatedDescription": "Tương lai không còn là viễn cảnh xa vời, mà đang dần hiện hữu ngay trước mắt chúng ta! Năm 2026 sẽ chứng kiến những bước nhảy vọt phi thường của Trí Tuệ Nhân Tạo (AI) mà có thể bạn chưa từng tưởng tượng.\n\nTrong video này, chúng tôi sẽ cùng bạn khám phá TOP 5 công nghệ AI mới nhất, tiên tiến nhất dự kiến sẽ bùng nổ và định hình lại mọi mặt đời sống xã hội vào năm 2026. Từ cách bạn làm việc, giải trí, đến sức khỏe và giao tiếp, AI sẽ thay đổi tất cả. Đừng bỏ lỡ những phát minh đột phá này để không bị bỏ lại phía sau!\n\n🕒 Dàn ý nội dung:\n00:00 - Giới thiệu: Tương lai AI 2026 và sức ảnh hưởng\n01:15 - AI Số 1: Trợ lý ảo siêu cấp và Cá nhân hóa cuộc sống (AI siêu cá nhân hóa)\n02:40 - AI Số 2: Y học thông minh: Dự đoán bệnh tật trước cả bác sĩ (AI y tế dự phòng)\n04:10 - AI Số 3: Sáng tạo vô tận: AI tạo ra mọi thứ bạn tưởng tượng (AI kiến tạo nội dung đa phương thức)\n05:45 - AI Số 4: Thế giới tự động: Từ giao thông đến nhà máy thông minh hoàn toàn (AI tự hành toàn diện)\n07:15 - AI Số 5: AI giải cứu hành tinh: Ứng dụng vì một tương lai bền vững (AI giải quyết vấn đề toàn cầu)\n08:50 - Kết luận: Bạn đã sẵn sàng cho 2026? & Lời kêu gọi hành động\n\nNếu bạn thấy video này hữu ích và thú vị, đừng quên nhấn LIKE, CHIA SẺ cho bạn bè, và ĐĂNG KÝ kênh để không bỏ lỡ những nội dung hấp dẫn về công nghệ và tương lai nhé! Hãy để lại bình luận phía dưới về công nghệ AI nào khiến bạn ấn tượng nhất!\n\n#CongNgheAI #AI2026 #Top5AI #TuongLaiAI #KhamPhaAI #CongNgheMoiNhat #DoiSongSo #PhatMinhAI",
+      "generatedTags": [
+        "cong nghe AI",
+        "AI 2026",
+        "top 5 AI",
+        "cong nghe moi nhat",
+        "tri tue nhan tao",
+        "tuong lai cong nghe",
+        "phat minh AI",
+        "AI thay doi cuoc song",
+        "cong nghe dot pha",
+        "khoa hoc cong nghe",
+        "AI cho dai chung",
+        "xu huong AI",
+        "tin tuc AI",
+        "AI tien tien",
+        "cuoc cach mang 4.0"
+      ],
+      "channelVariants": [
+        {
+          "channelTitle": "Tương Lai & Công Nghệ",
+          "customTitle": "KHÔNG THỂ TIN NỔI! Top 5 AI Đột Phá Năm 2026 Sẽ Thay Đổi Mọi Thứ",
+          "customDescription": "Chào mừng các tín đồ công nghệ và những người yêu thích khám phá tương lai! Chúng ta đang đứng trước ngưỡng cửa của một kỷ nguyên mới do Trí Tuệ Nhân Tạo định hình. Trong video đặc biệt này, kênh Tương Lai & Công Nghệ sẽ mang đến cho bạn cái nhìn sâu sắc về TOP 5 công nghệ AI dự kiến sẽ 'làm mưa làm gió' vào năm 2026..."
+        },
+        {
+          "channelTitle": "Khám Phá Tri Thức",
+          "customTitle": "BÍ MẬT Của Năm 2026: 5 Công Nghệ AI Sẽ Mở Ra Kỷ Nguyên Mới Cho Loài Người",
+          "customDescription": "Bạn đã bao giờ tự hỏi thế giới sẽ trông như thế nào chỉ vài năm tới? Kênh Khám Phá Tri Thức hôm nay sẽ vén màn bức màn bí ẩn, giới thiệu đến bạn TOP 5 công nghệ Trí Tuệ Nhân Tạo (AI) tiên tiến nhất mà các chuyên gia dự đoán sẽ bùng nổ và có tác động sâu rộng đến nhân loại vào năm 2026..."
+        },
+        {
+          "channelTitle": "Góc Nhìn Hiện Đại",
+          "customTitle": "AI 2026 Sẽ 'Xâm Chiếm' Cuộc Sống Bạn Như Thế Nào? Top 5 Điều Cần Biết",
+          "customDescription": "Với Góc Nhìn Hiện Đại, chúng ta luôn tìm kiếm những xu hướng và công nghệ định hình tương lai. Hôm nay, hãy cùng chúng tôi đi sâu vào thế giới của Trí Tuệ Nhân Tạo, đặc biệt là TOP 5 công nghệ AI được dự báo sẽ trở thành trung tâm của mọi sự chú ý vào năm 2026. Bạn sẽ ngạc nhiên về mức độ AI sẽ hòa nhập vào cuộc sống hàng ngày của chúng ta..."
+        },
+        {
+          "channelTitle": "Cuộc Sống Số",
+          "customTitle": "Không Chỉ Là Khoa Học Viễn Tưởng! 5 Công Nghệ AI 2026 Đã Sẵn Sàng Thay Đổi Mọi Gia Đình",
+          "customDescription": "Cuộc Sống Số tin rằng công nghệ phải phục vụ và nâng tầm cuộc sống. Vậy AI của năm 2026 sẽ tác động trực tiếp đến gia đình bạn như thế nào? Trong video này, chúng ta sẽ cùng điểm qua TOP 5 công nghệ Trí Tuệ Nhân Tạo mới nhất, từ trợ lý ảo siêu thông minh đến các giải pháp y tế tại gia, hứa hẹn sẽ mang đến những thay đổi bất ngờ cho mỗi cá nhân và hộ gia đình trong năm 2026..."
+        }
+      ],
+      "userId": "fc026a77-824d-429a-95c8-bd2bfa25d632",
+      "_id": "9ee82c51-0a6f-479a-9d04-d37065e165f4",
+      "createdAt": "2026-08-15T12:42:27.806Z"
+    },
+    {
+      "topic": "123",
+      "targetAudience": "123",
+      "generatedTitles": [
+        {
+          "title": "🔥 BÍ MẬT: 123 - Những Điều Bạn Chưa Từng Được Biết!",
+          "hookType": "Gây tò mò tột độ",
+          "clickScore": 96
+        },
+        {
+          "title": "Sự Thật Về 123: Đừng Làm Điều Này Nếu Không Muốn Hối Hận!",
+          "hookType": "Cảnh báo & Giật tít",
+          "clickScore": 93
+        },
+        {
+          "title": "Hướng Dẫn Toàn Diện 123 Từ A-Z Cho Người Mới (Mới Nhất 2026)",
+          "hookType": "Chuyên gia & Giá trị",
+          "clickScore": 89
+        },
+        {
+          "title": "Tôi Đã Thử 123 Suốt 30 Ngày Và Cái Kết Bất Ngờ...",
+          "hookType": "Trải nghiệm cá nhân",
+          "clickScore": 94
+        },
+        {
+          "title": "Liệu 123 Có Thực Sự Xứng Đáng? Đánh Giá Chi Tiết!",
+          "hookType": "Phân tích & Đánh giá",
+          "clickScore": 88
+        }
+      ],
+      "generatedDescription": "📌 Trong video hôm nay, chúng ta sẽ cùng khám phá toàn bộ sự thật và bí quyết về \"123\". Dành riêng cho 123!\n\n⏱️ TIMESTAMPS / CÁC MỐC THỜI GIAN QUAN TRỌNG:\n00:00 - Mở đầu & Tổng quan\n01:15 - Những hiểu lầm phổ biến về 123\n03:40 - Chi tiết từng bước thực hiện hiệu quả nhất\n06:20 - Sai lầm cần tuyệt đối tránh\n08:50 - Lời khuyên vàng & Tổng kết\n\n🔔 ĐỪNG QUÊN BẤM LIKE & ĐĂNG KÝ KÊNH ĐỂ KHÔNG BỎ LỠ NHỮNG VIDEO MỚI NHẤT!\n💬 Bình luận ý kiến của bạn về 123 ở bên dưới nhé!\n\n#123 #trending #huongdan #review #kienthuc #youtube",
+      "generatedTags": [
+        "123",
+        "huong dan 123",
+        "review 123",
+        "bi quyet 123",
+        "123 2026",
+        "kinh nghiem hay",
+        "huong dan chi tiet",
+        "xu huong",
+        "trending youtube"
+      ],
+      "channelVariants": [],
+      "userId": "f798a16f-0940-4705-a275-2c1e623f1bda",
+      "_id": "d57a847d-a512-4135-ad52-d1114ec24251",
+      "createdAt": "2026-08-15T12:37:22.078Z"
+    },
+    {
+      "topic": "girl",
+      "targetAudience": "girl",
+      "generatedTitles": [
+        {
+          "title": "🔥 BÍ MẬT: girl - Những Điều Bạn Chưa Từng Được Biết!",
+          "hookType": "Gây tò mò tột độ",
+          "clickScore": 96
+        },
+        {
+          "title": "Sự Thật Về girl: Đừng Làm Điều Này Nếu Không Muốn Hối Hận!",
+          "hookType": "Cảnh báo & Giật tít",
+          "clickScore": 93
+        },
+        {
+          "title": "Hướng Dẫn Toàn Diện girl Từ A-Z Cho Người Mới (Mới Nhất 2026)",
+          "hookType": "Chuyên gia & Giá trị",
+          "clickScore": 89
+        },
+        {
+          "title": "Tôi Đã Thử girl Suốt 30 Ngày Và Cái Kết Bất Ngờ...",
+          "hookType": "Trải nghiệm cá nhân",
+          "clickScore": 94
+        },
+        {
+          "title": "Liệu girl Có Thực Sự Xứng Đáng? Đánh Giá Chi Tiết!",
+          "hookType": "Phân tích & Đánh giá",
+          "clickScore": 88
+        }
+      ],
+      "generatedDescription": "📌 Trong video hôm nay, chúng ta sẽ cùng khám phá toàn bộ sự thật và bí quyết về \"girl\". Dành riêng cho girl!\n\n⏱️ TIMESTAMPS / CÁC MỐC THỜI GIAN QUAN TRỌNG:\n00:00 - Mở đầu & Tổng quan\n01:15 - Những hiểu lầm phổ biến về girl\n03:40 - Chi tiết từng bước thực hiện hiệu quả nhất\n06:20 - Sai lầm cần tuyệt đối tránh\n08:50 - Lời khuyên vàng & Tổng kết\n\n🔔 ĐỪNG QUÊN BẤM LIKE & ĐĂNG KÝ KÊNH ĐỂ KHÔNG BỎ LỠ NHỮNG VIDEO MỚI NHẤT!\n💬 Bình luận ý kiến của bạn về girl ở bên dưới nhé!\n\n#girl #trending #huongdan #review #kienthuc #youtube",
+      "generatedTags": [
+        "girl",
+        "huong dan girl",
+        "review girl",
+        "bi quyet girl",
+        "girl 2026",
+        "kinh nghiem hay",
+        "huong dan chi tiet",
+        "xu huong",
+        "trending youtube"
+      ],
+      "channelVariants": [],
+      "userId": "f798a16f-0940-4705-a275-2c1e623f1bda",
+      "_id": "0f91aa2a-b7f6-470c-933d-085e28db0433",
+      "createdAt": "2026-08-15T12:36:27.708Z"
+    },
+    {
+      "topic": "Top 10 mẹo công nghệ 2026",
+      "targetAudience": "Người dùng smartphone",
+      "generatedTitles": [
+        {
+          "title": "🔥 BÍ MẬT: Top 10 mẹo công nghệ 2026 - Những Điều Bạn Chưa Từng Được Biết!",
+          "hookType": "Gây tò mò tột độ",
+          "clickScore": 96
+        },
+        {
+          "title": "Sự Thật Về Top 10 mẹo công nghệ 2026: Đừng Làm Điều Này Nếu Không Muốn Hối Hận!",
+          "hookType": "Cảnh báo & Giật tít",
+          "clickScore": 93
+        },
+        {
+          "title": "Hướng Dẫn Toàn Diện Top 10 mẹo công nghệ 2026 Từ A-Z Cho Người Mới (Mới Nhất 2026)",
+          "hookType": "Chuyên gia & Giá trị",
+          "clickScore": 89
+        },
+        {
+          "title": "Tôi Đã Thử Top 10 mẹo công nghệ 2026 Suốt 30 Ngày Và Cái Kết Bất Ngờ...",
+          "hookType": "Trải nghiệm cá nhân",
+          "clickScore": 94
+        },
+        {
+          "title": "Liệu Top 10 mẹo công nghệ 2026 Có Thực Sự Xứng Đáng? Đánh Giá Chi Tiết!",
+          "hookType": "Phân tích & Đánh giá",
+          "clickScore": 88
+        }
+      ],
+      "generatedDescription": "📌 Trong video hôm nay, chúng ta sẽ cùng khám phá toàn bộ sự thật và bí quyết về \"Top 10 mẹo công nghệ 2026\". Dành riêng cho Người dùng smartphone!\n\n⏱️ TIMESTAMPS / CÁC MỐC THỜI GIAN QUAN TRỌNG:\n00:00 - Mở đầu & Tổng quan\n01:15 - Những hiểu lầm phổ biến về Top 10 mẹo công nghệ 2026\n03:40 - Chi tiết từng bước thực hiện hiệu quả nhất\n06:20 - Sai lầm cần tuyệt đối tránh\n08:50 - Lời khuyên vàng & Tổng kết\n\n🔔 ĐỪNG QUÊN BẤM LIKE & ĐĂNG KÝ KÊNH ĐỂ KHÔNG BỎ LỠ NHỮNG VIDEO MỚI NHẤT!\n💬 Bình luận ý kiến của bạn về Top 10 mẹo công nghệ 2026 ở bên dưới nhé!\n\n#top10mẹocôngnghệ2026 #trending #huongdan #review #kienthuc #youtube",
+      "generatedTags": [
+        "Top 10 mẹo công nghệ 2026",
+        "huong dan Top 10 mẹo công nghệ 2026",
+        "review Top 10 mẹo công nghệ 2026",
+        "bi quyet Top 10 mẹo công nghệ 2026",
+        "Top 10 mẹo công nghệ 2026 2026",
+        "kinh nghiem hay",
+        "huong dan chi tiet",
+        "xu huong",
+        "trending youtube",
+        "Top",
+        "mẹo",
+        "công",
+        "nghệ",
+        "2026"
+      ],
+      "channelVariants": [],
+      "userId": "f798a16f-0940-4705-a275-2c1e623f1bda",
+      "_id": "8cf07ec0-57aa-4a31-8d49-ecf27af9065b",
+      "createdAt": "2026-08-15T12:35:18.457Z"
+    }
+  ]
+}

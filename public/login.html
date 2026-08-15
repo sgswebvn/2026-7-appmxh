@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập / Đăng Ký - YouTube Multi-Publisher</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .auth-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .auth-brand-badge {
+      width: 34px;
+      height: 34px;
+      background: var(--accent-red);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: var(--bg-main);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .auth-tab-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.88rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .auth-tab-btn.active {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .quick-test-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .quick-test-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 16px 0;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .divider span {
+      padding: 0 8px;
+    }
+
+    .back-home {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .back-home:hover {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-page-wrapper">
+    <div class="auth-card">
+      
+      <div class="auth-header">
+        <div class="auth-brand">
+          <div class="auth-brand-badge">Y</div>
+          <div style="text-align:left;">
+            <h2 style="font-size:1.15rem; font-weight:600; color:#fff;">YouTube Multi-Publisher</h2>
+            <span style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Quản Trị Hệ Thống</span>
+          </div>
+        </div>
+        <p style="font-size:0.82rem; color:var(--text-muted);" id="auth-subtitle">Đăng nhập để quản lý và phân phối video</p>
+      </div>
+
+      <div class="quick-test-box">
+        <div class="quick-test-title">Kiểm thử nhanh hệ thống (Không cần đăng ký):</div>
+        <button type="button" class="btn btn-outline" id="btn-page-quick-test" style="width:100%; font-size:0.85rem;">
+          Đăng Nhập Tài Khoản Test (1-Click)
+        </button>
+      </div>
+
+      <div class="divider">
+        <span>HOẶC DÙNG EMAIL</span>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab-btn active" id="tab-login" onclick="setAuthMode('login')">
+          Đăng Nhập
+        </button>
+        <button type="button" class="auth-tab-btn" id="tab-register" onclick="setAuthMode('register')">
+          Đăng Ký Mới
+        </button>
+      </div>
+
+      <form id="auth-page-form">
+        <div class="form-group" id="field-name" style="display:none;">
+          <label class="form-label" for="page-name">Tên hiển thị / Creator</label>
+          <input type="text" id="page-name" class="form-input" placeholder="Ví dụ: Nguyễn Văn A">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="page-email">Địa chỉ Email *</label>
+          <input type="email" id="page-email" class="form-input" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="page-password">Mật khẩu *</label>
+          <input type="password" id="page-password" class="form-input" placeholder="Nhập ít nhất 6 ký tự" required minlength="6">
+        </div>
+
+        <div class="form-group" id="field-confirm-password" style="display:none;">
+          <label class="form-label" for="page-confirm-password">Xác nhận lại mật khẩu *</label>
+          <input type="password" id="page-confirm-password" class="form-input" placeholder="Nhập lại mật khẩu">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btn-page-submit" style="width:100%; padding:11px; font-size:0.92rem; font-weight:600; margin-top:6px;">
+          Đăng Nhập
+        </button>
+      </form>
+
+      <a href="/" class="back-home">← Quay lại trang chủ</a>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    let mode = 'login';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const token = localStorage.getItem('ytb_auth_token');
+      if (token) {
+        try {
+          const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+          const data = await res.json();
+          if (data.success) {
+            window.location.href = '/';
+            return;
+          }
+        } catch (e) {}
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mode') === 'register') {
+        setAuthMode('register');
+      }
+
+      document.getElementById('btn-page-quick-test').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/auth/quick-test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await res.json();
+          if (data.success && data.token) {
+            localStorage.setItem('ytb_auth_token', data.token);
+            showToast('Đăng nhập tài khoản Test thành công.', 'success');
+            setTimeout(() => { window.location.href = '/'; }, 800);
+          }
+        } catch (err) {
+          showToast('Lỗi đăng nhập: ' + err.message, 'error');
+        }
+      });
+
+      document.getElementById('auth-page-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('page-email').value.trim();
+        const password = document.getElementById('page-password').value;
+        const name = document.getElementById('page-name').value.trim();
+        const confirmPass = document.getElementById('page-confirm-password').value;
+
+        if (mode === 'register' && password !== confirmPass) {
+          showToast('Mật khẩu xác nhận không khớp!', 'error');
+          return;
+        }
+
+        const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+        const payload = mode === 'login' ? { email, password } : { email, password, name };
+
+        const submitBtn = document.getElementById('btn-page-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang xử lý...';
+
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.success && data.token) {
+            localStorage.setItem('ytb_auth_token', data.token);
+            showToast(data.message, 'success');
+            setTimeout(() => { window.location.href = '/'; }, 800);
+          } else {
+            showToast(data.message || 'Xác thực thất bại', 'error');
+          }
+        } catch (err) {
+          showToast('Lỗi kết nối máy chủ: ' + err.message, 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = mode === 'login' ? 'Đăng Nhập' : 'Tạo Tài Khoản Mới';
+        }
+      });
+    });
+
+    function setAuthMode(newMode) {
+      mode = newMode;
+      const tabLogin = document.getElementById('tab-login');
+      const tabRegister = document.getElementById('tab-register');
+      const fieldName = document.getElementById('field-name');
+      const fieldConfirmPass = document.getElementById('field-confirm-password');
+      const submitBtn = document.getElementById('btn-page-submit');
+      const subtitle = document.getElementById('auth-subtitle');
+
+      if (mode === 'login') {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        fieldName.style.display = 'none';
+        fieldConfirmPass.style.display = 'none';
+        submitBtn.textContent = 'Đăng Nhập';
+        subtitle.textContent = 'Đăng nhập để quản lý và phân phối video';
+      } else {
+        tabRegister.classList.add('active');
+        tabLogin.classList.remove('active');
+        fieldName.style.display = 'block';
+        fieldConfirmPass.style.display = 'block';
+        submitBtn.textContent = 'Tạo Tài Khoản Mới';
+        subtitle.textContent = 'Tạo tài khoản mới để bắt đầu sử dụng';
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'all 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

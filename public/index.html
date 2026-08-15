@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Multi-Publisher - Phân Phối Video Đa Kênh</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- THANH ĐIỀU HƯỚNG (NAVBAR) -->
+  <nav class="navbar">
+    <a href="#" class="brand">
+      <div class="brand-badge">Y</div>
+      <div class="brand-text">
+        <h1>YouTube Multi-Publisher</h1>
+        <span>Hệ thống phân phối video đa kênh</span>
+      </div>
+    </a>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="publish-tab">
+        Phân Phối Video
+      </button>
+      <button class="nav-tab" data-tab="gemini-tab">
+        Phân Tích AI
+      </button>
+      <button class="nav-tab" data-tab="channels-tab">
+        Quản Lý Kênh (<span id="channel-count-badge">0</span>)
+      </button>
+      <button class="nav-tab" data-tab="history-tab">
+        Lịch Sử & Hạn Mức
+      </button>
+    </div>
+
+    <div class="nav-right">
+      <div class="quota-pill" id="db-status-pill">
+        <div class="status-dot" id="db-status-dot"></div>
+        <span id="db-status-text">MongoDB Atlas</span>
+      </div>
+
+      <div class="quota-pill" id="quota-display">
+        <span>Quota: <strong id="quota-used-text" style="color:var(--text-primary)">0</strong> / 10.000</span>
+      </div>
+
+      <div id="auth-nav-container">
+        <a href="/login" class="btn btn-sm btn-accent">
+          Đăng Nhập / Đăng Ký
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- NỘI DUNG CHÍNH (MAIN CONTENT) -->
+  <main class="main-content">
+
+    <!-- ==================== TAB 1: PHÂN PHỐI VIDEO ==================== -->
+    <section id="publish-tab" class="tab-pane active">
+      <form id="upload-form">
+        <div class="grid-2">
+          
+          <!-- Cột Trái: Video, Thumbnail, Kênh -->
+          <div class="col-left">
+            
+            <div class="glass-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">1. Chọn Video Cần Đăng</h3>
+                <span class="status-badge status-pending" id="video-status-tag">Chưa chọn video</span>
+              </div>
+
+              <div class="dropzone" id="video-dropzone">
+                <input type="file" id="video-input" name="video" accept="video/mp4,video/quicktime,video/x-matroska,video/webm" style="display:none;">
+                <h4 style="font-size:0.9rem; margin-bottom:4px; font-weight:500;">Kéo & Thả file Video vào đây</h4>
+                <p style="font-size:0.78rem; color:var(--text-muted);">Hỗ trợ MP4, MOV, MKV, WebM (Tối đa 2GB)</p>
+              </div>
+
+              <div id="video-preview-container" style="display:none; margin-top:10px;">
+                <video id="video-preview-player" controls style="width:100%; border-radius:var(--radius-sm); max-height:180px; background:#000;"></video>
+                <div class="file-preview-card">
+                  <div class="file-info">
+                    <div class="file-name" id="video-file-name">video.mp4</div>
+                    <div class="file-size" id="video-file-size">0 MB</div>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-danger-outline" id="remove-video-btn">Đổi video</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">2. Ảnh Bìa Thumbnail (Tùy chọn)</h3>
+              </div>
+
+              <div class="dropzone" id="thumb-dropzone" style="padding: 14px;">
+                <input type="file" id="thumb-input" name="thumbnail" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                <p style="font-size:0.8rem; color:var(--text-secondary);">Bấm hoặc kéo thả ảnh thumbnail (JPG, PNG)</p>
+              </div>
+
+              <div id="thumb-preview-container" style="display:none; margin-top:8px;">
+                <div class="file-preview-card">
+                  <img id="thumb-preview-img" class="file-preview-thumb" src="" alt="Thumbnail Preview">
+                  <div class="file-info">
+                    <div class="file-name" id="thumb-file-name">thumbnail.jpg</div>
+                    <div class="file-size" id="thumb-file-size">0 KB</div>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-danger-outline" id="remove-thumb-btn">Xóa</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">3. Chọn Kênh Đăng</h3>
+                <label style="font-size:0.8rem; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:6px;">
+                  <input type="checkbox" id="select-all-channels" checked> Chọn tất cả
+                </label>
+              </div>
+
+              <div id="channel-selection-list" class="channel-grid"></div>
+
+              <div id="no-channels-prompt" style="display:none; text-align:center; padding:14px; color:var(--text-muted);">
+                <p style="font-size:0.85rem;">Chưa có kênh nào được liên kết.</p>
+                <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="switchTab('channels-tab')">
+                  Thêm kênh YouTube
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Cột Phải: Nội dung Video -->
+          <div class="col-right">
+            <div class="glass-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">4. Nội Dung Video</h3>
+                <button type="button" class="btn btn-sm btn-outline" onclick="switchTab('gemini-tab')">
+                  Tạo bằng AI
+                </button>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="video-title">Tiêu đề Video *</label>
+                <input type="text" id="video-title" class="form-input" placeholder="Nhập tiêu đề video..." required maxlength="100">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="video-description">Mô tả Video</label>
+                <textarea id="video-description" class="form-textarea" placeholder="Nhập nội dung mô tả, liên kết, hashtag..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="video-tags">Thẻ từ khóa (Tags)</label>
+                <input type="text" id="video-tags" class="form-input" placeholder="Cách nhau bằng dấu phẩy (ví dụ: hướng dẫn, review, tin tức)">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="video-category">Danh mục</label>
+                  <select id="video-category" class="form-select"></select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="video-privacy">Chế độ hiển thị</label>
+                  <select id="video-privacy" class="form-select">
+                    <option value="public">Công khai (Public)</option>
+                    <option value="unlisted">Không công khai (Unlisted)</option>
+                    <option value="private">Riêng tư (Private)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="video-publish-at">Hẹn giờ đăng (Tùy chọn)</label>
+                  <input type="datetime-local" id="video-publish-at" class="form-input">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="made-for-kids">Dành cho trẻ em?</label>
+                  <select id="made-for-kids" class="form-select">
+                    <option value="false">Không, không dành cho trẻ em</option>
+                    <option value="true">Có, nội dung dành cho trẻ em</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="accordion" id="custom-channel-accordion">
+                <div class="accordion-header" onclick="toggleAccordion()">
+                  <span>Tùy biến riêng từng kênh (Chống trùng lặp nội dung)</span>
+                  <span id="accordion-arrow">▼</span>
+                </div>
+                <div class="accordion-body" id="custom-channel-fields">
+                  <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px;">
+                    Điền tiêu đề hoặc mô tả khác nhau cho từng kênh nếu bạn muốn tối ưu thuật toán:
+                  </p>
+                  <div id="channel-overrides-container"></div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary" id="btn-submit-upload" style="width: 100%; padding: 12px; font-size: 0.95rem; font-weight:600;">
+                Bắt Đầu Phân Phối Video Đến Các Kênh
+              </button>
+
+            </div>
+          </div>
+
+        </div>
+      </form>
+    </section>
+
+    <!-- ==================== TAB 2: GEMINI AI STUDIO ==================== -->
+    <section id="gemini-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Phân Tích & Sáng Tạo Nội Dung Bằng AI</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Tự động tạo tiêu đề Viral, mô tả chuẩn SEO, thẻ tags và biến thể riêng cho từng kênh.
+            </p>
+          </div>
+        </div>
+
+        <form id="gemini-ai-form">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="ai-topic">Chủ đề Video hoặc Kịch bản tóm tắt *</label>
+              <textarea id="ai-topic" class="form-textarea" placeholder="Nhập chủ đề hoặc dàn ý nội dung video..." required style="min-height:75px;"></textarea>
+            </div>
+
+            <div>
+              <div class="form-group">
+                <label class="form-label" for="ai-audience">Đối tượng khán giả</label>
+                <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Người yêu công nghệ, học sinh sinh viên...">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="ai-tone">Giọng điệu</label>
+                  <select id="ai-tone" class="form-select">
+                    <option value="Hấp dẫn, kích thích tò mò">Hấp dẫn & Tò mò</option>
+                    <option value="Hài hước, vui vẻ">Hài hước & Vui vẻ</option>
+                    <option value="Chuyên sâu, thực tế">Chuyên sâu & Thực tế</option>
+                    <option value="Kịch tính, cảnh báo">Kịch tính & Cảnh báo</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="ai-key-input">Gemini API Key (Tùy chọn)</label>
+                  <input type="password" id="ai-key-input" class="form-input" placeholder="Để trống để dùng cấu hình mặc định">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+            <button type="submit" class="btn btn-primary" id="btn-generate-ai" style="padding:10px 20px;">
+              Phân Tích & Tạo Nội Dung
+            </button>
+            <span id="ai-loading-text" style="display:none; color:var(--text-muted); font-size:0.84rem;">Đang xử lý nội dung với Gemini AI...</span>
+          </div>
+        </form>
+
+        <div id="ai-results-wrapper" style="display:none; margin-top:20px;">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); border:1px solid var(--border-subtle); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:14px;">
+            <div>
+              <h4 style="color:#fff; font-size:0.95rem; font-weight:600;">Kết Quả Phân Tích Hoàn Tất</h4>
+              <p style="font-size:0.78rem; color:var(--text-muted);" id="ai-engine-source">Hệ thống Gemini AI Engine</p>
+            </div>
+            <button type="button" class="btn btn-accent btn-sm" id="btn-apply-all-to-publisher" onclick="applyAllAiToPublisher()">
+              Đưa Vào Bảng Phân Phối Video
+            </button>
+          </div>
+
+          <div class="glass-panel" style="background:var(--bg-input);">
+            <h4 style="color:var(--text-primary); margin-bottom:10px; font-size:0.9rem; font-weight:600;">Top Tiêu Đề Đề Xuất (Bấm để chọn):</h4>
+            <div id="ai-titles-list"></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="glass-panel" style="background:var(--bg-input);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h4 style="color:var(--text-primary); font-size:0.9rem; font-weight:600;">Mô Tả Video (SEO):</h4>
+                <button type="button" class="btn btn-sm btn-outline" onclick="copyAiDescription()">Sao chép</button>
+              </div>
+              <textarea id="ai-generated-desc" class="form-textarea" style="min-height:140px; font-size:0.82rem;" readonly></textarea>
+            </div>
+
+            <div class="glass-panel" style="background:var(--bg-input);">
+              <h4 style="color:var(--text-primary); font-size:0.9rem; font-weight:600; margin-bottom:8px;">Tags Từ Khóa:</h4>
+              <div id="ai-tags-container" style="margin-bottom:12px;"></div>
+
+              <h4 style="color:var(--text-primary); font-size:0.9rem; font-weight:600; margin-bottom:6px;">Biến Thể Từng Kênh:</h4>
+              <div id="ai-channel-variants-container" style="font-size:0.8rem; color:var(--text-muted);"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: QUẢN LÝ KÊNH ==================== -->
+    <section id="channels-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Danh Sách Kênh YouTube Đã Liên Kết</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Quản lý các kênh YouTube được ủy quyền đăng video.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-channels" onclick="syncChannelsFromYouTube()">
+              Đồng bộ số liệu từ YouTube
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-channel">
+              + Thêm Kênh Mới
+            </button>
+          </div>
+        </div>
+
+        <div id="channels-grid-container" class="grid-3"></div>
+
+        <div id="empty-channels-state" style="text-align:center; padding: 40px 16px; display:none;">
+          <h3 style="color:#fff; margin-bottom: 4px; font-size:1rem;">Chưa có kênh nào được liên kết</h3>
+          <p style="color:var(--text-muted); max-width: 380px; margin: 0 auto 12px; font-size:0.82rem;">
+            Bấm nút bên dưới để cấp quyền kết nối kênh của bạn qua Google OAuth.
+          </p>
+          <button type="button" class="btn btn-accent btn-sm" onclick="openOAuthPopup()">
+            Liên Kết Kênh Ngay
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: LỊCH SỬ & HẠN MỨC ==================== -->
+    <section id="history-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h3 class="panel-title">Lịch Sử Phân Phối & Hạn Mức API</h3>
+          <button class="btn btn-sm btn-outline" id="btn-refresh-history">
+            Làm mới dữ liệu
+          </button>
+        </div>
+
+        <div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border-subtle); margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:500; font-size:0.86rem;">Hạn ngạch YouTube Data API trong ngày:</span>
+            <span style="font-family:monospace; color:var(--text-primary);" id="quota-detail-text">0 / 10.000 Units</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="quota-progress-bar" style="width: 0%;"></div>
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+            1 lượt đăng video tiêu tốn ~1.600 units (tối đa ~6 video/ngày trên hạn mức mặc định 10.000 units). Reset vào 14:00 hàng ngày.
+          </p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Tiêu đề Video</th>
+                <th>Số Kênh</th>
+                <th>Chi Tiết & Link Xem Trực Tiếp</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body"></tbody>
+          </table>
+        </div>
+
+        <div id="empty-history-state" style="text-align:center; padding: 24px; color:var(--text-muted); display:none;">
+          <p style="font-size:0.85rem;">Chưa có lịch sử đăng video nào.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL TIẾN TRÌNH TẢI LÊN -->
+  <div class="modal-backdrop" id="upload-modal">
+    <div class="modal-dialog">
+      <div class="panel-header">
+        <h3 class="panel-title" id="modal-title">Đang Phân Phối Video Lên Các Kênh...</h3>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <p id="modal-subtitle" style="font-size: 0.82rem; color: var(--text-muted);">Vui lòng giữ nguyên trình duyệt trong quá trình tải lên.</p>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="overall-progress-bar" style="width: 20%;"></div>
+        </div>
+      </div>
+
+      <div id="modal-channel-status-list" style="max-height: 220px; overflow-y: auto;"></div>
+
+      <div style="margin-top: 16px; text-align: right;">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-close-modal" style="display:none;" onclick="closeUploadModal()">
+          Đóng cửa sổ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
