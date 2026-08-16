@@ -1,6 +1,8 @@
 node_modules/
 uploads/*
 !uploads/.gitkeep
+data/
 .vercel
 .DS_Store
 *.log
+

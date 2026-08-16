@@ -1036,14 +1036,7 @@ function initAdminPanel() {
   if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
       loadAdminTestUsers();
-      showToast('Đã làm mới danh sách tài khoản test.');
-    });
-  }
-
-  const quickCreateBtn = document.getElementById('btn-quick-create-test-user');
-  if (quickCreateBtn) {
-    quickCreateBtn.addEventListener('click', async () => {
-      await createAdminTestUser('', '', 10);
+      showToast('Đã làm mới danh sách tài khoản khách hàng.');
     });
   }
 
@@ -1053,8 +1046,15 @@ function initAdminPanel() {
       e.preventDefault();
       const email = document.getElementById('admin-test-email').value.trim();
       const password = document.getElementById('admin-test-pass').value.trim();
+      const name = document.getElementById('admin-test-name').value.trim();
       const duration = document.getElementById('admin-test-duration').value || 10;
-      await createAdminTestUser(email, password, duration);
+
+      if (!email || !password) {
+        showToast('Vui lòng nhập đầy đủ Email và Mật khẩu cấp cho khách.', 'error');
+        return;
+      }
+
+      await createAdminTestUser(email, password, name, duration);
       form.reset();
       document.getElementById('admin-test-duration').value = '10';
     });
@@ -1103,9 +1103,9 @@ function renderAdminTestUsersTable() {
       timeBadge = `<span style="color:var(--text-muted); font-family:monospace;">--:--</span>`;
     } else if (u.isExpired || u.remainingSeconds <= 0) {
       statusBadge = `<span class="status-badge status-failed" style="background:rgba(239,68,68,0.2); color:#ef4444;">Hết hạn 10p</span>`;
-      timeBadge = `<span style="color:#ef4444; font-weight:600; font-family:monospace;">00:00 (Hết hạn)</span>`;
+      timeBadge = `<span style="color:#ef4444; font-weight:600; font-family:monospace;">00:00 (Đã khóa)</span>`;
     } else {
-      statusBadge = `<span class="status-badge status-success" style="background:rgba(16,185,129,0.2); color:#10b981;">Đang hoạt động</span>`;
+      statusBadge = `<span class="status-badge status-success" style="background:rgba(16,185,129,0.2); color:#10b981;">Đang dùng thử</span>`;
       timeBadge = `<span id="admin-user-timer-${u.id}" style="color:#10b981; font-weight:600; font-family:monospace;">⏱️ ${timeFormatted}</span>`;
     }
 
@@ -1113,7 +1113,7 @@ function renderAdminTestUsersTable() {
       <tr>
         <td>
           <div style="font-weight:600; color:#fff;">${u.email}</div>
-          <div style="font-size:0.75rem; color:var(--text-muted);">${u.name || 'Người dùng test'}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${u.name || 'Khách dùng thử'}</div>
         </td>
         <td>
           <div style="display:flex; align-items:center; gap:6px;">
@@ -1172,32 +1172,32 @@ function startAdminUsersTableCountdown() {
   }, 1000);
 }
 
-async function createAdminTestUser(email, password, durationMinutes) {
+async function createAdminTestUser(email, password, name, durationMinutes) {
   const submitBtn = document.getElementById('btn-submit-create-test');
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Đang tạo...';
+    submitBtn.textContent = 'Đang cấp...';
   }
 
   try {
     const res = await fetch('/api/admin/create-test-user', {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ email, password, durationMinutes })
+      body: JSON.stringify({ email, password, name, durationMinutes })
     });
     const data = await res.json();
     if (data.success && data.user) {
-      showToast(`Tạo thành công: ${data.user.email} (Mật khẩu: ${data.user.plainPassword})`, 'success');
+      showToast(`Đã cấp tài khoản cho khách: ${data.user.email} (Hạn mức ${durationMinutes} phút)`, 'success');
       loadAdminTestUsers();
     } else {
-      showToast(data.message || 'Lỗi tạo tài khoản test', 'error');
+      showToast(data.message || 'Lỗi cấp tài khoản test', 'error');
     }
   } catch (err) {
     showToast('Lỗi kết nối máy chủ: ' + err.message, 'error');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Tạo Tài Khoản';
+      submitBtn.textContent = 'Cấp Tài Khoản';
     }
   }
 }

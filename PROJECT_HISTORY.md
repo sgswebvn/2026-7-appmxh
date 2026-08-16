@@ -96,17 +96,17 @@ GEMINI_API_KEY=AQ.Ab8RN6Kj9_KZVQ6egDt5TsCZSK2YbYtRdjbd0Y4xyVPjkcguag
 - **Anti-Spam Multi-Tier:** Giới hạn 100 req/min (DDoS), khóa IP tự động 15 phút nếu vi phạm 3 lần, giới hạn 8 lần đăng nhập sai, Cooldown đếm ngược (4s - 5s) trên các nút bấm.
 - **Self-Healing Engine:** Tự động cắt tiêu đề > 100 ký tự, lọc tags > 500 ký tự, auto-retry mạng chập chờn, dọn dẹp file tạm rác định kỳ mỗi 15 phút.
 
-### 7. Tính năng Quản trị viên (Admin) tạo tài khoản Dùng thử (Test User - Tự động khóa sau 10 phút):
-- **Tài khoản Admin mặc định:** `admin@admin.com` / `admin123` (Role: `admin`). Tự động khởi tạo ngay khi server kết nối Database.
+### 7. Tính năng Quản trị viên (Admin) cấp tài khoản Dùng thử cho Khách hàng (Tự động khóa sau 10 phút):
+- **Trang Đăng Nhập Chuẩn:** Loại bỏ hoàn toàn các nút đăng nhập mẫu/demo hay tài khoản thử nghiệm nhanh. Giao diện đăng nhập/đăng ký hoàn toàn chuyên nghiệp, sạch sẽ để bàn giao trực tiếp cho khách hàng.
+- **Tài khoản Quản trị viên (Admin):** `admin@admin.com` / `admin123` (Role: `admin`). Tự động khởi tạo ngay khi server kết nối Database.
 - **Admin Panel chuyên dụng:** Tab "Quản Trị Admin" trên thanh điều hướng (chỉ hiển thị với Admin).
-- **Tính năng cho Admin:**
-  1. **Tạo tài khoản 1-Click:** Tự động sinh Email (`test_xxx@demo.local`), Mật khẩu ngẫu nhiên và thời hạn (mặc định 10 phút).
-  2. **Tùy chỉnh:** Cho phép Admin tự nhập Email, Mật khẩu và tùy biến số phút dùng thử (từ 1 đến 1440 phút).
-  3. **Quản lý danh sách:** Hiển thị toàn bộ tài khoản test, mật khẩu bản rõ (Plain Password) để Admin 1-Click copy gửi cho khách, đồng hồ đếm ngược thời gian thực, trạng thái (Đang hoạt động / Đã hết hạn / Đã khóa).
-  4. **Thao tác nhanh:** Nút "+10 Phút" gia hạn thời gian, nút "Khóa / Mở khóa" tức thì, nút "Xóa" tài khoản.
+- **Tính năng Cấp Tài Khoản cho Admin:**
+  1. **Nhập Email & Mật khẩu cấp cho khách:** Admin nhập email khách hàng, mật khẩu, tên/ghi chú khách hàng, và thiết lập thời hạn (mặc định 10 phút).
+  2. **Quản lý danh sách khách dùng thử:** Hiển thị toàn bộ tài khoản test, mật khẩu đã cấp (với nút Copy nhanh để gửi cho khách), đồng hồ đếm ngược thời gian thực, trạng thái (Đang dùng thử / Đã hết hạn / Đã khóa).
+  3. **Thao tác quản trị:** Nút "+10 Phút" gia hạn thêm thời gian và mở khóa, nút "Khóa / Mở khóa" thủ công, nút "Xóa" tài khoản.
 - **Cơ chế tự động khóa và bảo vệ bảo mật:**
   - **Backend Layer:** Middleware `authenticateToken` và `POST /api/auth/login` kiểm tra `expiresAt` và `isLocked`. Khi quá thời gian 10 phút, tự động từ chối truy cập với mã `403 Forbidden` và thông báo rõ ràng cho người dùng.
-  - **Frontend Layer:** Hiển thị Badge đếm ngược `⏱️ Dùng thử: mm:ss` trên Navbar. Khi về `00:00`, tự động hiện cảnh báo hết hạn và chuyển về trang đăng nhập.
+  - **Frontend Layer:** Khách hàng đăng nhập tài khoản Test sẽ nhìn thấy Badge đếm ngược `⏱️ Dùng thử: mm:ss` trên Navbar. Khi về `00:00`, tự động hiện thông báo hết hạn và chuyển về trang đăng nhập.
 
 ### 8. Tương thích triển khai Vercel Serverless & GitHub:
 - Cấu hình `vercel.json` định tuyến toàn bộ request về Express application.

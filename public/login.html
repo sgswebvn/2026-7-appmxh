@@ -142,21 +142,6 @@
         <p style="font-size:0.82rem; color:var(--text-muted);" id="auth-subtitle">Đăng nhập để quản lý và phân phối video</p>
       </div>
 
-      <div class="quick-test-box">
-        <div class="quick-test-title">Đăng nhập nhanh Quản Trị Viên (Admin):</div>
-        <button type="button" class="btn btn-outline" id="btn-page-admin-login" style="width:100%; font-size:0.85rem; border-color:rgba(220,38,38,0.6); color:#fff; margin-bottom:8px;">
-          👑 Đăng Nhập Tài Khoản Admin (1-Click)
-        </button>
-        <div class="quick-test-title" style="margin-top:4px;">Hoặc vào tài khoản Demo khách:</div>
-        <button type="button" class="btn btn-outline" id="btn-page-quick-test" style="width:100%; font-size:0.82rem;">
-          Đăng Nhập Khách Thử Nghiệm
-        </button>
-      </div>
-
-      <div class="divider">
-        <span>HOẶC DÙNG EMAIL TÀI KHOẢN</span>
-      </div>
-
       <div class="auth-tabs">
         <button type="button" class="auth-tab-btn active" id="tab-login" onclick="setAuthMode('login')">
           Đăng Nhập
@@ -218,34 +203,6 @@
       if (urlParams.get('mode') === 'register') {
         setAuthMode('register');
       }
-
-      // Quick Admin Login
-      const adminBtn = document.getElementById('btn-page-admin-login');
-      if (adminBtn) {
-        adminBtn.addEventListener('click', async () => {
-          document.getElementById('page-email').value = 'admin@admin.com';
-          document.getElementById('page-password').value = 'admin123';
-          setAuthMode('login');
-          document.getElementById('btn-page-submit').click();
-        });
-      }
-
-      document.getElementById('btn-page-quick-test').addEventListener('click', async () => {
-        try {
-          const res = await fetch('/api/auth/quick-test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          const data = await res.json();
-          if (data.success && data.token) {
-            localStorage.setItem('ytb_auth_token', data.token);
-            showToast('Đăng nhập tài khoản Test thành công.', 'success');
-            setTimeout(() => { window.location.href = '/'; }, 800);
-          }
-        } catch (err) {
-          showToast('Lỗi đăng nhập: ' + err.message, 'error');
-        }
-      });
 
       document.getElementById('auth-page-form').addEventListener('submit', async (e) => {
         e.preventDefault();

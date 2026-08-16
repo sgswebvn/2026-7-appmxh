@@ -189,51 +189,12 @@ app.post('/api/auth/login', authBruteForceLimiter, async (req, res) => {
   }
 });
 
-// 3. Đăng nhập nhanh tài khoản Test (1-Click)
-app.post('/api/auth/quick-test', async (req, res) => {
-  try {
-    const testEmail = 'admin@test.com';
-    let user = await dbService.findUserByEmail(testEmail);
-    if (!user) {
-      user = await dbService.createUser({
-        email: testEmail,
-        password: 'password123',
-        name: 'Demo Creator',
-        geminiApiKey: ''
-      });
-    }
-
-    const lockStatus = dbService.checkUserLockAndExpiry(user);
-    const userId = user._id ? user._id.toString() : user.id;
-    const token = jwt.sign({ id: userId, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({
-      success: true,
-      message: 'Đăng nhập tài khoản Test thành công!',
-      token,
-      user: {
-        id: userId,
-        email: user.email,
-        name: user.name,
-        role: user.role || 'user',
-        isTestAccount: Boolean(user.isTestAccount),
-        expiresAt: user.expiresAt || null,
-        isLocked: Boolean(user.isLocked),
-        remainingSeconds: lockStatus.remainingSeconds,
-        geminiApiKey: user.geminiApiKey || ''
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Lỗi đăng nhập nhanh: ' + err.message });
-  }
-});
-
-// 4. Lấy thông tin User hiện tại
+// 3. Lấy thông tin User hiện tại
 app.get('/api/auth/me', authenticateToken, (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
-// 5. Cập nhật Gemini API Key cho User
+// 4. Cập nhật Gemini API Key cho User
 app.put('/api/auth/gemini-key', authenticateToken, async (req, res) => {
   try {
     const { geminiApiKey } = req.body;
@@ -256,21 +217,18 @@ app.get('/api/admin/test-users', authenticateToken, requireAdmin, async (req, re
   }
 });
 
-// Admin tạo tài khoản Test mới (Tự động khóa sau 10 phút sử dụng hoặc thời gian tùy chọn)
+// Admin cấp tài khoản Test mới cho khách hàng (Tự động khóa sau 10 phút sử dụng)
 app.post('/api/admin/create-test-user', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    let { email, password, name, durationMinutes } = req.body;
-    durationMinutes = Number(durationMinutes) || 10;
+    const { email, password, name, durationMinutes } = req.body;
+    const duration = Number(durationMinutes) || 10;
 
-    // Nếu không nhập email/password, tự động sinh ngẫu nhiên
-    if (!email || email.trim() === '') {
-      const randStr = Math.random().toString(36).substring(2, 7);
-      email = `test_${randStr}@demo.local`;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ Email và Mật khẩu cấp cho khách hàng.' });
     }
 
-    if (!password || password.trim() === '') {
-      const randPass = Math.floor(100000 + Math.random() * 900000);
-      password = `pass${randPass}`;
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
     }
 
     const existingUser = await dbService.findUserByEmail(email);
@@ -281,8 +239,8 @@ app.post('/api/admin/create-test-user', authenticateToken, requireAdmin, async (
     const newUser = await dbService.createTestUser({
       email,
       password,
-      name: name || `Test User (${durationMinutes}m)`,
-      durationMinutes,
+      name: name || 'Khách hàng dùng thử',
+      durationMinutes: duration,
       createdBy: req.user.email
     });
 
