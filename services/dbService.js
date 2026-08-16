@@ -252,6 +252,7 @@ async function createTestUser({ email, password, name, durationMinutes = 10, cre
 
 // Lấy danh sách tất cả tài khoản Test cho Admin
 async function getTestUsers() {
+  await ensureMongoConnected();
   let users = [];
   if (isConnectedToMongo()) {
     users = await User.find({ isTestAccount: true }).sort({ createdAt: -1 }).lean();
@@ -284,6 +285,7 @@ async function getTestUsers() {
 
 // Gia hạn thêm thời gian cho tài khoản Test (+10p, +30p,...) và mở khóa
 async function extendTestUser(userId, additionalMinutes = 10) {
+  await ensureMongoConnected();
   const addMs = Number(additionalMinutes) * 60 * 1000;
   const now = Date.now();
 
@@ -316,6 +318,7 @@ async function extendTestUser(userId, additionalMinutes = 10) {
 
 // Khóa hoặc Mở khóa thủ công tài khoản
 async function toggleLockUser(userId) {
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
     const user = await User.findById(userId);
     if (!user) return null;
@@ -333,6 +336,7 @@ async function toggleLockUser(userId) {
 
 // Xóa tài khoản Test
 async function deleteTestUser(userId) {
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
     await Channel.deleteMany({ userId: userId.toString() });
     await History.deleteMany({ userId: userId.toString() });
@@ -377,6 +381,7 @@ function checkUserLockAndExpiry(user) {
 }
 
 async function updateUserGeminiKey(userId, apiKey) {
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
     return await User.findByIdAndUpdate(userId, { geminiApiKey: apiKey }, { returnDocument: 'after' });
   } else {
@@ -392,6 +397,7 @@ async function updateUserGeminiKey(userId, apiKey) {
 
 // ==================== CHANNELS OPERATIONS ====================
 async function getChannels(userId) {
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
     return await Channel.find({ userId: userId.toString() }).sort({ createdAt: -1 });
   } else {
@@ -401,6 +407,7 @@ async function getChannels(userId) {
 }
 
 async function getChannelById(userId, channelId) {
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
     return await Channel.findOne({ userId: userId.toString(), channelId: channelId.toString() });
   } else {
@@ -410,6 +417,7 @@ async function getChannelById(userId, channelId) {
 }
 
 async function saveChannel(userId, channelData) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   const cleanChannelId = (channelData.id || channelData.channelId).toString();
 
@@ -508,6 +516,7 @@ async function updateChannelStats(userId, channelId, stats) {
 }
 
 async function deleteChannel(userId, channelId) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   const cleanChannelId = channelId.toString();
 
@@ -522,6 +531,7 @@ async function deleteChannel(userId, channelId) {
 }
 
 async function updateChannelTokens(userId, channelId, tokens) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   const cleanChannelId = channelId.toString();
 
@@ -543,6 +553,7 @@ async function updateChannelTokens(userId, channelId, tokens) {
 
 // ==================== HISTORY OPERATIONS ====================
 async function getHistory(userId) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   if (isConnectedToMongo()) {
     return await History.find({ userId: cleanUserId }).sort({ createdAt: -1 });
@@ -555,6 +566,7 @@ async function getHistory(userId) {
 }
 
 async function addHistory(userId, record) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   if (isConnectedToMongo()) {
     const hist = new History({ ...record, userId: cleanUserId });
@@ -571,6 +583,7 @@ async function addHistory(userId, record) {
 
 // ==================== GEMINI DRAFTS OPERATIONS ====================
 async function saveGeminiDraft(userId, draftData) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   if (isConnectedToMongo()) {
     const draft = new GeminiDraft({ ...draftData, userId: cleanUserId });
@@ -586,6 +599,7 @@ async function saveGeminiDraft(userId, draftData) {
 }
 
 async function getGeminiDrafts(userId) {
+  await ensureMongoConnected();
   const cleanUserId = userId.toString();
   if (isConnectedToMongo()) {
     return await GeminiDraft.find({ userId: cleanUserId }).sort({ createdAt: -1 }).limit(10);

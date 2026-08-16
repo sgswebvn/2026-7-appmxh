@@ -1,11 +1,21 @@
 const mongoose = require('mongoose');
 
-let isMongoConnected = false;
+let cachedPromise = null;
 
 async function connectDB() {
   if (mongoose.connection.readyState === 1) {
     return true;
   }
+
+  if (mongoose.connection.readyState === 2 && cachedPromise) {
+    try {
+      await cachedPromise;
+      return mongoose.connection.readyState === 1;
+    } catch (e) {
+      cachedPromise = null;
+    }
+  }
+
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     console.warn('⚠️ MONGODB_URI chưa được thiết lập. Hệ thống sẽ sử dụng Local Resilience Database.');
@@ -13,20 +23,22 @@ async function connectDB() {
   }
 
   try {
-    // Cấu hình Connection Pool chịu tải cao (High Concurrency & Stability)
-    await mongoose.connect(uri, {
-      maxPoolSize: 25,          // Duy trì tới 25 kết nối song song phục vụ nhiều luồng cùng lúc
-      minPoolSize: 5,           // Luôn giữ tối thiểu 5 kết nối sẵn sàng
-      socketTimeoutMS: 45000,   // Tránh ngắt kết nối giữa chừng khi xử lý tác vụ nặng
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS: 10000,
-      family: 4                 // Ép IPv4 giúp tăng tốc độ phân giải DNS
+    cachedPromise = mongoose.connect(uri, {
+      maxPoolSize: 25,
+      minPoolSize: 2,
+      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      family: 4
     });
 
+    await cachedPromise;
+    cachedPromise = null;
     isMongoConnected = true;
     console.log('✅ Đã kết nối thành công đến MongoDB Atlas (Database: ytb-multi - Connection Pool: 25)!');
     return true;
   } catch (err) {
+    cachedPromise = null;
     console.warn('⚠️ Kết nối MongoDB Atlas chưa thành công (Chi tiết:', err.message, '). Đang kích hoạt bộ đệm bảo vệ an toàn.');
     isMongoConnected = false;
     return false;

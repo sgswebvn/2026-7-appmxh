@@ -485,6 +485,12 @@ async function openOAuthPopup() {
     return;
   }
 
+  const addBtn = document.getElementById('btn-add-channel');
+  if (addBtn) {
+    addBtn.disabled = true;
+    setTimeout(() => { if (addBtn) addBtn.disabled = false; }, 3000);
+  }
+
   try {
     const res = await fetch(`/api/auth/url?userId=${currentUser.id}`, { headers: getAuthHeaders() });
     const data = await res.json();
@@ -493,13 +499,24 @@ async function openOAuthPopup() {
       const height = 700;
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
-      window.open(
+      const popup = window.open(
         data.authUrl,
         'google_oauth_popup',
         `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,status=yes`
       );
+
+      // Tự động làm mới danh sách kênh khi cửa sổ OAuth được đóng lại
+      const popupInterval = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(popupInterval);
+          setTimeout(() => {
+            loadChannels();
+            loadQuota();
+          }, 800);
+        }
+      }, 1000);
     } else {
-      showToast('Không lấy được link cấp quyền', 'error');
+      showToast('Không lấy được link cấp quyền: ' + (data.message || ''), 'error');
     }
   } catch (err) {
     showToast('Lỗi mở OAuth Google: ' + err.message, 'error');
