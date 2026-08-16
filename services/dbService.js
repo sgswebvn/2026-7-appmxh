@@ -99,8 +99,19 @@ async function createUser(userData) {
   }
 }
 
+async function ensureMongoConnected() {
+  if (process.env.MONGODB_URI && mongoose.connection.readyState !== 1) {
+    try {
+      const { connectDB } = require('../config/db');
+      await connectDB();
+    } catch (e) {}
+  }
+}
+
 async function findUserByEmail(email) {
+  if (!email) return null;
   const cleanEmail = email.toLowerCase().trim();
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
     return await User.findOne({ email: cleanEmail });
   } else {
@@ -116,12 +127,29 @@ async function findUserByEmail(email) {
   }
 }
 
-async function findUserById(id) {
+async function findUserById(id, emailFallback = '') {
+  if (!id && !emailFallback) return null;
+  await ensureMongoConnected();
   if (isConnectedToMongo()) {
-    return await User.findById(id).select('-password');
+    try {
+      if (id && mongoose.isValidObjectId(id)) {
+        const u = await User.findById(id).select('-password');
+        if (u) return u;
+      }
+    } catch (e) {}
+
+    // Fallback tìm theo Email nếu ID có sự thay đổi
+    if (emailFallback) {
+      return await User.findOne({ email: emailFallback.toLowerCase().trim() }).select('-password');
+    }
+    return null;
   } else {
     const db = readLocalDB();
-    const user = (db.users || []).find(u => (u._id && u._id.toString() === id.toString()) || u.id === id);
+    const user = (db.users || []).find(u => 
+      (u._id && u._id.toString() === (id ? id.toString() : '')) || 
+      u.id === id || 
+      (emailFallback && u.email === emailFallback.toLowerCase().trim())
+    );
     if (user) {
       const { password, ...safeUser } = user;
       return safeUser;

@@ -1,6 +1,14 @@
 // ==================== STATE MANAGEMENT ====================
 let authToken = localStorage.getItem('ytb_auth_token') || null;
 let currentUser = null;
+
+try {
+  const cachedUser = localStorage.getItem('ytb_user_data');
+  if (cachedUser) {
+    currentUser = JSON.parse(cachedUser);
+  }
+} catch (e) {}
+
 let channelsState = [];
 let selectedChannelIds = new Set();
 let videoFile = null;
@@ -11,6 +19,10 @@ let adminUsersInterval = null;
 let adminTestUsersList = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Hiển thị ngay trạng thái người dùng đã lưu từ trước (tránh giật lag khi F5)
+  renderNavUser();
+  handleUserRolesAndTimers();
+
   initTabs();
   initDropzones();
   loadCategories();
@@ -51,32 +63,57 @@ async function checkAuthStatus() {
   if (authToken) {
     try {
       const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+
+      if (res.status === 401) {
+        // Token không hợp lệ hoặc đã hết hạn
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
+        logout();
+        return;
+      }
+
+      if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data.isExpired || data.isLocked) {
+          showToast(data.message || 'Tài khoản đã hết hạn hoặc bị khóa.', 'error');
+          logout();
+          return;
+        }
+      }
+
       const data = await res.json();
       if (data.success && data.user) {
         currentUser = data.user;
+        localStorage.setItem('ytb_user_data', JSON.stringify(data.user));
         renderNavUser();
         handleUserRolesAndTimers();
         loadChannels();
         loadQuota();
         loadHistory();
         return;
-      } else if (data.isExpired || data.isLocked) {
-        showToast(data.message || 'Tài khoản đã hết hạn hoặc bị khóa.', 'error');
-        logout();
-        return;
       }
     } catch (err) {
-      console.warn('Phiên đăng nhập không hợp lệ:', err);
+      console.warn('Lỗi kiểm tra phiên từ máy chủ:', err);
+      if (currentUser) {
+        renderNavUser();
+        handleUserRolesAndTimers();
+        loadChannels();
+        loadQuota();
+        loadHistory();
+        return;
+      }
     }
   }
 
-  currentUser = null;
-  authToken = null;
-  localStorage.removeItem('ytb_auth_token');
-  renderNavUser();
-  handleUserRolesAndTimers();
-  renderChannelSelection();
-  renderChannelsManager();
+  if (!authToken) {
+    currentUser = null;
+    localStorage.removeItem('ytb_auth_token');
+    localStorage.removeItem('ytb_user_data');
+    renderNavUser();
+    handleUserRolesAndTimers();
+    renderChannelSelection();
+    renderChannelsManager();
+  }
 }
 
 function handleUserRolesAndTimers() {
@@ -165,6 +202,7 @@ function logout() {
   authToken = null;
   currentUser = null;
   localStorage.removeItem('ytb_auth_token');
+  localStorage.removeItem('ytb_user_data');
   if (testUserTimerInterval) {
     clearInterval(testUserTimerInterval);
     testUserTimerInterval = null;

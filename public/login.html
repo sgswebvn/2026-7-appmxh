@@ -133,6 +133,9 @@
           const data = await res.json();
           if (data.success && data.token) {
             localStorage.setItem('ytb_auth_token', data.token);
+            if (data.user) {
+              localStorage.setItem('ytb_user_data', JSON.stringify(data.user));
+            }
             showToast('Đăng nhập thành công!', 'success');
             setTimeout(() => { window.location.href = '/'; }, 600);
           } else {

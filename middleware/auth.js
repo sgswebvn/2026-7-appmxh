@@ -16,7 +16,7 @@ async function authenticateToken(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await dbService.findUserById(decoded.id);
+    const user = await dbService.findUserById(decoded.id, decoded.email);
 
     if (!user) {
       return res.status(401).json({
@@ -52,7 +52,7 @@ async function authenticateToken(req, res, next) {
 
     next();
   } catch (err) {
-    return res.status(403).json({
+    return res.status(401).json({
       success: false,
       message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.'
     });
@@ -78,7 +78,7 @@ async function optionalAuth(req, res, next) {
   if (token) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      const user = await dbService.findUserById(decoded.id);
+      const user = await dbService.findUserById(decoded.id, decoded.email);
       if (user) {
         const lockStatus = dbService.checkUserLockAndExpiry(user);
         req.user = {
