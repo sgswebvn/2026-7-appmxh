@@ -155,7 +155,7 @@ function renderNavUser() {
   } else {
     container.innerHTML = `
       <a href="/login" class="btn btn-sm btn-accent" style="text-decoration:none;">
-        Đăng Nhập / Đăng Ký
+        Đăng Nhập
       </a>
     `;
   }

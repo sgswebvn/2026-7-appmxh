@@ -111,50 +111,17 @@ app.get('/login', (req, res) => {
 });
 
 app.get('/register', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  res.redirect('/login');
 });
 
 // ==================== AUTHENTICATION APIS (BẢO VỆ CHỐNG BRUTE-FORCE) ====================
 
-// 1. Đăng ký tài khoản
-app.post('/api/auth/register', authBruteForceLimiter, async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ Email và Mật khẩu.' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
-    }
-
-    const existingUser = await dbService.findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Email này đã được đăng ký. Vui lòng đăng nhập.' });
-    }
-
-    const user = await dbService.createUser({ email, password, name });
-    const userId = user._id ? user._id.toString() : user.id;
-
-    const token = jwt.sign({ id: userId, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({
-      success: true,
-      message: 'Đăng ký tài khoản thành công!',
-      token,
-      user: {
-        id: userId,
-        email: user.email,
-        name: user.name,
-        role: user.role || 'user',
-        isTestAccount: false,
-        geminiApiKey: user.geminiApiKey || ''
-      }
-    });
-  } catch (err) {
-    console.error('Register Error:', err);
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng ký: ' + err.message });
-  }
+// 1. Đăng ký tài khoản (Đã khóa công khai - Chỉ Admin mới có quyền tạo và cấp tài khoản)
+app.post('/api/auth/register', (req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: 'Hệ thống đã khóa đăng ký tự do. Vui lòng liên hệ Quản trị viên (Admin) để được cấp tài khoản sử dụng.'
+  });
 });
 
 // 2. Đăng nhập tài khoản (Kiểm tra khóa và thời hạn 10 phút)
