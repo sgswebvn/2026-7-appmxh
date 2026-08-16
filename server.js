@@ -314,10 +314,16 @@ app.get('/api/auth/url', optionalAuth, (req, res) => {
     const userId = req.user ? req.user.id : (req.query.userId || 'default_user');
     
     // Tự động nhận diện domain hiện tại (Vercel HTTPS hoặc Localhost)
-    const host = req.get('host');
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || (host.includes('localhost') ? 'http' : 'https');
+    const host = req.get('host') || 'localhost:3000';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const protocol = req.headers['x-forwarded-proto'] || (isLocal ? 'http' : 'https');
     const dynamicRedirectUri = `${protocol}://${host}/api/auth/callback/google`;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || dynamicRedirectUri;
+    
+    // Nếu host không phải localhost (chạy trên Vercel), tự động ưu tiên domain thực tế
+    let redirectUri = dynamicRedirectUri;
+    if (process.env.GOOGLE_REDIRECT_URI && !process.env.GOOGLE_REDIRECT_URI.includes('localhost')) {
+      redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    }
 
     const authUrl = youtubeService.getAuthUrl(userId, redirectUri);
     res.json({ success: true, authUrl, redirectUri });
@@ -331,10 +337,15 @@ app.get('/api/auth/callback/google', async (req, res) => {
   const { code, state, error } = req.query;
   const userId = state || 'default_user';
 
-  const host = req.get('host');
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol || (host.includes('localhost') ? 'http' : 'https');
+  const host = req.get('host') || 'localhost:3000';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  const protocol = req.headers['x-forwarded-proto'] || (isLocal ? 'http' : 'https');
   const dynamicRedirectUri = `${protocol}://${host}/api/auth/callback/google`;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || dynamicRedirectUri;
+  
+  let redirectUri = dynamicRedirectUri;
+  if (process.env.GOOGLE_REDIRECT_URI && !process.env.GOOGLE_REDIRECT_URI.includes('localhost')) {
+    redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  }
 
   if (error) {
     return res.send(`
