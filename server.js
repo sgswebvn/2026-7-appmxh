@@ -25,13 +25,19 @@ const {
   advancedSanitizeInput
 } = require('./middleware/security');
 
+const os = require('os');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Khởi tạo thư mục uploads tạm
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// Khởi tạo thư mục uploads tạm (Tương thích cả Vercel /tmp và Server)
+const UPLOADS_DIR = process.env.VERCEL ? path.join(os.tmpdir(), 'ytb_uploads') : path.join(__dirname, 'uploads');
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch (e) {
+  // Bỏ qua lỗi read-only trên serverless
 }
 
 // Cấu hình Multer Upload chịu tải cao (Hỗ trợ file video tới 5GB)
@@ -49,6 +55,21 @@ const upload = multer({
 });
 
 // ==================== LỚP BẢO MẬT & NÉN TỐI ƯU HIỆU NĂNG ====================
+
+// Tự động kết nối DB khi chạy Serverless trên Vercel
+let isDbInitialized = false;
+app.use(async (req, res, next) => {
+  if (!isDbInitialized && process.env.MONGODB_URI) {
+    try {
+      await connectDB();
+      await dbService.initDefaultAdmin();
+      isDbInitialized = true;
+    } catch (err) {
+      console.warn('DB Init Serverless Error:', err.message);
+    }
+  }
+  next();
+});
 
 // 1. Nén phản hồi HTTP Gzip/Brotli giúp giảm 70% băng thông tải trang
 app.use(compression({
@@ -78,10 +99,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 7. Bộ lọc dữ liệu đầu vào chống NoSQL & XSS Injection
 app.use(advancedSanitizeInput);
 
-// 8. Tệp tĩnh
+// 8. Tệp tĩnh & Trang giao diện
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes trang giao diện
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });

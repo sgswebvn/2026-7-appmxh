@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 let isMongoConnected = false;
 
 async function connectDB() {
+  if (mongoose.connection.readyState === 1) {
+    return true;
+  }
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     console.warn('⚠️ MONGODB_URI chưa được thiết lập. Hệ thống sẽ sử dụng Local Resilience Database.');

@@ -14,46 +14,54 @@ function isConnectedToMongo() {
   return mongoose.connection.readyState === 1;
 }
 
-// Local fallback store
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// Local fallback store (Tương thích cả Vercel Serverless /tmp và Local environment)
+const os = require('os');
+const DATA_DIR = process.env.VERCEL ? path.join(os.tmpdir(), 'ytb_data') : path.join(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {
+  // Bỏ qua lỗi read-only trên môi trường serverless
 }
 
 function initLocalDB() {
-  if (!fs.existsSync(DB_FILE)) {
-    const defaultData = {
-      users: [],
-      channels: [],
-      history: [],
-      geminiDrafts: [],
-      quotaUsage: {
-        date: new Date().toISOString().split('T')[0],
-        unitsUsed: 0,
-        limit: 10000
-      }
-    };
-    fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2), 'utf-8');
-  }
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      const defaultData = {
+        users: [],
+        channels: [],
+        history: [],
+        geminiDrafts: [],
+        quotaUsage: {
+          date: new Date().toISOString().split('T')[0],
+          unitsUsed: 0,
+          limit: 10000
+        }
+      };
+      fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2), 'utf-8');
+    }
+  } catch (e) {}
 }
 
 function readLocalDB() {
   initLocalDB();
   try {
-    const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch (err) {
-    return { users: [], channels: [], history: [], geminiDrafts: [], quotaUsage: { date: new Date().toISOString().split('T')[0], unitsUsed: 0, limit: 10000 } };
-  }
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {}
+  return { users: [], channels: [], history: [], geminiDrafts: [], quotaUsage: { date: new Date().toISOString().split('T')[0], unitsUsed: 0, limit: 10000 } };
 }
 
 function writeLocalDB(data) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Lỗi ghi local db:', err);
+    // Local fallback silent on serverless
   }
 }
 
