@@ -25,11 +25,29 @@ async function authenticateToken(req, res, next) {
       });
     }
 
+    // Kiểm tra tài khoản có bị khóa hoặc hết hạn dùng thử (10 phút)
+    const lockStatus = dbService.checkUserLockAndExpiry(user);
+    if (!lockStatus.canAccess) {
+      return res.status(403).json({
+        success: false,
+        isExpired: lockStatus.isExpired,
+        isLocked: lockStatus.isLocked,
+        message: lockStatus.isExpired
+          ? 'Tài khoản dùng thử đã hết hạn 10 phút sử dụng. Vui lòng liên hệ Quản trị viên (Admin) để được gia hạn.'
+          : 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên (Admin).'
+      });
+    }
+
     req.user = {
       id: user._id ? user._id.toString() : user.id,
       email: user.email,
       name: user.name,
-      geminiApiKey: user.geminiApiKey || ''
+      geminiApiKey: user.geminiApiKey || '',
+      role: user.role || 'user',
+      isTestAccount: Boolean(user.isTestAccount),
+      expiresAt: user.expiresAt || null,
+      isLocked: Boolean(user.isLocked),
+      remainingSeconds: lockStatus.remainingSeconds
     };
 
     next();
@@ -39,6 +57,17 @@ async function authenticateToken(req, res, next) {
       message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.'
     });
   }
+}
+
+// Middleware chỉ cho phép Quản trị viên (Admin)
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Quyền truy cập bị từ chối. Chỉ Quản trị viên (Admin) mới có quyền thực hiện thao tác này.'
+    });
+  }
+  next();
 }
 
 // Optional Auth (cho phép lấy thông tin nếu có token, không bắt buộc)
@@ -51,11 +80,17 @@ async function optionalAuth(req, res, next) {
       const decoded = jwt.verify(token, JWT_SECRET);
       const user = await dbService.findUserById(decoded.id);
       if (user) {
+        const lockStatus = dbService.checkUserLockAndExpiry(user);
         req.user = {
           id: user._id ? user._id.toString() : user.id,
           email: user.email,
           name: user.name,
-          geminiApiKey: user.geminiApiKey || ''
+          geminiApiKey: user.geminiApiKey || '',
+          role: user.role || 'user',
+          isTestAccount: Boolean(user.isTestAccount),
+          expiresAt: user.expiresAt || null,
+          isLocked: Boolean(user.isLocked),
+          remainingSeconds: lockStatus.remainingSeconds
         };
       }
     } catch (e) {
@@ -67,6 +102,7 @@ async function optionalAuth(req, res, next) {
 
 module.exports = {
   authenticateToken,
+  requireAdmin,
   optionalAuth,
   JWT_SECRET
 };

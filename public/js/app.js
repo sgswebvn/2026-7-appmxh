@@ -6,6 +6,9 @@ let selectedChannelIds = new Set();
 let videoFile = null;
 let thumbFile = null;
 let lastAiResult = null;
+let testUserTimerInterval = null;
+let adminUsersInterval = null;
+let adminTestUsersList = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
@@ -15,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initFormSubmit();
   initOAuthListener();
   checkDbHealth();
+  initAdminPanel();
 
   await checkAuthStatus();
 
@@ -42,7 +46,7 @@ function getAuthHeaders(isMultipart = false) {
   return headers;
 }
 
-// ==================== AUTHENTICATION ====================
+// ==================== AUTHENTICATION & ADMIN ROLES ====================
 async function checkAuthStatus() {
   if (authToken) {
     try {
@@ -51,9 +55,14 @@ async function checkAuthStatus() {
       if (data.success && data.user) {
         currentUser = data.user;
         renderNavUser();
+        handleUserRolesAndTimers();
         loadChannels();
         loadQuota();
         loadHistory();
+        return;
+      } else if (data.isExpired || data.isLocked) {
+        showToast(data.message || 'Tài khoản đã hết hạn hoặc bị khóa.', 'error');
+        logout();
         return;
       }
     } catch (err) {
@@ -65,16 +74,81 @@ async function checkAuthStatus() {
   authToken = null;
   localStorage.removeItem('ytb_auth_token');
   renderNavUser();
+  handleUserRolesAndTimers();
   renderChannelSelection();
   renderChannelsManager();
+}
+
+function handleUserRolesAndTimers() {
+  const adminTabBtn = document.getElementById('nav-tab-admin');
+  const timerPill = document.getElementById('test-timer-pill');
+
+  if (testUserTimerInterval) {
+    clearInterval(testUserTimerInterval);
+    testUserTimerInterval = null;
+  }
+
+  if (currentUser) {
+    // 1. Nếu là Admin: Hiển thị tab Quản trị và tải danh sách tài khoản test
+    if (currentUser.role === 'admin') {
+      if (adminTabBtn) adminTabBtn.style.display = 'inline-block';
+      loadAdminTestUsers();
+    } else {
+      if (adminTabBtn) adminTabBtn.style.display = 'none';
+    }
+
+    // 2. Nếu là tài khoản Test dùng thử: Kích hoạt đồng hồ đếm ngược
+    if (currentUser.isTestAccount) {
+      if (timerPill) timerPill.style.display = 'flex';
+      startTestUserCountdown(currentUser.remainingSeconds || 600);
+    } else {
+      if (timerPill) timerPill.style.display = 'none';
+    }
+  } else {
+    if (adminTabBtn) adminTabBtn.style.display = 'none';
+    if (timerPill) timerPill.style.display = 'none';
+  }
+}
+
+// Bộ đếm ngược thời gian thực cho tài khoản Test
+function startTestUserCountdown(secondsLeft) {
+  let timeLeft = Math.max(0, Number(secondsLeft) || 0);
+  const timerText = document.getElementById('test-timer-text');
+
+  function updateDisplay() {
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    if (timerText) {
+      timerText.textContent = `⏱️ Dùng thử: ${formatted}`;
+    }
+
+    if (timeLeft <= 0) {
+      clearInterval(testUserTimerInterval);
+      testUserTimerInterval = null;
+      showToast('⚠️ Hết hạn 10 phút dùng thử! Phiên làm việc đã tự động khóa.', 'error');
+      setTimeout(() => {
+        logout();
+        window.location.href = '/login';
+      }, 2500);
+    }
+    timeLeft--;
+  }
+
+  updateDisplay();
+  testUserTimerInterval = setInterval(updateDisplay, 1000);
 }
 
 function renderNavUser() {
   const container = document.getElementById('auth-nav-container');
   if (currentUser) {
+    const roleBadge = currentUser.role === 'admin'
+      ? `<span style="background:var(--accent-red); color:#fff; font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; margin-right:4px;">ADMIN</span>`
+      : (currentUser.isTestAccount ? `<span style="background:#f59e0b; color:#000; font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; margin-right:4px;">TEST</span>` : '');
+
     container.innerHTML = `
       <div class="user-pill">
-        <span><strong>${currentUser.name || currentUser.email}</strong></span>
+        <span>${roleBadge}<strong>${currentUser.name || currentUser.email}</strong></span>
         <button type="button" class="btn btn-sm btn-outline" onclick="logout()" style="padding:2px 6px; font-size:0.75rem;">Đăng xuất</button>
       </div>
     `;
@@ -91,7 +165,12 @@ function logout() {
   authToken = null;
   currentUser = null;
   localStorage.removeItem('ytb_auth_token');
+  if (testUserTimerInterval) {
+    clearInterval(testUserTimerInterval);
+    testUserTimerInterval = null;
+  }
   renderNavUser();
+  handleUserRolesAndTimers();
   channelsState = [];
   renderChannelSelection();
   renderChannelsManager();
@@ -951,6 +1030,244 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
+// ==================== ADMIN TEST USERS MANAGEMENT ====================
+function initAdminPanel() {
+  const refreshBtn = document.getElementById('btn-refresh-admin-users');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      loadAdminTestUsers();
+      showToast('Đã làm mới danh sách tài khoản test.');
+    });
+  }
+
+  const quickCreateBtn = document.getElementById('btn-quick-create-test-user');
+  if (quickCreateBtn) {
+    quickCreateBtn.addEventListener('click', async () => {
+      await createAdminTestUser('', '', 10);
+    });
+  }
+
+  const form = document.getElementById('admin-create-test-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('admin-test-email').value.trim();
+      const password = document.getElementById('admin-test-pass').value.trim();
+      const duration = document.getElementById('admin-test-duration').value || 10;
+      await createAdminTestUser(email, password, duration);
+      form.reset();
+      document.getElementById('admin-test-duration').value = '10';
+    });
+  }
+}
+
+async function loadAdminTestUsers() {
+  if (!authToken || !currentUser || currentUser.role !== 'admin') return;
+
+  try {
+    const res = await fetch('/api/admin/test-users', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && Array.isArray(data.users)) {
+      adminTestUsersList = data.users;
+      renderAdminTestUsersTable();
+      startAdminUsersTableCountdown();
+    }
+  } catch (err) {
+    console.error('Lỗi tải danh sách tài khoản test:', err);
+  }
+}
+
+function renderAdminTestUsersTable() {
+  const tbody = document.getElementById('admin-test-users-tbody');
+  const emptyState = document.getElementById('empty-admin-users-state');
+  if (!tbody) return;
+
+  if (adminTestUsersList.length === 0) {
+    tbody.innerHTML = '';
+    if (emptyState) emptyState.style.display = 'block';
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = 'none';
+
+  tbody.innerHTML = adminTestUsersList.map(u => {
+    const remainingMins = Math.floor(u.remainingSeconds / 60);
+    const remainingSecs = u.remainingSeconds % 60;
+    const timeFormatted = `${String(remainingMins).padStart(2, '0')}:${String(remainingSecs).padStart(2, '0')}`;
+
+    let statusBadge = '';
+    let timeBadge = '';
+
+    if (u.isLocked) {
+      statusBadge = `<span class="status-badge status-pending" style="background:#dc2626; color:#fff;">Đã khóa</span>`;
+      timeBadge = `<span style="color:var(--text-muted); font-family:monospace;">--:--</span>`;
+    } else if (u.isExpired || u.remainingSeconds <= 0) {
+      statusBadge = `<span class="status-badge status-failed" style="background:rgba(239,68,68,0.2); color:#ef4444;">Hết hạn 10p</span>`;
+      timeBadge = `<span style="color:#ef4444; font-weight:600; font-family:monospace;">00:00 (Hết hạn)</span>`;
+    } else {
+      statusBadge = `<span class="status-badge status-success" style="background:rgba(16,185,129,0.2); color:#10b981;">Đang hoạt động</span>`;
+      timeBadge = `<span id="admin-user-timer-${u.id}" style="color:#10b981; font-weight:600; font-family:monospace;">⏱️ ${timeFormatted}</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:600; color:#fff;">${u.email}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${u.name || 'Người dùng test'}</div>
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <code style="background:var(--bg-main); padding:2px 6px; border-radius:4px; border:1px solid var(--border-subtle);">${u.plainPassword}</code>
+            <button type="button" class="btn btn-sm btn-outline" style="padding:2px 6px; font-size:0.72rem;" onclick="copyTestUserCredentials('${u.email}', '${u.plainPassword}')">
+              Copy
+            </button>
+          </div>
+        </td>
+        <td>${u.durationMinutes || 10} phút</td>
+        <td>${timeBadge}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align:center;">
+          <div style="display:inline-flex; gap:4px;">
+            <button type="button" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:0.75rem;" onclick="extendAdminTestUser('${u.id}', 10)">
+              +10 Phút
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" style="padding:3px 8px; font-size:0.75rem;" onclick="toggleLockAdminTestUser('${u.id}')">
+              ${u.isLocked ? 'Mở Khóa' : 'Khóa'}
+            </button>
+            <button type="button" class="btn btn-sm btn-danger-outline" style="padding:3px 8px; font-size:0.75rem;" onclick="deleteAdminTestUser('${u.id}', '${u.email}')">
+              Xóa
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function startAdminUsersTableCountdown() {
+  if (adminUsersInterval) clearInterval(adminUsersInterval);
+
+  adminUsersInterval = setInterval(() => {
+    let hasActive = false;
+    adminTestUsersList.forEach(u => {
+      if (!u.isLocked && u.remainingSeconds > 0) {
+        u.remainingSeconds--;
+        hasActive = true;
+        const el = document.getElementById(`admin-user-timer-${u.id}`);
+        if (el) {
+          const mins = Math.floor(u.remainingSeconds / 60);
+          const secs = u.remainingSeconds % 60;
+          el.textContent = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+          if (u.remainingSeconds === 0) {
+            u.isExpired = true;
+            renderAdminTestUsersTable();
+          }
+        }
+      }
+    });
+
+    if (!hasActive && adminUsersInterval) {
+      // Nothing actively ticking
+    }
+  }, 1000);
+}
+
+async function createAdminTestUser(email, password, durationMinutes) {
+  const submitBtn = document.getElementById('btn-submit-create-test');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Đang tạo...';
+  }
+
+  try {
+    const res = await fetch('/api/admin/create-test-user', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ email, password, durationMinutes })
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      showToast(`Tạo thành công: ${data.user.email} (Mật khẩu: ${data.user.plainPassword})`, 'success');
+      loadAdminTestUsers();
+    } else {
+      showToast(data.message || 'Lỗi tạo tài khoản test', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối máy chủ: ' + err.message, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Tạo Tài Khoản';
+    }
+  }
+}
+
+async function extendAdminTestUser(userId, minutes = 10) {
+  try {
+    const res = await fetch(`/api/admin/extend-test-user/${userId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ minutes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      loadAdminTestUsers();
+    } else {
+      showToast(data.message || 'Lỗi gia hạn', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối máy chủ: ' + err.message, 'error');
+  }
+}
+
+async function toggleLockAdminTestUser(userId) {
+  try {
+    const res = await fetch(`/api/admin/toggle-lock-user/${userId}`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      loadAdminTestUsers();
+    } else {
+      showToast(data.message || 'Lỗi thao tác', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối máy chủ: ' + err.message, 'error');
+  }
+}
+
+async function deleteAdminTestUser(userId, email) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa tài khoản test ${email}?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/test-users/${userId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã xóa tài khoản test thành công.', 'success');
+      loadAdminTestUsers();
+    } else {
+      showToast(data.message || 'Lỗi xóa tài khoản', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
+}
+
+function copyTestUserCredentials(email, password) {
+  const text = `Tài khoản dùng thử YouTube Multi-Publisher (Hạn dùng 10 phút):\nEmail: ${email}\nMật khẩu: ${password}\nĐăng nhập tại: ${window.location.origin}/login`;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Đã sao chép thông tin tài khoản vào Clipboard!', 'success');
+  }).catch(() => {
+    showToast(`Email: ${email} | Mật khẩu: ${password}`);
+  });
+}
+
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -963,3 +1280,4 @@ function formatBytes(bytes, decimals = 2) {
 function formatNumber(num) {
   return new Intl.NumberFormat('vi-VN').format(num || 0);
 }
+

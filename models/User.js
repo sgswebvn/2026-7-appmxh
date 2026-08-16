@@ -23,7 +23,32 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
+    enum: ['admin', 'user'],
     default: 'user'
+  },
+  isTestAccount: {
+    type: Boolean,
+    default: false
+  },
+  durationMinutes: {
+    type: Number,
+    default: 10
+  },
+  expiresAt: {
+    type: Date,
+    default: null
+  },
+  isLocked: {
+    type: Boolean,
+    default: false
+  },
+  plainPassword: {
+    type: String,
+    default: ''
+  },
+  createdBy: {
+    type: String,
+    default: 'system'
   },
   createdAt: {
     type: Date,

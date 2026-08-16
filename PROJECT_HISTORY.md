@@ -96,11 +96,29 @@ GEMINI_API_KEY=AQ.Ab8RN6Kj9_KZVQ6egDt5TsCZSK2YbYtRdjbd0Y4xyVPjkcguag
 - **Anti-Spam Multi-Tier:** Giới hạn 100 req/min (DDoS), khóa IP tự động 15 phút nếu vi phạm 3 lần, giới hạn 8 lần đăng nhập sai, Cooldown đếm ngược (4s - 5s) trên các nút bấm.
 - **Self-Healing Engine:** Tự động cắt tiêu đề > 100 ký tự, lọc tags > 500 ký tự, auto-retry mạng chập chờn, dọn dẹp file tạm rác định kỳ mỗi 15 phút.
 
+### 7. Tính năng Quản trị viên (Admin) tạo tài khoản Dùng thử (Test User - Tự động khóa sau 10 phút):
+- **Tài khoản Admin mặc định:** `admin@admin.com` / `admin123` (Role: `admin`). Tự động khởi tạo ngay khi server kết nối Database.
+- **Admin Panel chuyên dụng:** Tab "Quản Trị Admin" trên thanh điều hướng (chỉ hiển thị với Admin).
+- **Tính năng cho Admin:**
+  1. **Tạo tài khoản 1-Click:** Tự động sinh Email (`test_xxx@demo.local`), Mật khẩu ngẫu nhiên và thời hạn (mặc định 10 phút).
+  2. **Tùy chỉnh:** Cho phép Admin tự nhập Email, Mật khẩu và tùy biến số phút dùng thử (từ 1 đến 1440 phút).
+  3. **Quản lý danh sách:** Hiển thị toàn bộ tài khoản test, mật khẩu bản rõ (Plain Password) để Admin 1-Click copy gửi cho khách, đồng hồ đếm ngược thời gian thực, trạng thái (Đang hoạt động / Đã hết hạn / Đã khóa).
+  4. **Thao tác nhanh:** Nút "+10 Phút" gia hạn thời gian, nút "Khóa / Mở khóa" tức thì, nút "Xóa" tài khoản.
+- **Cơ chế tự động khóa và bảo vệ bảo mật:**
+  - **Backend Layer:** Middleware `authenticateToken` và `POST /api/auth/login` kiểm tra `expiresAt` và `isLocked`. Khi quá thời gian 10 phút, tự động từ chối truy cập với mã `403 Forbidden` và thông báo rõ ràng cho người dùng.
+  - **Frontend Layer:** Hiển thị Badge đếm ngược `⏱️ Dùng thử: mm:ss` trên Navbar. Khi về `00:00`, tự động hiện cảnh báo hết hạn và chuyển về trang đăng nhập.
+
+### 8. Tương thích triển khai Vercel Serverless & GitHub:
+- Cấu hình `vercel.json` định tuyến toàn bộ request về Express application.
+- Xuất `module.exports = app` và xử lý kết nối Database Mongoose an toàn cho cả môi trường máy chủ độc lập lẫn Serverless Lambda.
+
 ---
 
 ## 💡 6. HƯỚNG DẪN DÀNH CHO AI MODEL KẾ TIẾP (INSTRUCTIONS FOR NEXT AI):
 1. Khi chạy lệnh npm trên môi trường Windows PowerShell, luôn dùng: `cmd /c npm <lệnh>` để tránh bị PowerShell chặn policy.
 2. Để khởi chạy server: `node server.js` (Server chạy tại port `3000`).
-3. Model Gemini khả dụng trên API key hiện tại là **`gemini-2.5-flash`** (các model cũ như `gemini-1.5-flash` hay `gemini-pro` trả về 404 trên v1beta).
-4. Luôn giữ vững thiết kế tối giản 3 màu cơ bản, không tự ý chèn lại emoji rườm rà vào giao diện.
-5. Toàn bộ mã nguồn đã được commit và push lên nhánh `main` của repository GitHub: `https://github.com/sgswebvn/2026-4-ytbmuti.git`.
+3. Tài khoản Quản trị viên Admin: `admin@admin.com` / `admin123`.
+4. Model Gemini khả dụng trên API key hiện tại là **`gemini-2.5-flash`** (các model cũ như `gemini-1.5-flash` hay `gemini-pro` trả về 404 trên v1beta).
+5. Luôn giữ vững thiết kế tối giản 3 màu cơ bản, không tự ý chèn lại emoji rườm rà vào giao diện.
+6. Toàn bộ mã nguồn đã được commit và push lên nhánh `main` của repository GitHub: `https://github.com/sgswebvn/2026-4-ytbmuti.git`.
+

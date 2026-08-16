@@ -122,6 +122,224 @@ async function findUserById(id) {
   }
 }
 
+// ==================== ADMIN & TEST USER OPERATIONS ====================
+
+// Tự động khởi tạo tài khoản Quản trị viên (Admin) mặc định nếu chưa tồn tại
+async function initDefaultAdmin() {
+  try {
+    const adminEmail = 'admin@admin.com';
+    let admin = await findUserByEmail(adminEmail);
+    if (!admin) {
+      if (isConnectedToMongo()) {
+        const user = new User({
+          email: adminEmail,
+          password: 'admin123',
+          name: 'Administrator',
+          role: 'admin',
+          isTestAccount: false
+        });
+        await user.save();
+        console.log('👑 [Admin] Đã khởi tạo tài khoản Admin mặc định (admin@admin.com / admin123)');
+      } else {
+        await createUser({
+          email: adminEmail,
+          password: 'admin123',
+          name: 'Administrator',
+          role: 'admin'
+        });
+        console.log('👑 [Admin] Đã khởi tạo tài khoản Admin Local (admin@admin.com / admin123)');
+      }
+    } else if (admin.role !== 'admin') {
+      if (isConnectedToMongo()) {
+        await User.findByIdAndUpdate(admin._id, { role: 'admin' });
+      } else {
+        const db = readLocalDB();
+        const found = (db.users || []).find(u => u.email === adminEmail);
+        if (found) {
+          found.role = 'admin';
+          writeLocalDB(db);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi khởi tạo tài khoản Admin:', err.message);
+  }
+}
+
+// Admin tạo tài khoản Test tự động khóa sau N phút (mặc định 10 phút)
+async function createTestUser({ email, password, name, durationMinutes = 10, createdBy = 'admin' }) {
+  const cleanEmail = email.toLowerCase().trim();
+  const duration = Number(durationMinutes) || 10;
+  const expiresAt = new Date(Date.now() + duration * 60 * 1000);
+
+  if (isConnectedToMongo()) {
+    const user = new User({
+      email: cleanEmail,
+      password: password,
+      name: name || `Test User (${duration}m)`,
+      role: 'user',
+      isTestAccount: true,
+      durationMinutes: duration,
+      expiresAt: expiresAt,
+      isLocked: false,
+      plainPassword: password,
+      createdBy: createdBy
+    });
+    return await user.save();
+  } else {
+    const db = readLocalDB();
+    if (!db.users) db.users = [];
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = {
+      _id: uuidv4(),
+      id: uuidv4(),
+      email: cleanEmail,
+      password: hashedPassword,
+      name: name || `Test User (${duration}m)`,
+      role: 'user',
+      isTestAccount: true,
+      durationMinutes: duration,
+      expiresAt: expiresAt.toISOString(),
+      isLocked: false,
+      plainPassword: password,
+      createdBy: createdBy,
+      createdAt: new Date().toISOString()
+    };
+    db.users.push(newUser);
+    writeLocalDB(db);
+    return newUser;
+  }
+}
+
+// Lấy danh sách tất cả tài khoản Test cho Admin
+async function getTestUsers() {
+  let users = [];
+  if (isConnectedToMongo()) {
+    users = await User.find({ isTestAccount: true }).sort({ createdAt: -1 }).lean();
+  } else {
+    const db = readLocalDB();
+    users = (db.users || []).filter(u => u.isTestAccount);
+  }
+
+  const now = Date.now();
+  return users.map(u => {
+    const expTime = u.expiresAt ? new Date(u.expiresAt).getTime() : 0;
+    const remainingSeconds = expTime > now ? Math.floor((expTime - now) / 1000) : 0;
+    const isExpired = expTime ? now >= expTime : false;
+
+    return {
+      id: u._id ? u._id.toString() : u.id,
+      email: u.email,
+      name: u.name,
+      plainPassword: u.plainPassword || '******',
+      durationMinutes: u.durationMinutes || 10,
+      expiresAt: u.expiresAt,
+      isLocked: Boolean(u.isLocked),
+      isExpired: isExpired,
+      remainingSeconds: remainingSeconds,
+      createdAt: u.createdAt,
+      createdBy: u.createdBy || 'admin'
+    };
+  });
+}
+
+// Gia hạn thêm thời gian cho tài khoản Test (+10p, +30p,...) và mở khóa
+async function extendTestUser(userId, additionalMinutes = 10) {
+  const addMs = Number(additionalMinutes) * 60 * 1000;
+  const now = Date.now();
+
+  if (isConnectedToMongo()) {
+    const user = await User.findById(userId);
+    if (!user) return null;
+
+    const currentExp = user.expiresAt ? new Date(user.expiresAt).getTime() : now;
+    const baseTime = currentExp > now ? currentExp : now;
+    const newExpiresAt = new Date(baseTime + addMs);
+
+    user.expiresAt = newExpiresAt;
+    user.isLocked = false;
+    user.durationMinutes = (user.durationMinutes || 10) + Number(additionalMinutes);
+    return await user.save();
+  } else {
+    const db = readLocalDB();
+    const user = (db.users || []).find(u => (u._id && u._id.toString() === userId.toString()) || u.id === userId);
+    if (!user) return null;
+
+    const currentExp = user.expiresAt ? new Date(user.expiresAt).getTime() : now;
+    const baseTime = currentExp > now ? currentExp : now;
+    user.expiresAt = new Date(baseTime + addMs).toISOString();
+    user.isLocked = false;
+    user.durationMinutes = (user.durationMinutes || 10) + Number(additionalMinutes);
+    writeLocalDB(db);
+    return user;
+  }
+}
+
+// Khóa hoặc Mở khóa thủ công tài khoản
+async function toggleLockUser(userId) {
+  if (isConnectedToMongo()) {
+    const user = await User.findById(userId);
+    if (!user) return null;
+    user.isLocked = !user.isLocked;
+    return await user.save();
+  } else {
+    const db = readLocalDB();
+    const user = (db.users || []).find(u => (u._id && u._id.toString() === userId.toString()) || u.id === userId);
+    if (!user) return null;
+    user.isLocked = !user.isLocked;
+    writeLocalDB(db);
+    return user;
+  }
+}
+
+// Xóa tài khoản Test
+async function deleteTestUser(userId) {
+  if (isConnectedToMongo()) {
+    await Channel.deleteMany({ userId: userId.toString() });
+    await History.deleteMany({ userId: userId.toString() });
+    await GeminiDraft.deleteMany({ userId: userId.toString() });
+    return await User.findByIdAndDelete(userId);
+  } else {
+    const db = readLocalDB();
+    db.users = (db.users || []).filter(u => !( (u._id && u._id.toString() === userId.toString()) || u.id === userId ));
+    db.channels = (db.channels || []).filter(c => c.userId !== userId.toString());
+    db.history = (db.history || []).filter(h => h.userId !== userId.toString());
+    db.geminiDrafts = (db.geminiDrafts || []).filter(g => g.userId !== userId.toString());
+    writeLocalDB(db);
+    return true;
+  }
+}
+
+// Kiểm tra trạng thái hết hạn và tự động khóa nếu quá thời gian
+function checkUserLockAndExpiry(user) {
+  if (!user) return { isExpired: false, isLocked: false, remainingSeconds: 0 };
+
+  const isLocked = Boolean(user.isLocked);
+  let isExpired = false;
+  let remainingSeconds = 0;
+
+  if (user.isTestAccount && user.expiresAt) {
+    const now = Date.now();
+    const expTime = new Date(user.expiresAt).getTime();
+    if (now >= expTime) {
+      isExpired = true;
+      remainingSeconds = 0;
+    } else {
+      remainingSeconds = Math.floor((expTime - now) / 1000);
+    }
+  }
+
+  return {
+    isExpired,
+    isLocked,
+    remainingSeconds,
+    canAccess: !isLocked && !isExpired
+  };
+}
+
 async function updateUserGeminiKey(userId, apiKey) {
   if (isConnectedToMongo()) {
     return await User.findByIdAndUpdate(userId, { geminiApiKey: apiKey }, { returnDocument: 'after' });
@@ -371,6 +589,13 @@ module.exports = {
   findUserByEmail,
   findUserById,
   updateUserGeminiKey,
+  initDefaultAdmin,
+  createTestUser,
+  getTestUsers,
+  extendTestUser,
+  toggleLockUser,
+  deleteTestUser,
+  checkUserLockAndExpiry,
   getChannels,
   getChannelById,
   saveChannel,

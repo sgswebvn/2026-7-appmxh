@@ -13,7 +13,7 @@ const { connectDB, getMongoStatus } = require('./config/db');
 const dbService = require('./services/dbService');
 const youtubeService = require('./services/youtubeService');
 const geminiService = require('./services/geminiService');
-const { authenticateToken, optionalAuth, JWT_SECRET } = require('./middleware/auth');
+const { authenticateToken, requireAdmin, optionalAuth, JWT_SECRET } = require('./middleware/auth');
 const {
   ipBanChecker,
   globalDdosLimiter,
@@ -118,7 +118,14 @@ app.post('/api/auth/register', authBruteForceLimiter, async (req, res) => {
       success: true,
       message: 'Đăng ký tài khoản thành công!',
       token,
-      user: { id: userId, email: user.email, name: user.name, geminiApiKey: user.geminiApiKey || '' }
+      user: {
+        id: userId,
+        email: user.email,
+        name: user.name,
+        role: user.role || 'user',
+        isTestAccount: false,
+        geminiApiKey: user.geminiApiKey || ''
+      }
     });
   } catch (err) {
     console.error('Register Error:', err);
@@ -126,7 +133,7 @@ app.post('/api/auth/register', authBruteForceLimiter, async (req, res) => {
   }
 });
 
-// 2. Đăng nhập tài khoản
+// 2. Đăng nhập tài khoản (Kiểm tra khóa và thời hạn 10 phút)
 app.post('/api/auth/login', authBruteForceLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -144,6 +151,19 @@ app.post('/api/auth/login', authBruteForceLimiter, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác.' });
     }
 
+    // Kiểm tra khóa hoặc hết hạn dùng thử
+    const lockStatus = dbService.checkUserLockAndExpiry(user);
+    if (!lockStatus.canAccess) {
+      return res.status(403).json({
+        success: false,
+        isExpired: lockStatus.isExpired,
+        isLocked: lockStatus.isLocked,
+        message: lockStatus.isExpired
+          ? 'Tài khoản dùng thử đã hết hạn 10 phút sử dụng. Vui lòng liên hệ Quản trị viên (Admin) để được gia hạn.'
+          : 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên (Admin).'
+      });
+    }
+
     const userId = user._id ? user._id.toString() : user.id;
     const token = jwt.sign({ id: userId, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -151,7 +171,17 @@ app.post('/api/auth/login', authBruteForceLimiter, async (req, res) => {
       success: true,
       message: 'Đăng nhập thành công!',
       token,
-      user: { id: userId, email: user.email, name: user.name, geminiApiKey: user.geminiApiKey || '' }
+      user: {
+        id: userId,
+        email: user.email,
+        name: user.name,
+        role: user.role || 'user',
+        isTestAccount: Boolean(user.isTestAccount),
+        expiresAt: user.expiresAt || null,
+        isLocked: Boolean(user.isLocked),
+        remainingSeconds: lockStatus.remainingSeconds,
+        geminiApiKey: user.geminiApiKey || ''
+      }
     });
   } catch (err) {
     console.error('Login Error:', err);
@@ -173,6 +203,7 @@ app.post('/api/auth/quick-test', async (req, res) => {
       });
     }
 
+    const lockStatus = dbService.checkUserLockAndExpiry(user);
     const userId = user._id ? user._id.toString() : user.id;
     const token = jwt.sign({ id: userId, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -180,7 +211,17 @@ app.post('/api/auth/quick-test', async (req, res) => {
       success: true,
       message: 'Đăng nhập tài khoản Test thành công!',
       token,
-      user: { id: userId, email: user.email, name: user.name, geminiApiKey: user.geminiApiKey || '' }
+      user: {
+        id: userId,
+        email: user.email,
+        name: user.name,
+        role: user.role || 'user',
+        isTestAccount: Boolean(user.isTestAccount),
+        expiresAt: user.expiresAt || null,
+        isLocked: Boolean(user.isLocked),
+        remainingSeconds: lockStatus.remainingSeconds,
+        geminiApiKey: user.geminiApiKey || ''
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Lỗi đăng nhập nhanh: ' + err.message });
@@ -200,6 +241,114 @@ app.put('/api/auth/gemini-key', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Đã lưu Gemini API Key thành công!' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ==================== ADMIN MANAGEMENT APIS ====================
+
+// Lấy danh sách tất cả tài khoản Test
+app.get('/api/admin/test-users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const testUsers = await dbService.getTestUsers();
+    res.json({ success: true, users: testUsers });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi lấy danh sách tài khoản test: ' + err.message });
+  }
+});
+
+// Admin tạo tài khoản Test mới (Tự động khóa sau 10 phút sử dụng hoặc thời gian tùy chọn)
+app.post('/api/admin/create-test-user', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    let { email, password, name, durationMinutes } = req.body;
+    durationMinutes = Number(durationMinutes) || 10;
+
+    // Nếu không nhập email/password, tự động sinh ngẫu nhiên
+    if (!email || email.trim() === '') {
+      const randStr = Math.random().toString(36).substring(2, 7);
+      email = `test_${randStr}@demo.local`;
+    }
+
+    if (!password || password.trim() === '') {
+      const randPass = Math.floor(100000 + Math.random() * 900000);
+      password = `pass${randPass}`;
+    }
+
+    const existingUser = await dbService.findUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: `Email ${email} đã tồn tại trong hệ thống.` });
+    }
+
+    const newUser = await dbService.createTestUser({
+      email,
+      password,
+      name: name || `Test User (${durationMinutes}m)`,
+      durationMinutes,
+      createdBy: req.user.email
+    });
+
+    res.json({
+      success: true,
+      message: `Đã tạo tài khoản test thành công (Hạn mức: ${durationMinutes} phút).`,
+      user: {
+        id: newUser._id ? newUser._id.toString() : newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        plainPassword: password,
+        durationMinutes: durationMinutes,
+        expiresAt: newUser.expiresAt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tạo tài khoản test: ' + err.message });
+  }
+});
+
+// Admin gia hạn thời gian cho tài khoản Test (+10p, +30p,...)
+app.post('/api/admin/extend-test-user/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { minutes } = req.body;
+    const additionalMinutes = Number(minutes) || 10;
+    const updatedUser = await dbService.extendTestUser(req.params.id, additionalMinutes);
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản để gia hạn.' });
+    }
+
+    res.json({
+      success: true,
+      message: `Đã gia hạn thêm ${additionalMinutes} phút và mở khóa tài khoản thành công!`,
+      expiresAt: updatedUser.expiresAt
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi gia hạn tài khoản: ' + err.message });
+  }
+});
+
+// Admin khóa / mở khóa thủ công tài khoản
+app.post('/api/admin/toggle-lock-user/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const updatedUser = await dbService.toggleLockUser(req.params.id);
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+    }
+
+    res.json({
+      success: true,
+      isLocked: updatedUser.isLocked,
+      message: updatedUser.isLocked ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi thao tác khóa tài khoản: ' + err.message });
+  }
+});
+
+// Admin xóa tài khoản Test
+app.delete('/api/admin/test-users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await dbService.deleteTestUser(req.params.id);
+    res.json({ success: true, message: 'Đã xóa tài khoản test thành công.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi xóa tài khoản test: ' + err.message });
   }
 });
 
@@ -596,14 +745,18 @@ const autoFixService = require('./services/autoFixService');
 // Khởi chạy Server và kết nối Database
 async function startServer() {
   await connectDB();
+  await dbService.initDefaultAdmin();
 
-  // Khởi động tiến trình tự động dọn dẹp file tạm rác theo chu kỳ
-  autoFixService.startPeriodicTempClean(UPLOADS_DIR, 60);
+  // Khởi động tiến trình tự động dọn dẹp file tạm rác theo chu kỳ (môi trường server)
+  if (!process.env.VERCEL) {
+    autoFixService.startPeriodicTempClean(UPLOADS_DIR, 60);
+  }
 
   const server = app.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(`🛡️ YouTube Multi-Publisher v2.5 (Self-Healing & Anti-Spam Active)`);
     console.log(`🚀 Đang chạy tại: http://localhost:${PORT}`);
+    console.log(`👑 Tài khoản Admin: admin@admin.com / admin123`);
     console.log(`====================================================`);
   });
 
@@ -612,6 +765,15 @@ async function startServer() {
     console.log('Đang đóng máy chủ an toàn...');
     server.close(() => process.exit(0));
   });
+
+  return server;
 }
 
-startServer();
+// Chạy trực tiếp nếu là file chính, hoặc tự động kết nối DB khi chạy Serverless trên Vercel
+if (process.env.VERCEL) {
+  connectDB().then(() => dbService.initDefaultAdmin());
+} else {
+  startServer();
+}
+
+module.exports = app;

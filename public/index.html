@@ -31,9 +31,16 @@
       <button class="nav-tab" data-tab="history-tab">
         Lịch Sử & Hạn Mức
       </button>
+      <button class="nav-tab" data-tab="admin-tab" id="nav-tab-admin" style="display:none; color:#ef4444; border-color:rgba(239, 68, 68, 0.3);">
+        Quản Trị Admin
+      </button>
     </div>
 
     <div class="nav-right">
+      <div class="quota-pill" id="test-timer-pill" style="display:none; border-color:#f59e0b; color:#fbbf24; background:rgba(245, 158, 11, 0.1);">
+        <span id="test-timer-text">Dùng thử: 10:00</span>
+      </div>
+
       <div class="quota-pill" id="db-status-pill">
         <div class="status-dot" id="db-status-dot"></div>
         <span id="db-status-text">MongoDB Atlas</span>
@@ -373,6 +380,75 @@
 
         <div id="empty-history-state" style="text-align:center; padding: 24px; color:var(--text-muted); display:none;">
           <p style="font-size:0.85rem;">Chưa có lịch sử đăng video nào.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: QUẢN TRỊ ADMIN (TÀI KHOẢN TEST 10 PHÚT) ==================== -->
+    <section id="admin-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Quản Trị Hệ Thống & Cấp Quyền Dùng Thử</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Tạo tài khoản dùng thử cho khách hàng trải nghiệm. Hệ thống tự động khóa sau thời gian quy định (mặc định 10 phút).
+            </p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-admin-users">
+              Làm mới danh sách
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-quick-create-test-user">
+              + Tạo Nhanh Tài Khoản 10 Phút
+            </button>
+          </div>
+        </div>
+
+        <!-- Form tạo tài khoản Test tùy chỉnh -->
+        <div style="background:var(--bg-input); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:16px; margin-bottom:20px;">
+          <h4 style="color:#fff; font-size:0.88rem; margin-bottom:12px; font-weight:600;">Tùy Chỉnh Tạo Tài Khoản Dùng Thử:</h4>
+          <form id="admin-create-test-form">
+            <div class="form-row">
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" for="admin-test-email">Email đăng nhập (Để trống để tự sinh)</label>
+                <input type="text" id="admin-test-email" class="form-input" placeholder="Ví dụ: guest01@demo.local">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label class="form-label" for="admin-test-pass">Mật khẩu (Để trống để tự sinh)</label>
+                <input type="text" id="admin-test-pass" class="form-input" placeholder="Ví dụ: pass123456">
+              </div>
+              <div class="form-group" style="width:140px;">
+                <label class="form-label" for="admin-test-duration">Thời hạn (Phút)</label>
+                <input type="number" id="admin-test-duration" class="form-input" value="10" min="1" max="1440">
+              </div>
+              <div class="form-group" style="align-self:flex-end;">
+                <button type="submit" class="btn btn-primary" id="btn-submit-create-test" style="height:38px; white-space:nowrap;">
+                  Tạo Tài Khoản
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Bảng danh sách tài khoản test -->
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Email Đăng Nhập</th>
+                <th>Mật Khẩu</th>
+                <th>Thời Hạn Gốc</th>
+                <th>Thời Gian Còn Lại</th>
+                <th>Trạng Thái</th>
+                <th style="text-align:center;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="admin-test-users-tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="empty-admin-users-state" style="text-align:center; padding: 28px; color:var(--text-muted); display:none;">
+          <p style="font-size:0.85rem;">Chưa có tài khoản test nào được tạo.</p>
         </div>
       </div>
     </section>
