@@ -128,8 +128,8 @@ app.post('/api/auth/register', (req, res) => {
 app.post('/api/auth/login', authBruteForceLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập Email và Mật khẩu.' });
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ Email và Mật khẩu hợp lệ.' });
     }
 
     const user = await dbService.findUserByEmail(email);

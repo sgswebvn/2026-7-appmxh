@@ -290,6 +290,7 @@ async function extendTestUser(userId, additionalMinutes = 10) {
   const now = Date.now();
 
   if (isConnectedToMongo()) {
+    if (!mongoose.isValidObjectId(userId)) return null;
     const user = await User.findById(userId);
     if (!user) return null;
 
@@ -320,6 +321,7 @@ async function extendTestUser(userId, additionalMinutes = 10) {
 async function toggleLockUser(userId) {
   await ensureMongoConnected();
   if (isConnectedToMongo()) {
+    if (!mongoose.isValidObjectId(userId)) return null;
     const user = await User.findById(userId);
     if (!user) return null;
     user.isLocked = !user.isLocked;
@@ -338,10 +340,13 @@ async function toggleLockUser(userId) {
 async function deleteTestUser(userId) {
   await ensureMongoConnected();
   if (isConnectedToMongo()) {
-    await Channel.deleteMany({ userId: userId.toString() });
-    await History.deleteMany({ userId: userId.toString() });
-    await GeminiDraft.deleteMany({ userId: userId.toString() });
-    return await User.findByIdAndDelete(userId);
+    if (mongoose.isValidObjectId(userId)) {
+      await Channel.deleteMany({ userId: userId.toString() });
+      await History.deleteMany({ userId: userId.toString() });
+      await GeminiDraft.deleteMany({ userId: userId.toString() });
+      return await User.findByIdAndDelete(userId);
+    }
+    return true;
   } else {
     const db = readLocalDB();
     db.users = (db.users || []).filter(u => !( (u._id && u._id.toString() === userId.toString()) || u.id === userId ));

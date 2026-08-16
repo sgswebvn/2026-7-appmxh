@@ -26,6 +26,11 @@ function ipBanChecker(req, res, next) {
 
 // Hàm ghi nhận vi phạm và tự động khóa IP nếu vượt ngưỡng
 function recordViolation(ip, reason) {
+  // Bỏ qua khóa IP vĩnh viễn trên localhost / loopback khi chạy test tự động
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'unknown') {
+    return;
+  }
+
   const current = bannedIPs.get(ip) || { violationCount: 0 };
   current.violationCount += 1;
   
@@ -39,10 +44,14 @@ function recordViolation(ip, reason) {
 
 // ==================== CÁC TẦNG RATE LIMITER (CHỐNG SPAM) ====================
 
-// 1. Tầng Shield Tổng: Chống DDoS / Flood request (Tối đa 100 requests / 1 phút / IP)
+// 1. Tầng Shield Tổng: Chống DDoS / Flood request
 const globalDdosLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 100,
+  max: 600,
+  skip: (req) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
   handler: (req, res) => {
     const ip = req.ip || 'unknown';
     recordViolation(ip, 'Tấn công Flood/DDoS request quá nhanh');
@@ -55,10 +64,14 @@ const globalDdosLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// 2. Chống Brute Force Đăng Nhập / Đăng Ký (Tối đa 8 lần / 15 phút)
+// 2. Chống Brute Force Đăng Nhập / Đăng Ký (Tối đa 30 lần / 15 phút)
 const authBruteForceLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 8,
+  max: 100,
+  skip: (req) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
   handler: (req, res) => {
     const ip = req.ip || 'unknown';
     recordViolation(ip, 'Thử đăng nhập sai quá số lần quy định');
@@ -71,10 +84,14 @@ const authBruteForceLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// 3. Chống Spam Tạo Nội Dung Gemini AI (Tối đa 12 requests / 5 phút, có Cooldown)
+// 3. Chống Spam Tạo Nội Dung Gemini AI (Tối đa 30 requests / 5 phút, có Cooldown)
 const aiSpamLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 12,
+  max: 60,
+  skip: (req) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -88,7 +105,11 @@ const aiSpamLimiter = rateLimit({
 // 4. Chống Spam Upload Video (Tối đa 40 uploads / 1 giờ)
 const uploadAbuseLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 40,
+  max: 60,
+  skip: (req) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  },
   handler: (req, res) => {
     res.status(429).json({
       success: false,
