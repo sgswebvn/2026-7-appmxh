@@ -13,12 +13,13 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email'
 ];
 
-function createOAuth2Client() {
-  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+function createOAuth2Client(customRedirectUri = null) {
+  const redirectUri = customRedirectUri || process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/callback/google';
+  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, redirectUri);
 }
 
-function getAuthUrl(userId = 'default_user') {
-  const oauth2Client = createOAuth2Client();
+function getAuthUrl(userId = 'default_user', customRedirectUri = null) {
+  const oauth2Client = createOAuth2Client(customRedirectUri);
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
@@ -27,8 +28,8 @@ function getAuthUrl(userId = 'default_user') {
   });
 }
 
-async function handleOAuthCallback(code, userId = 'default_user') {
-  const oauth2Client = createOAuth2Client();
+async function handleOAuthCallback(code, userId = 'default_user', customRedirectUri = null) {
+  const oauth2Client = createOAuth2Client(customRedirectUri);
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
 

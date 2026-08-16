@@ -312,8 +312,15 @@ app.get('/api/health/db', (req, res) => {
 app.get('/api/auth/url', optionalAuth, (req, res) => {
   try {
     const userId = req.user ? req.user.id : (req.query.userId || 'default_user');
-    const authUrl = youtubeService.getAuthUrl(userId);
-    res.json({ success: true, authUrl });
+    
+    // Tự động nhận diện domain hiện tại (Vercel HTTPS hoặc Localhost)
+    const host = req.get('host');
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || (host.includes('localhost') ? 'http' : 'https');
+    const dynamicRedirectUri = `${protocol}://${host}/api/auth/callback/google`;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || dynamicRedirectUri;
+
+    const authUrl = youtubeService.getAuthUrl(userId, redirectUri);
+    res.json({ success: true, authUrl, redirectUri });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -323,6 +330,11 @@ app.get('/api/auth/url', optionalAuth, (req, res) => {
 app.get('/api/auth/callback/google', async (req, res) => {
   const { code, state, error } = req.query;
   const userId = state || 'default_user';
+
+  const host = req.get('host');
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || (host.includes('localhost') ? 'http' : 'https');
+  const dynamicRedirectUri = `${protocol}://${host}/api/auth/callback/google`;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || dynamicRedirectUri;
 
   if (error) {
     return res.send(`
@@ -340,7 +352,7 @@ app.get('/api/auth/callback/google', async (req, res) => {
   }
 
   try {
-    const channelData = await youtubeService.handleOAuthCallback(code, userId);
+    const channelData = await youtubeService.handleOAuthCallback(code, userId, redirectUri);
 
     res.send(`
       <html>
