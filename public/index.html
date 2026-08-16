@@ -23,7 +23,7 @@
         Phân Phối Video
       </button>
       <button class="nav-tab" data-tab="gemini-tab">
-        Phân Tích AI
+        Soạn Thảo & Gợi Ý
       </button>
       <button class="nav-tab" data-tab="channels-tab">
         Quản Lý Kênh (<span id="channel-count-badge">0</span>)
@@ -31,7 +31,7 @@
       <button class="nav-tab" data-tab="history-tab">
         Lịch Sử & Hạn Mức
       </button>
-      <button class="nav-tab" data-tab="admin-tab" id="nav-tab-admin" style="display:none; color:#ef4444; border-color:rgba(239, 68, 68, 0.3);">
+      <button class="nav-tab" data-tab="admin-tab" id="nav-tab-admin" style="display:none; color:#fb7185; border-color:rgba(225, 29, 72, 0.3);">
         Quản Trị Admin
       </button>
     </div>
@@ -139,9 +139,9 @@
           <div class="col-right">
             <div class="glass-panel">
               <div class="panel-header">
-                <h3 class="panel-title">4. Nội Dung Video</h3>
+                <h3 class="panel-title">2. Nội Dung Video</h3>
                 <button type="button" class="btn btn-sm btn-outline" onclick="switchTab('gemini-tab')">
-                  Tạo bằng AI
+                  Gợi ý tiêu đề & mô tả
                 </button>
               </div>
 
@@ -185,27 +185,27 @@
                 <div class="form-group">
                   <label class="form-label" for="made-for-kids">Dành cho trẻ em?</label>
                   <select id="made-for-kids" class="form-select">
-                    <option value="false">Không, không dành cho trẻ em</option>
-                    <option value="true">Có, nội dung dành cho trẻ em</option>
+                    <option value="false">Không dành cho trẻ em</option>
+                    <option value="true">Dành cho trẻ em</option>
                   </select>
                 </div>
               </div>
 
               <div class="accordion" id="custom-channel-accordion">
                 <div class="accordion-header" onclick="toggleAccordion()">
-                  <span>Tùy biến riêng từng kênh (Chống trùng lặp nội dung)</span>
+                  <span>Tùy biến riêng từng kênh</span>
                   <span id="accordion-arrow">▼</span>
                 </div>
                 <div class="accordion-body" id="custom-channel-fields">
                   <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:8px;">
-                    Điền tiêu đề hoặc mô tả khác nhau cho từng kênh nếu bạn muốn tối ưu thuật toán:
+                    Nhập tiêu đề hoặc mô tả riêng cho từng kênh:
                   </p>
                   <div id="channel-overrides-container"></div>
                 </div>
               </div>
 
-              <button type="submit" class="btn btn-primary" id="btn-submit-upload" style="width: 100%; padding: 12px; font-size: 0.95rem; font-weight:600;">
-                Bắt Đầu Phân Phối Video Đến Các Kênh
+              <button type="submit" class="btn btn-primary" id="btn-submit-upload" style="width: 100%; padding: 11px; font-size: 0.92rem; font-weight:600;">
+                Bắt Đầu Đăng Video Lên Các Kênh
               </button>
 
             </div>
@@ -215,14 +215,14 @@
       </form>
     </section>
 
-    <!-- ==================== TAB 2: GEMINI AI STUDIO ==================== -->
+    <!-- ==================== TAB 2: SOẠN THẢO & GỢI Ý ==================== -->
     <section id="gemini-tab" class="tab-pane">
       <div class="glass-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Phân Tích & Sáng Tạo Nội Dung Bằng AI</h3>
+            <h3 class="panel-title">Soạn Thảo & Gợi Ý Nội Dung</h3>
             <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
-              Tự động tạo tiêu đề Viral, mô tả chuẩn SEO, thẻ tags và biến thể riêng cho từng kênh.
+              Gợi ý tiêu đề, mô tả chuẩn và bộ thẻ từ khóa phù hợp cho từng kênh.
             </p>
           </div>
         </div>
@@ -230,14 +230,14 @@
         <form id="gemini-ai-form">
           <div class="grid-2">
             <div class="form-group">
-              <label class="form-label" for="ai-topic">Chủ đề Video hoặc Kịch bản tóm tắt *</label>
-              <textarea id="ai-topic" class="form-textarea" placeholder="Nhập chủ đề hoặc dàn ý nội dung video..." required style="min-height:75px;"></textarea>
+              <label class="form-label" for="ai-topic">Chủ đề Video hoặc Tóm tắt nội dung *</label>
+              <textarea id="ai-topic" class="form-textarea" placeholder="Nhập chủ đề hoặc dàn ý video..." required style="min-height:75px;"></textarea>
             </div>
 
             <div>
               <div class="form-group">
                 <label class="form-label" for="ai-audience">Đối tượng khán giả</label>
-                <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Người yêu công nghệ, học sinh sinh viên...">
+                <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Người xem trẻ, giới văn phòng...">
               </div>
 
               <div class="form-row">
@@ -252,53 +252,53 @@
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label" for="ai-key-input">Gemini API Key (Tùy chọn)</label>
-                  <input type="password" id="ai-key-input" class="form-input" placeholder="Để trống để dùng cấu hình mặc định">
+                  <label class="form-label" for="ai-key-input">Khóa API riêng (Tùy chọn)</label>
+                  <input type="password" id="ai-key-input" class="form-input" placeholder="Để trống để dùng mặc định">
                 </div>
               </div>
             </div>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-            <button type="submit" class="btn btn-primary" id="btn-generate-ai" style="padding:10px 20px;">
-              Phân Tích & Tạo Nội Dung
+            <button type="submit" class="btn btn-primary" id="btn-generate-ai" style="padding:9px 18px;">
+              Tạo Gợi Ý Nội Dung
             </button>
-            <span id="ai-loading-text" style="display:none; color:var(--text-muted); font-size:0.84rem;">Đang xử lý nội dung với Gemini AI...</span>
+            <span id="ai-loading-text" style="display:none; color:var(--text-muted); font-size:0.82rem;">Đang tạo gợi ý nội dung...</span>
           </div>
         </form>
 
-        <div id="ai-results-wrapper" style="display:none; margin-top:20px;">
+        <div id="ai-results-wrapper" style="display:none; margin-top:18px;">
           
-          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); border:1px solid var(--border-subtle); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); border:1px solid var(--border-subtle); padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:12px;">
             <div>
-              <h4 style="color:#fff; font-size:0.95rem; font-weight:600;">Kết Quả Phân Tích Hoàn Tất</h4>
-              <p style="font-size:0.78rem; color:var(--text-muted);" id="ai-engine-source">Hệ thống Gemini AI Engine</p>
+              <h4 style="color:#fff; font-size:0.9rem; font-weight:600;">Gợi Ý Đã Sẵn Sàng</h4>
+              <p style="font-size:0.75rem; color:var(--text-muted);" id="ai-engine-source">Bộ tạo nội dung tự động</p>
             </div>
             <button type="button" class="btn btn-accent btn-sm" id="btn-apply-all-to-publisher" onclick="applyAllAiToPublisher()">
-              Đưa Vào Bảng Phân Phối Video
+              Áp Dụng Vào Bảng Đăng Video
             </button>
           </div>
 
-          <div class="glass-panel" style="background:var(--bg-input);">
-            <h4 style="color:var(--text-primary); margin-bottom:10px; font-size:0.9rem; font-weight:600;">Top Tiêu Đề Đề Xuất (Bấm để chọn):</h4>
+          <div class="glass-panel" style="background:var(--bg-input); padding:14px; margin-bottom:12px;">
+            <h4 style="color:var(--text-primary); margin-bottom:8px; font-size:0.86rem; font-weight:600;">Gợi ý tiêu đề (Bấm để chọn):</h4>
             <div id="ai-titles-list"></div>
           </div>
 
           <div class="grid-2">
-            <div class="glass-panel" style="background:var(--bg-input);">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <h4 style="color:var(--text-primary); font-size:0.9rem; font-weight:600;">Mô Tả Video (SEO):</h4>
+            <div class="glass-panel" style="background:var(--bg-input); padding:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <h4 style="color:var(--text-primary); font-size:0.86rem; font-weight:600;">Mô Tả Video:</h4>
                 <button type="button" class="btn btn-sm btn-outline" onclick="copyAiDescription()">Sao chép</button>
               </div>
-              <textarea id="ai-generated-desc" class="form-textarea" style="min-height:140px; font-size:0.82rem;" readonly></textarea>
+              <textarea id="ai-generated-desc" class="form-textarea" style="min-height:120px; font-size:0.82rem;" readonly></textarea>
             </div>
 
-            <div class="glass-panel" style="background:var(--bg-input);">
-              <h4 style="color:var(--text-primary); font-size:0.9rem; font-weight:600; margin-bottom:8px;">Tags Từ Khóa:</h4>
-              <div id="ai-tags-container" style="margin-bottom:12px;"></div>
+            <div class="glass-panel" style="background:var(--bg-input); padding:14px;">
+              <h4 style="color:var(--text-primary); font-size:0.86rem; font-weight:600; margin-bottom:6px;">Thẻ từ khóa:</h4>
+              <div id="ai-tags-container" style="margin-bottom:10px;"></div>
 
-              <h4 style="color:var(--text-primary); font-size:0.9rem; font-weight:600; margin-bottom:6px;">Biến Thể Từng Kênh:</h4>
-              <div id="ai-channel-variants-container" style="font-size:0.8rem; color:var(--text-muted);"></div>
+              <h4 style="color:var(--text-primary); font-size:0.86rem; font-weight:600; margin-bottom:6px;">Biến thể từng kênh:</h4>
+              <div id="ai-channel-variants-container" style="font-size:0.78rem; color:var(--text-muted);"></div>
             </div>
           </div>
 

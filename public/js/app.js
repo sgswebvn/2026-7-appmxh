@@ -152,18 +152,18 @@ function startTestUserCountdown(secondsLeft) {
   let timeLeft = Math.max(0, Number(secondsLeft) || 0);
   const timerText = document.getElementById('test-timer-text');
 
-  function updateDisplay() {
+    function updateDisplay() {
     const mins = Math.floor(timeLeft / 60);
     const secs = timeLeft % 60;
     const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     if (timerText) {
-      timerText.textContent = `⏱️ Dùng thử: ${formatted}`;
+      timerText.textContent = `Dùng thử: ${formatted}`;
     }
 
     if (timeLeft <= 0) {
       clearInterval(testUserTimerInterval);
       testUserTimerInterval = null;
-      showToast('⚠️ Hết hạn 10 phút dùng thử! Phiên làm việc đã tự động khóa.', 'error');
+      showToast('Hết hạn 10 phút dùng thử. Phiên làm việc đã tự động khóa.', 'error');
       setTimeout(() => {
         logout();
         window.location.href = '/login';
@@ -580,14 +580,14 @@ function initGeminiStudio() {
       showToast('Lỗi gửi yêu cầu: ' + err.message, 'error');
     } finally {
       loadingText.style.display = 'none';
-      let cooldown = 4;
+      let cooldown = 3;
       const interval = setInterval(() => {
         btn.textContent = `Chờ (${cooldown}s)...`;
         cooldown--;
         if (cooldown < 0) {
           clearInterval(interval);
           btn.disabled = false;
-          btn.textContent = 'Phân Tích & Tạo Nội Dung';
+          btn.textContent = 'Tạo Gợi Ý Nội Dung';
         }
       }, 1000);
     }
@@ -598,9 +598,7 @@ function renderAiResults(data, isAiGenerated) {
   const wrapper = document.getElementById('ai-results-wrapper');
   wrapper.style.display = 'block';
 
-  document.getElementById('ai-engine-source').textContent = isAiGenerated 
-    ? 'Mô hình Gemini 2.5 Flash Engine'
-    : 'Bộ máy thuật toán YouTube SEO';
+  document.getElementById('ai-engine-source').textContent = 'Bộ gợi ý nội dung tối ưu';
 
   // Render Titles
   const titlesList = document.getElementById('ai-titles-list');
@@ -1161,7 +1159,7 @@ function renderAdminTestUsersTable() {
       timeBadge = `<span style="color:#ef4444; font-weight:600; font-family:monospace;">00:00 (Đã khóa)</span>`;
     } else {
       statusBadge = `<span class="status-badge status-success" style="background:rgba(16,185,129,0.2); color:#10b981;">Đang dùng thử</span>`;
-      timeBadge = `<span id="admin-user-timer-${u.id}" style="color:#10b981; font-weight:600; font-family:monospace;">⏱️ ${timeFormatted}</span>`;
+      timeBadge = `<span id="admin-user-timer-${u.id}" style="color:#10b981; font-weight:600; font-family:monospace;">${timeFormatted}</span>`;
     }
 
     return `
@@ -1212,7 +1210,7 @@ function startAdminUsersTableCountdown() {
         if (el) {
           const mins = Math.floor(u.remainingSeconds / 60);
           const secs = u.remainingSeconds % 60;
-          el.textContent = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+          el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
           if (u.remainingSeconds === 0) {
             u.isExpired = true;
             renderAdminTestUsersTable();
