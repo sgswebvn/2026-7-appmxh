@@ -461,14 +461,29 @@
                   <div id="render-progress-bar" style="width:0%; height:100%; background:#38bdf8; transition:width 0.3s ease;"></div>
                 </div>
               </div>
-              <div id="render-result-box" style="display:none; margin-top:10px; padding:8px 12px; background:#10131c; border-radius:4px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                <span style="color:#34d399; font-size:0.78rem; font-weight:500;">Đã tạo thành công video MP4!</span>
-                <div style="display:flex; gap:6px;">
-                  <button type="button" class="btn btn-sm btn-outline" onclick="handleExportCapCutDraft()" style="border-color:#ec4899; color:#f472b6; font-size:0.74rem;">
-                    🎬 Xuất Dự Án CapCut (PC)
+              <div id="render-result-box" style="display:none; margin-top:12px; padding:14px; background:#080b12; border:1px solid #38bdf8; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="color:#34d399; font-size:0.86rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+                    <span>✅</span> Video MP4 Đã Tạo Xong - Xem Trước Trực Tiếp Tại Đây!
+                  </span>
+                  <span class="status-badge status-success" style="font-size:0.7rem;">Chuẩn 1080x1920 MP4</span>
+                </div>
+
+                <!-- Khung Video Player Trực Tiếp Trên Màn Hình -->
+                <div id="ai-video-player-container" style="max-width:320px; margin:0 auto 12px; background:#000; border-radius:6px; overflow:hidden; border:1px solid #1e293b; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+                  <video id="ai-rendered-video-preview" controls playsinline style="width:100%; aspect-ratio:9/16; display:block; object-fit:contain; background:#090d16;"></video>
+                </div>
+
+                <!-- Bộ Nút Thao Tác Trực Tiếp Với Video -->
+                <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-sm btn-primary" onclick="pushRenderedVideoToPublisher()" style="font-size:0.8rem; padding:6px 14px;">
+                    🚀 Chuyển Sang Phân Phối Video ➔
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="pushRenderedVideoToPublisher()" style="font-size:0.74rem;">
-                    Chuyển Sang Phân Phối Video ➔
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-download-video" onclick="downloadRenderedVideo()" style="border-color:#34d399; color:#34d399; font-size:0.8rem; padding:6px 12px;">
+                    ⬇️ Tải Video MP4 Về Máy
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="handleExportCapCutDraft()" style="border-color:#ec4899; color:#f472b6; font-size:0.8rem; padding:6px 12px;">
+                    🎬 Xuất Dự Án CapCut (Tùy Chọn Mở Rộng)
                   </button>
                 </div>
               </div>

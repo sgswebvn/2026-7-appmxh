@@ -1455,7 +1455,7 @@ async function renderVideoFromAiStudio() {
 
     const data = await res.json();
     if (data.success && data.jobId) {
-      pollRenderJobProgress(data.jobId);
+      pollRenderJobProgress(data.jobId, audioUrl, title, scriptText);
     } else {
       progressBox.style.display = 'none';
       btn.disabled = false;
@@ -1468,7 +1468,7 @@ async function renderVideoFromAiStudio() {
   }
 }
 
-function pollRenderJobProgress(jobId) {
+function pollRenderJobProgress(jobId, audioUrlFallback = '', videoTitle = '', scriptText = '') {
   const statusText = document.getElementById('render-status-text');
   const percentText = document.getElementById('render-percent-text');
   const progressBar = document.getElementById('render-progress-bar');
@@ -1490,8 +1490,18 @@ function pollRenderJobProgress(jobId) {
           btn.disabled = false;
           statusText.textContent = 'Hoàn tất render video MP4!';
           currentRenderedVideoUrl = data.status.videoUrl;
-          resultBox.style.display = 'flex';
-          showToast('Đã tạo thành công video MP4 kèm phụ đề Karaoke!', 'success');
+          
+          if (resultBox) resultBox.style.display = 'block';
+          const videoPreviewEl = document.getElementById('ai-rendered-video-preview');
+          if (videoPreviewEl) {
+            // Nạp video URL (hoặc audio fallback nếu môi trường dev chưa có FFmpeg)
+            videoPreviewEl.src = currentRenderedVideoUrl;
+            videoPreviewEl.poster = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280"><rect width="100%" height="100%" fill="%23090d16"/><text x="50%" y="45%" fill="%23FACC15" font-size="44" font-weight="900" font-family="sans-serif" text-anchor="middle">🔥 ' + encodeURIComponent(videoTitle.substring(0, 25)) + '</text><text x="50%" y="55%" fill="%2338bdf8" font-size="28" font-family="sans-serif" text-anchor="middle">VIDEO AI AUTO-GENERATED</text></svg>';
+            videoPreviewEl.load();
+            videoPreviewEl.play().catch(() => {});
+          }
+
+          showToast('Đã tạo thành công video MP4 kèm phụ đề Karaoke! Đang phát thử trên màn hình...', 'success');
         } else if (data.status.status === 'FAILED') {
           clearInterval(pollInterval);
           btn.disabled = false;
@@ -1504,6 +1514,24 @@ function pollRenderJobProgress(jobId) {
       btn.disabled = false;
     }
   }, 1000);
+}
+
+// Tải Video MP4 đã Render trực tiếp về máy tính
+function downloadRenderedVideo() {
+  if (!currentRenderedVideoUrl) {
+    showToast('Chưa có file video nào được tạo để tải về!', 'warning');
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = currentRenderedVideoUrl;
+  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video_AI_Shorts';
+  a.download = `${title.replace(/[^a-zA-Z0-9_\-]/g, '_')}.mp4`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  showToast('Bắt đầu tải video MP4 về máy tính của bạn...', 'success');
 }
 
 // ==================== TỰ ĐỘNG TẠO ẢNH BÌA VIRAL (AUTO THUMBNAIL GENERATOR) ====================
