@@ -244,6 +244,40 @@ async function runFullSystemAudit() {
   }
 
   // -------------------------------------------------------------
+  // TEST SUITE 5.0: BRAND PERSONA & MULTI-SCENE AI STORYBOARD
+  // -------------------------------------------------------------
+  console.log('\n--- 5.0. KIỂM THỬ BRAND PERSONA & MULTI-SCENE AI GENERATOR ---');
+
+  const personasRes = await request('/api/ai/personas');
+  if (personasRes.ok && personasRes.body?.success && personasRes.body.personas?.length >= 3) {
+    logTest('BRAND_PERSONA', 'Lấy danh mục Nhân Vật Thương Hiệu (Persona)', 'PASS', `Tìm thấy ${personasRes.body.personas.length} Persona: Alex, Minh Anh, Kenji`);
+  } else {
+    logTest('BRAND_PERSONA', 'Lấy danh mục Nhân Vật Thương Hiệu (Persona)', 'FAIL', 'Lỗi tải danh mục Persona');
+  }
+
+  const scenesRes = await request('/api/ai/scenes-generate', {
+    method: 'POST',
+    body: JSON.stringify({
+      personaId: 'alex-tech',
+      aspectRatio: '9:16',
+      scriptData: {
+        hook: 'Bí mật kiểm soát AI năm 2026',
+        bodySections: [
+          { heading: 'Bước 1', content: 'Tự động hóa toàn diện quy trình sáng tạo' },
+          { heading: 'Bước 2', content: 'Tăng trưởng doanh thu đột phá' }
+        ],
+        callToAction: 'Đăng ký kênh ngay'
+      }
+    })
+  });
+
+  if (scenesRes.ok && scenesRes.body?.success && scenesRes.body.data?.scenes?.length >= 3) {
+    logTest('MULTI_SCENE_AI', 'Đồng bộ 3-5 Phân Cảnh Hình Ảnh Điện Ảnh AI', 'PASS', `Tạo thành công ${scenesRes.body.data.scenes.length} phân cảnh đồng bộ nhân vật: ${scenesRes.body.data.persona.name}`);
+  } else {
+    logTest('MULTI_SCENE_AI', 'Đồng bộ 3-5 Phân Cảnh Hình Ảnh Điện Ảnh AI', 'FAIL', scenesRes.body?.message || 'Lỗi sinh phân cảnh');
+  }
+
+  // -------------------------------------------------------------
   // TEST SUITE 5.1: AUTO B-ROLL FOOTAGE MATCHER & DOWNLOADER
   // -------------------------------------------------------------
   console.log('\n--- 5.1. KIỂM THỬ AUTO B-ROLL FOOTAGE MATCHER (PHASE 7.1) ---');

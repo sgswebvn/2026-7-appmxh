@@ -102,4 +102,28 @@ router.get('/drafts', authenticateToken, async (req, res) => {
   }
 });
 
+const brandPersonaService = require('../services/brandPersonaService');
+
+// 4. Lấy danh sách Brand Personas (Nhân vật đại diện & Phong cách thương hiệu)
+router.get('/personas', authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    personas: brandPersonaService.getPersonas()
+  });
+});
+
+// 5. Tự động sinh 3-5 Phân Cảnh Hình Ảnh Điện Ảnh Đồng Bộ Nhân Vật từ Kịch Bản
+router.post('/scenes-generate', authenticateToken, (req, res) => {
+  try {
+    const { scriptData, personaId, aspectRatio } = req.body;
+    const scenePackage = brandPersonaService.generateScenesFromScript(scriptData || {}, personaId || 'alex-tech', aspectRatio || '9:16');
+    res.json({
+      success: true,
+      data: scenePackage
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi sinh phân cảnh: ' + err.message });
+  }
+});
+
 module.exports = router;

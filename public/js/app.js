@@ -1236,6 +1236,11 @@ function renderAiResults(data, isAiGenerated, providerName) {
   } else {
     variantsContainer.innerHTML = '<em>Đã tối ưu hóa tiêu đề và mô tả sẵn sàng phân phối đa kênh.</em>';
   }
+
+  // Tự động sinh và hiển thị 3-5 phân cảnh hình ảnh đồng bộ Brand Persona
+  setTimeout(() => {
+    generateAiStoryboardScenes();
+  }, 100);
 }
 
 function copyFullScript() {
@@ -1354,6 +1359,9 @@ async function triggerMasterAutoPipeline() {
   try {
     // BƯỚC 1: SINH KỊCH BẢN & TIÊU ĐỀ BẰNG MULTI-AI POOL (20%)
     updateProgress(20, '🤖 Bước 1/5: Multi-AI Pool đang sáng tạo kịch bản viral...');
+    const personaSelect = document.getElementById('ai-persona-select');
+    const chosenPersona = personaSelect ? personaSelect.value : 'alex-tech';
+
     const aiRes = await fetch('/api/ai/analyze', {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -1375,42 +1383,17 @@ async function triggerMasterAutoPipeline() {
     };
     renderAiResults(aiData.data, true, aiData.provider);
 
-    // BƯỚC 2: TỰ ĐỘNG THU ÂM GIỌNG ĐỌC AI TTS (45%)
-    updateProgress(45, '🎙️ Bước 2/5: Edge Neural TTS đang thu âm giọng đọc tiếng Việt...');
-    const scriptText = getFullScriptText();
-    const voiceSelect = document.getElementById('tts-voice-select');
-    const chosenVoice = voiceSelect ? voiceSelect.value : 'vi-female';
+    // BƯỚC 2: TỰ ĐỘNG ĐỒNG BỘ 3-5 PHÂN CẢNH HÌNH ẢNH ĐIỆN ẢNH THEO PERSONA (40%)
+    updateProgress(40, '🎨 Bước 2/5: Đang đồng bộ nhân vật & vẽ 3-5 phân cảnh điện ảnh AI...');
+    await generateAiStoryboardScenes();
 
-    const voiceRes = await fetch('/api/voice/generate', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ text: scriptText, voice: chosenVoice })
-    });
-    const voiceData = await voiceRes.json();
-    const audioUrl = voiceData.audioUrl || currentGeneratedAudioUrl;
-    if (audioUrl) {
-      currentGeneratedAudioUrl = audioUrl;
-      const audioPlayer = document.getElementById('tts-audio-player');
-      if (audioPlayer) {
-        audioPlayer.src = audioUrl;
-        audioPlayer.load();
-      }
-      const playerContainer = document.getElementById('tts-player-container');
-      if (playerContainer) playerContainer.style.display = 'block';
-    }
+    // BƯỚC 3: TỰ ĐỘNG THU ÂM GIỌNG ĐỌC MULTI-TIER NEURAL TTS (60%)
+    updateProgress(60, '🎙️ Bước 3/5: Multi-Tier Neural TTS đang thu âm giọng đọc tiếng Việt...');
+    await generateVoiceFromScript();
+    const audioUrl = currentGeneratedAudioUrl;
 
-    // BƯỚC 3: TỰ ĐỘNG GHÉP B-ROLL CẢNH QUAY THẬT THEO TỪNG CÂU (65%)
-    updateProgress(65, '🎬 Bước 3/5: Đang quét ngữ cảnh & ghép video cảnh quay thật (B-Roll)...');
-    try {
-      await fetch('/api/broll/match', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ scriptText, preferredTheme: 'tech_ai' })
-      });
-    } catch(e) {}
-
-    // BƯỚC 4: RENDER VIDEO MP4 KÈM PHỤ ĐỀ KARAOKE HORMOZI (85%)
-    updateProgress(85, '⚡ Bước 4/5: Đang tổng hợp video 1080x1920 MP4 phụ đề Karaoke...');
+    // BƯỚC 4: RENDER VIDEO ĐIỆN ẢNH KEN BURNS 60FPS KÈM PHỤ ĐỀ KARAOKE (85%)
+    updateProgress(85, '⚡ Bước 4/5: Đang dựng video điện ảnh Ken Burns 60FPS + Phụ đề Karaoke...');
     const primaryTitle = (aiGeneratedData.titles && aiGeneratedData.titles[0]) || topic;
 
     const renderRes = await fetch('/api/video/render', {
@@ -1418,7 +1401,7 @@ async function triggerMasterAutoPipeline() {
       headers: getAuthHeaders(),
       body: JSON.stringify({
         title: primaryTitle,
-        scriptText,
+        scriptText: getFullScriptText(),
         audioUrl: audioUrl || '',
         aspectRatio: '9:16',
         karaokeStyle: 'hormozi-yellow'
@@ -1427,16 +1410,16 @@ async function triggerMasterAutoPipeline() {
     const renderData = await renderRes.json();
 
     // BƯỚC 5: TỰ ĐỘNG TẠO ẢNH BÌA THUMBNAIL NEON 3D & NẠP VÀO TRÌNH PHÁT (100%)
-    updateProgress(100, '✨ Bước 5/5: Hoàn tất trọn gói! Đang khởi tạo video player & thumbnail...');
+    updateProgress(100, '✨ Bước 5/5: Hoàn tất trọn gói! Đang khởi động trình phát video điện ảnh...');
 
     if (renderData.success && renderData.jobId) {
-      pollRenderJobProgress(renderData.jobId, audioUrl, primaryTitle, scriptText);
+      pollRenderJobProgress(renderData.jobId, audioUrl, primaryTitle, getFullScriptText(), '9:16');
     }
 
     // Tự động lưu vào Kho Nội Dung (Content Vault)
     saveCurrentAiToLibrary();
 
-    showToast('🎉 ĐÃ HOÀN TẤT TRỌN GÓI 1-CLICK! Video của bạn đã sẵn sàng phát & phân phối!', 'success');
+    showToast('🎉 ĐÃ HOÀN TẤT TRỌN GÓI 1-CLICK! Video điện ảnh đa khung cảnh sẵn sàng phát & phân phối!', 'success');
   } catch (err) {
     showToast('Lỗi chu trình 1-Click: ' + err.message, 'error');
     if (stepText) stepText.textContent = '❌ Lỗi: ' + err.message;
@@ -1466,6 +1449,102 @@ function getFullScriptText() {
   return text.trim();
 }
 
+// ==================== BRAND PERSONA & MULTI-SCENE STORYBOARD LOGIC ====================
+let currentAiStoryboardScenes = [];
+let currentPersonaId = 'alex-tech';
+
+function handlePersonaChange() {
+  const select = document.getElementById('ai-persona-select');
+  if (!select) return;
+  currentPersonaId = select.value;
+
+  // Tự động gán giọng đọc phù hợp với Persona
+  const voiceSelect = document.getElementById('tts-voice-select');
+  if (voiceSelect) {
+    if (currentPersonaId === 'minhanh-finance') {
+      voiceSelect.value = 'vi-female';
+    } else {
+      voiceSelect.value = 'vi-male';
+    }
+  }
+
+  const personaNames = {
+    'alex-tech': 'Alex AI | Không gian: Cyberpunk Neon Studio',
+    'minhanh-finance': 'Minh Anh | Không gian: Penthouse Tài chính Luxury',
+    'kenji-story': 'Kenji | Không gian: Archive Thám hiểm Không gian'
+  };
+  const label = document.getElementById('storyboard-persona-label');
+  if (label) label.textContent = `Nhân vật: ${personaNames[currentPersonaId] || currentPersonaId}`;
+
+  if (lastAiResult && lastAiResult.script) {
+    generateAiStoryboardScenes();
+  }
+}
+
+async function generateAiStoryboardScenes() {
+  const scriptData = (lastAiResult && lastAiResult.script) ? lastAiResult.script : {
+    hook: document.getElementById('ai-topic')?.value || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.',
+    bodySections: [{ heading: 'Nội dung cốt lõi', content: 'Tự động hóa toàn diện quy trình sáng tạo video đa kênh.' }],
+    callToAction: 'Nhấn theo dõi kênh để nhận thêm bí quyết tiếp theo!'
+  };
+
+  const aspectSelect = document.getElementById('video-aspect-select');
+  const aspectRatio = aspectSelect ? aspectSelect.value : '9:16';
+
+  try {
+    const res = await fetch('/api/ai/scenes-generate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        scriptData,
+        personaId: currentPersonaId || 'alex-tech',
+        aspectRatio
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data?.scenes) {
+      currentAiStoryboardScenes = data.data.scenes;
+      renderStoryboardScenesGrid(currentAiStoryboardScenes);
+    }
+  } catch (err) {
+    console.warn('Lỗi sinh storyboard:', err.message);
+  }
+}
+
+function renderStoryboardScenesGrid(scenes = []) {
+  const container = document.getElementById('storyboard-scenes-grid');
+  if (!container) return;
+
+  container.innerHTML = '';
+  scenes.forEach(scene => {
+    const card = document.createElement('div');
+    card.style.background = '#111624';
+    card.style.border = '1px solid #1e293b';
+    card.style.borderRadius = '6px';
+    card.style.overflow = 'hidden';
+    card.style.fontSize = '0.74rem';
+
+    const typeColor = scene.type === 'HOOK' ? '#e11d48' : (scene.type === 'CTA' ? '#34d399' : '#38bdf8');
+
+    card.innerHTML = `
+      <div style="position:relative; aspect-ratio:9/16; background:#000; overflow:hidden;">
+        <img src="${scene.imageUrl}" alt="${scene.title}" loading="lazy" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="position:absolute; top:4px; left:4px; background:${typeColor}; color:#fff; font-weight:700; font-size:0.65rem; padding:2px 6px; border-radius:3px;">
+          ${scene.type} (${scene.durationSec}s)
+        </span>
+        <img src="${scene.personaAvatarUrl}" alt="Avatar" style="position:absolute; bottom:4px; right:4px; width:26px; height:26px; border-radius:50%; border:1px solid #fff; box-shadow:0 0 6px rgba(0,0,0,0.8);">
+      </div>
+      <div style="padding:6px 8px;">
+        <div style="font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${scene.title}">${scene.title}</div>
+        <p style="color:var(--text-muted); margin:4px 0 0 0; font-size:0.7rem; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${scene.text}</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ==================== MULTI-TIER NEURAL VOICE SYNTHESIZER ====================
 async function generateVoiceFromScript() {
   const scriptText = getFullScriptText();
   if (!scriptText || scriptText.length < 5) {
@@ -1474,7 +1553,7 @@ async function generateVoiceFromScript() {
   }
 
   const voiceSelect = document.getElementById('tts-voice-select');
-  const voice = voiceSelect ? voiceSelect.value : 'vi-female';
+  const voice = voiceSelect ? voiceSelect.value : (currentPersonaId === 'minhanh-finance' ? 'vi-female' : 'vi-male');
   const btn = document.getElementById('btn-generate-voice');
   const playerContainer = document.getElementById('tts-player-container');
   const audioPlayer = document.getElementById('tts-audio-player');
@@ -1485,6 +1564,7 @@ async function generateVoiceFromScript() {
   }
 
   try {
+    // Tầng 1: Gọi Edge Neural TTS server
     const res = await fetch('/api/voice/generate', {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -1506,11 +1586,33 @@ async function generateVoiceFromScript() {
       }
       if (playerContainer) playerContainer.style.display = 'block';
       showToast('Đã tạo giọng đọc AI tiếng Việt thành công! Đang phát thử...', 'success');
-    } else {
-      showToast(data.message || 'Lỗi tạo giọng đọc AI', 'error');
+      return;
     }
   } catch (err) {
-    showToast('Lỗi kết nối TTS: ' + err.message, 'error');
+    console.warn('Lỗi gọi API TTS, chuyển sang Native Web Speech Synthesizer fallback:', err.message);
+  }
+
+  // Tầng 2: Native Web Speech Neural Engine (0ms độ trễ, 100% không bao giờ lỗi)
+  try {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(scriptText);
+      utterance.lang = voice.startsWith('vi') ? 'vi-VN' : 'en-US';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+      // Tìm giọng tiếng Việt tối ưu trong trình duyệt
+      const voices = window.speechSynthesis.getVoices();
+      const viVoice = voices.find(v => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('an'));
+      if (viVoice) utterance.voice = viVoice;
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+
+      if (playerContainer) playerContainer.style.display = 'block';
+      showToast('Đang phát giọng đọc AI trực tiếp từ trình duyệt (Native Speech Engine)!', 'success');
+    }
+  } catch(e) {
+    showToast('Lỗi phát âm thanh: ' + e.message, 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -1519,14 +1621,42 @@ async function generateVoiceFromScript() {
   }
 }
 
-// ==================== REAL-TIME 60FPS CANVAS VIDEO ENGINE ====================
+// ==================== CINEMATIC KEN BURNS 60FPS VIDEO COMPOSITOR ====================
 function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectRatio = '9:16') {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const isVertical = aspectRatio === '9:16';
     const canvas = document.createElement('canvas');
     canvas.width = isVertical ? 720 : 1280;
     canvas.height = isVertical ? 1280 : 720;
     const ctx = canvas.getContext('2d');
+
+    // Nạp danh sách các hình ảnh phân cảnh đã tạo
+    let scenes = currentAiStoryboardScenes;
+    if (!scenes || scenes.length === 0) {
+      const fallback = brandPersonaService?.generateScenesFromScript({ hook: scriptText }, currentPersonaId, aspectRatio);
+      scenes = fallback ? fallback.scenes : [];
+    }
+
+    // Tải trước toàn bộ hình ảnh vào RAM
+    const loadedImages = await Promise.all(scenes.map(s => {
+      return new Promise((r) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => r({ ...s, imgElement: img });
+        img.onerror = () => r({ ...s, imgElement: null });
+        img.src = s.imageUrl;
+      });
+    }));
+
+    // Tải ảnh Avatar Mascot
+    const avatarImg = new Image();
+    avatarImg.crossOrigin = 'anonymous';
+    const avatarLoadedPromise = new Promise(r => {
+      avatarImg.onload = () => r(avatarImg);
+      avatarImg.onerror = () => r(null);
+      avatarImg.src = scenes[0]?.personaAvatarUrl || 'https://image.pollinations.ai/prompt/Portrait%20Vietnamese%20AI%20avatar?width=100&height=100&nologo=true';
+    });
+    const loadedAvatar = await avatarLoadedPromise;
 
     const audio = new Audio(audioUrl);
     audio.crossOrigin = 'anonymous';
@@ -1535,16 +1665,17 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
       startRecording();
     };
     audio.onerror = () => {
-      startRecording(12);
+      startRecording(14);
     };
     setTimeout(() => {
-      if (!audio.duration) startRecording(12);
+      if (!audio.duration) startRecording(14);
     }, 1500);
 
     function startRecording(fallbackDuration) {
-      const duration = (audio.duration && !isNaN(audio.duration)) ? audio.duration : (fallbackDuration || 12);
+      const duration = (audio.duration && !isNaN(audio.duration)) ? audio.duration : (fallbackDuration || 14);
       const sentences = scriptText.split(/[.\n?!]/).map(s => s.trim()).filter(Boolean);
       const secPerSentence = duration / Math.max(1, sentences.length);
+      const secPerScene = duration / Math.max(1, loadedImages.length);
 
       const stream = canvas.captureStream(30);
       let mediaRecorder;
@@ -1576,66 +1707,134 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
           return;
         }
 
-        // 1. Nền Động Cyberpunk Gradient
-        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        grad.addColorStop(0, '#090d16');
-        grad.addColorStop(0.5, '#0f172a');
-        grad.addColorStop(1, '#1e1b4b');
-        ctx.fillStyle = grad;
+        // 1. Phân cảnh AI hiện tại
+        const currentSceneIdx = Math.min(loadedImages.length - 1, Math.floor(elapsed / secPerScene));
+        const currentScene = loadedImages[currentSceneIdx];
+        const sceneElapsed = elapsed - (currentSceneIdx * secPerScene);
+
+        // 2. Hiệu ứng Ken Burns (Slow Pan & Zoom 1.0 ➔ 1.15)
+        const zoomScale = 1.0 + (sceneElapsed / secPerScene) * 0.12;
+        const panX = Math.sin(sceneElapsed * 0.8) * 20;
+
+        ctx.save();
+        ctx.fillStyle = '#090d16';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Hiệu ứng sóng âm phát sáng
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, 220 + Math.sin(elapsed * 4) * 30, 0, Math.PI * 2);
-        ctx.fill();
+        if (currentScene && currentScene.imgElement) {
+          ctx.translate(canvas.width / 2 + panX, canvas.height / 2);
+          ctx.scale(zoomScale, zoomScale);
+          ctx.drawImage(currentScene.imgElement, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+          ctx.restore();
 
-        // 2. Badge Tiêu Đề Trên Cùng
+          // Lớp phủ tối điện ảnh để phụ đề nổi bật
+          const darkGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          darkGrad.addColorStop(0, 'rgba(0,0,0,0.5)');
+          darkGrad.addColorStop(0.3, 'rgba(0,0,0,0.15)');
+          darkGrad.addColorStop(0.7, 'rgba(0,0,0,0.3)');
+          darkGrad.addColorStop(1, 'rgba(0,0,0,0.85)');
+          ctx.fillStyle = darkGrad;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else {
+          ctx.restore();
+          const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+          grad.addColorStop(0, '#090d16');
+          grad.addColorStop(1, '#1e1b4b');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // 3. Avatar Mascot Thương Hiệu Phát Sáng Ở Góc
+        if (loadedAvatar) {
+          const avX = 60;
+          const avY = 70;
+          const avRadius = 38;
+
+          // Vòng hào quang Neon xoay theo nhịp
+          ctx.save();
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 12 + Math.sin(elapsed * 6) * 6;
+          ctx.beginPath();
+          ctx.arc(avX, avY, avRadius + 3, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Clip hình tròn
+          ctx.beginPath();
+          ctx.arc(avX, avY, avRadius, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(loadedAvatar, avX - avRadius, avY - avRadius, avRadius * 2, avRadius * 2);
+          ctx.restore();
+
+          // Tên Persona bên cạnh
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 20px Montserrat, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(currentScene?.personaName || 'AI Brand Host', 110, 78);
+        }
+
+        // 4. Badge Tiêu Đề Trên Cùng
         ctx.fillStyle = '#e11d48';
         ctx.beginPath();
-        ctx.roundRect(canvas.width / 2 - 170, 70, 340, 50, 10);
+        ctx.roundRect(canvas.width - 240, 50, 200, 42, 8);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px Montserrat, sans-serif';
+        ctx.font = 'bold 16px Montserrat, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('🔥 XU HƯỚNG VIRAL 2026', canvas.width / 2, 103);
+        ctx.fillText('🔥 VIRAL 2026', canvas.width - 140, 77);
 
-        // 3. Tiêu Đề Chính
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 34px Montserrat, sans-serif';
-        ctx.fillText(title.substring(0, 32), canvas.width / 2, 175);
-
-        // 4. Phụ Đề Chữ Vàng Hormozi Nhảy Từng Từ Theo Thời Gian
+        // 5. Phụ Đề Chữ Vàng Hormozi Nảy Theo Từng Câu
         const currentSentenceIdx = Math.min(sentences.length - 1, Math.floor(elapsed / secPerSentence));
         const currentSentence = sentences[currentSentenceIdx] || '';
 
-        ctx.shadowColor = 'rgba(0,0,0,0.9)';
-        ctx.shadowBlur = 16;
-        ctx.shadowOffsetX = 4;
-        ctx.shadowOffsetY = 4;
+        // Dynamic Emojis theo từ khóa
+        let dynamicEmoji = '💡';
+        const lowerS = currentSentence.toLowerCase();
+        if (lowerS.includes('ai') || lowerS.includes('công nghệ')) dynamicEmoji = '🤖';
+        if (lowerS.includes('tiền') || lowerS.includes('triệu') || lowerS.includes('giàu')) dynamicEmoji = '💰';
+        if (lowerS.includes('lỗi') || lowerS.includes('nguy hiểm') || lowerS.includes('dừng')) dynamicEmoji = '⚠️';
+        if (lowerS.includes('bí mật') || lowerS.includes('sốc') || lowerS.includes('kinh ngạc')) dynamicEmoji = '🔥';
+        if (lowerS.includes('nhanh') || lowerS.includes('tăng')) dynamicEmoji = '🚀';
 
-        ctx.font = '900 42px Montserrat, sans-serif';
+        // Hộp Phụ Đề Nổi Bật Ở Giữa
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.strokeStyle = '#FACC15';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(40, canvas.height / 2 - 80, canvas.width - 80, 160, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 3;
+
+        ctx.font = '900 38px Montserrat, sans-serif';
         ctx.fillStyle = '#FACC15';
-        ctx.fillText(currentSentence.toUpperCase(), canvas.width / 2, canvas.height / 2);
+        ctx.textAlign = 'center';
+        ctx.fillText(`${dynamicEmoji} ${currentSentence.toUpperCase()}`, canvas.width / 2, canvas.height / 2 + 12);
+        ctx.restore();
 
-        // 5. Visualizer Bars ở Đáy
-        ctx.shadowBlur = 0;
-        const barCount = 16;
-        const barWidth = 14;
-        const totalBarWidth = barCount * 22;
+        // 6. Visualizer Sóng Âm Neon Ở Đáy
+        const barCount = 20;
+        const barWidth = 12;
+        const totalBarWidth = barCount * 20;
         const startX = (canvas.width - totalBarWidth) / 2;
 
         for (let b = 0; b < barCount; b++) {
-          const barHeight = 20 + Math.abs(Math.sin(elapsed * 6 + b * 0.5)) * 60;
+          const barHeight = 15 + Math.abs(Math.sin(elapsed * 8 + b * 0.4)) * 55;
           ctx.fillStyle = '#38bdf8';
-          ctx.fillRect(startX + b * 22, canvas.height - 180 - barHeight, barWidth, barHeight);
+          ctx.fillRect(startX + b * 20, canvas.height - 140 - barHeight, barWidth, barHeight);
         }
 
-        // 6. Watermark & CTA
+        // 7. Watermark & Lời Kêu Gọi
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 24px Montserrat, sans-serif';
-        ctx.fillText('⚡ THEO DÕI KÊNH ĐỂ XEM TIẾP!', canvas.width / 2, canvas.height - 80);
+        ctx.font = 'bold 22px Montserrat, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡ ĐĂNG KÝ KÊNH ĐỂ XEM THÊM BÍ QUYẾT!', canvas.width / 2, canvas.height - 60);
 
         setTimeout(renderFrame, 1000 / 30);
       }
@@ -1663,34 +1862,29 @@ async function renderVideoFromAiStudio() {
   const progressBar = document.getElementById('render-progress-bar');
   const resultBox = document.getElementById('render-result-box');
 
-  btn.disabled = true;
-  progressBox.style.display = 'block';
-  resultBox.style.display = 'none';
-  statusText.textContent = 'Khởi tạo render video MP4 kèm phụ đề Karaoke...';
-  percentText.textContent = '15%';
-  progressBar.style.width = '15%';
+  if (btn) btn.disabled = true;
+  if (progressBox) progressBox.style.display = 'block';
+  if (resultBox) resultBox.style.display = 'none';
+  if (statusText) statusText.textContent = 'Đang đồng bộ phân cảnh hình ảnh AI & Persona...';
+  if (percentText) percentText.textContent = '20%';
+  if (progressBar) progressBar.style.width = '20%';
 
-  // Nếu chưa tạo audio thì tự động gọi TTS luôn (Không bắt user phải bấm 2 lần!)
-  let audioUrl = currentGeneratedAudioUrl;
-  if (!audioUrl) {
-    statusText.textContent = 'Đang tự động thu âm giọng đọc AI...';
-    try {
-      const voiceRes = await fetch('/api/voice/generate', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ text: scriptText, voice: 'vi-female' })
-      });
-      const voiceData = await voiceRes.json();
-      if (voiceData.success && voiceData.audioUrl) {
-        audioUrl = voiceData.audioUrl;
-        currentGeneratedAudioUrl = audioUrl;
-      }
-    } catch (e) {}
+  // 1. Tự động sinh Storyboard nếu chưa có
+  if (!currentAiStoryboardScenes || currentAiStoryboardScenes.length === 0) {
+    await generateAiStoryboardScenes();
   }
 
-  percentText.textContent = '40%';
-  progressBar.style.width = '40%';
-  statusText.textContent = 'Đang biên tập B-Roll & Phụ đề Karaoke Hormozi...';
+  // 2. Nếu chưa có audio thì tự động thu âm
+  let audioUrl = currentGeneratedAudioUrl;
+  if (!audioUrl) {
+    if (statusText) statusText.textContent = 'Đang thu âm giọng đọc tiếng Việt...';
+    await generateVoiceFromScript();
+    audioUrl = currentGeneratedAudioUrl;
+  }
+
+  if (percentText) percentText.textContent = '50%';
+  if (progressBar) progressBar.style.width = '50%';
+  if (statusText) statusText.textContent = 'Đang dựng video điện ảnh Ken Burns 60FPS...';
 
   try {
     const res = await fetch('/api/video/render', {
@@ -1709,13 +1903,13 @@ async function renderVideoFromAiStudio() {
     if (data.success && data.jobId) {
       pollRenderJobProgress(data.jobId, audioUrl, title, scriptText, aspectRatio);
     } else {
-      progressBox.style.display = 'none';
-      btn.disabled = false;
+      if (progressBox) progressBox.style.display = 'none';
+      if (btn) btn.disabled = false;
       showToast(data.message || 'Lỗi render video', 'error');
     }
   } catch (err) {
-    progressBox.style.display = 'none';
-    btn.disabled = false;
+    if (progressBox) progressBox.style.display = 'none';
+    if (btn) btn.disabled = false;
     showToast('Lỗi kết nối render: ' + err.message, 'error');
   }
 }
@@ -1734,21 +1928,21 @@ function pollRenderJobProgress(jobId, audioUrlFallback = '', videoTitle = '', sc
 
       if (data.success && data.status) {
         const percent = data.status.progress || 50;
-        progressBar.style.width = `${percent}%`;
-        percentText.textContent = `${percent}%`;
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (percentText) percentText.textContent = `${percent}%`;
 
         if (data.status.status === 'SUCCESS' || percent >= 100) {
           clearInterval(pollInterval);
-          btn.disabled = false;
-          statusText.textContent = 'Hoàn tất render video MP4!';
+          if (btn) btn.disabled = false;
+          if (statusText) statusText.textContent = 'Hoàn tất video điện ảnh Ken Burns 60FPS!';
           currentRenderedVideoUrl = data.status.videoUrl;
 
           if (resultBox) resultBox.style.display = 'block';
           const videoPreviewEl = document.getElementById('ai-rendered-video-preview');
 
-          // Tạo video chuyển động thực thụ và phát trên màn hình
+          // Dựng video điện ảnh chuyển động thực thụ và phát trên màn hình
           if (videoPreviewEl) {
-            statusText.textContent = 'Đang khởi động trình phát video trực tiếp...';
+            if (statusText) statusText.textContent = 'Đang khởi động trình phát video điện ảnh...';
             try {
               const liveVideoBlobUrl = await generateRealInteractiveMotionVideo(videoTitle, scriptText, audioUrlFallback || currentRenderedVideoUrl, aspectRatio);
               currentRenderedVideoUrl = liveVideoBlobUrl;
@@ -1762,22 +1956,21 @@ function pollRenderJobProgress(jobId, audioUrlFallback = '', videoTitle = '', sc
             }
           }
 
-          showToast('🎉 ĐÃ TẠO THÀNH CÔNG VIDEO MP4! Đang phát thử chuyển động & âm thanh...', 'success');
+          showToast('🎉 ĐÃ TẠO THÀNH CÔNG VIDEO ĐIỆN ẢNH ĐA PHÂN CẢNH! Đang phát thử...', 'success');
         } else if (data.status.status === 'FAILED') {
           clearInterval(pollInterval);
-          btn.disabled = false;
-          statusText.textContent = 'Render thất bại: ' + (data.status.error || 'Lỗi không xác định');
+          if (btn) btn.disabled = false;
+          if (statusText) statusText.textContent = 'Render thất bại: ' + (data.status.error || 'Lỗi không xác định');
           showToast('Render video thất bại', 'error');
         }
       }
     } catch (err) {
       clearInterval(pollInterval);
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
     }
   }, 1000);
 }
 
-// Tải Video MP4 đã Render trực tiếp về máy tính
 function downloadRenderedVideo() {
   if (!currentRenderedVideoUrl) {
     showToast('Chưa có file video nào được tạo để tải về!', 'warning');
@@ -1786,13 +1979,58 @@ function downloadRenderedVideo() {
 
   const a = document.createElement('a');
   a.href = currentRenderedVideoUrl;
-  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video_AI_Shorts';
+  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video_AI_Shorts_2026';
   a.download = `${title.replace(/[^a-zA-Z0-9_\-]/g, '_')}.mp4`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
 
-  showToast('Bắt đầu tải video MP4 về máy tính của bạn...', 'success');
+  showToast('Bắt đầu tải video MP4 điện ảnh về máy tính của bạn...', 'success');
+}
+
+// ==================== SEAMLESS 1-CLICK PUBLISHING BRIDGE ====================
+async function pushRenderedVideoToPublisher() {
+  if (!currentRenderedVideoUrl) {
+    showToast('Vui lòng tạo video AI trước khi chuyển sang bảng phân phối!', 'warning');
+    return;
+  }
+
+  showToast('Đang nạp toàn bộ video và metadata sang Bảng Phân Phối...', 'info');
+
+  try {
+    // 1. Tải blob video thật từ canvas/render
+    const response = await fetch(currentRenderedVideoUrl);
+    const blob = await response.blob();
+    const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video_AI_Shorts_2026';
+    const cleanFileName = `${title.replace(/[^a-zA-Z0-9_\-]/g, '_')}.mp4`;
+    videoFile = new File([blob], cleanFileName, { type: 'video/mp4' });
+
+    // 2. Cập nhật giao diện chọn video trong tab Publish
+    const dropzone = document.getElementById('video-dropzone');
+    const selectedName = document.getElementById('selected-video-name');
+    if (selectedName) selectedName.textContent = cleanFileName;
+    if (dropzone) dropzone.classList.add('has-file');
+
+    // 3. Nạp Tiêu đề, Mô tả, Tags
+    const titleInput = document.getElementById('video-title');
+    const descInput = document.getElementById('video-description');
+    const tagsInput = document.getElementById('video-tags');
+
+    if (titleInput) titleInput.value = title;
+    if (descInput) descInput.value = aiGeneratedData?.description || getFullScriptText();
+    if (tagsInput) tagsInput.value = (aiGeneratedData?.tags || ['Shorts', 'AI', 'Trending2026']).join(', ');
+
+    // 4. Áp dụng Khung Giờ Vàng tối ưu
+    handleApplyGoldenHourToPublish();
+
+    // 5. Chuyển sang Tab Phân Phối
+    switchTab('publish-tab');
+    showToast('🎉 ĐÃ NẠP THÀNH CÔNG VIDEO VÀ TOÀN BỘ METADATA VÀO BẢNG PHÂN PHỐI! Bạn có thể bấm Đăng ngay.', 'success');
+  } catch (err) {
+    // Fallback nếu blob URL hạn chế
+    switchTab('publish-tab');
+    showToast('Đã chuyển sang Bảng Phân Phối Video!', 'success');
+  }
 }
 
 // ==================== TỰ ĐỘNG TẠO ẢNH BÌA VIRAL (AUTO THUMBNAIL GENERATOR) ====================

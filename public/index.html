@@ -377,9 +377,20 @@
             </div>
 
             <div>
-              <div class="form-group">
-                <label class="form-label" for="ai-audience">Đối tượng khán giả mục tiêu</label>
-                <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Lập trình viên, người làm MMO, học sinh sinh viên...">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="ai-persona-select" style="color:#f472b6; font-weight:600;">🎭 Nhân Vật Đại Diện & Không Gian (Brand Persona):</label>
+                  <select id="ai-persona-select" class="form-select" onchange="handlePersonaChange()">
+                    <option value="alex-tech">🤖 Alex AI (Chuyên gia Công nghệ - Studio Neon Cyberpunk)</option>
+                    <option value="minhanh-finance">💼 Minh Anh (Nữ Doanh nhân - Penthouse Tài chính Luxury)</option>
+                    <option value="kenji-story">📜 Kenji (Kể chuyện / Bí ẩn - Archive Thám hiểm Không gian)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="ai-audience">Đối tượng khán giả mục tiêu</label>
+                  <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Lập trình viên, người làm MMO, học sinh sinh viên...">
+                </div>
               </div>
 
               <div class="form-row">
@@ -405,7 +416,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="btn btn-primary" id="btn-master-auto-pipeline" onclick="triggerMasterAutoPipeline()" style="background:linear-gradient(135deg, #e11d48, #9333ea); border:none; padding:10px 18px; font-weight:700; box-shadow:0 0 16px rgba(225,29,72,0.4);">
-                ⚡ CHẠY TRỌN GÓI AI 1-CLICK (Kịch Bản ➔ Thu Âm ➔ B-Roll ➔ Video ➔ Thumbnail)
+                ⚡ CHẠY TRỌN GÓI AI 1-CLICK (Nhân Vật ➔ Kịch Bản ➔ Phân Cảnh ➔ Thu Âm ➔ Video)
               </button>
               <button type="submit" class="btn btn-outline" id="btn-generate-ai" style="padding:9px 14px;">
                 Sinh Kịch Bản Nhanh
@@ -468,6 +479,26 @@
             <div id="ai-script-body-container" style="font-size:0.82rem; line-height:1.6; color:var(--text-secondary);"></div>
             <div id="ai-script-cta" style="background:#11151f; border-left:3px solid #34d399; padding:8px 12px; border-radius:4px; font-size:0.82rem; margin-top:8px;">
               <strong>Lời kêu gọi (CTA):</strong> <span id="ai-cta-text">...</span>
+            </div>
+
+            <!-- ==================== MULTI-SCENE STORYBOARD & BRAND PERSONA ==================== -->
+            <div id="ai-storyboard-panel" style="background:#090d16; border:1px solid rgba(244, 114, 182, 0.4); padding:12px; border-radius:var(--radius-sm); margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:1.1rem;">🎨</span>
+                  <div>
+                    <h5 style="color:#f472b6; font-size:0.85rem; font-weight:700; margin:0;">Bảng Phân Cảnh Điện Ảnh & Nhân Vật Đồng Bộ (Storyboard):</h5>
+                    <p style="font-size:0.72rem; color:var(--text-muted); margin:0;" id="storyboard-persona-label">Nhân vật: Alex AI | Không gian: Cyberpunk Neon Studio</p>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" onclick="generateAiStoryboardScenes()" style="border-color:#f472b6; color:#f472b6; padding:3px 10px; font-size:0.75rem;">
+                  ⚡ Tạo Lại Phân Cảnh AI
+                </button>
+              </div>
+
+              <div id="storyboard-scenes-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <!-- Render động các phân cảnh 1..4 tại đây -->
+              </div>
             </div>
 
             <!-- Voiceover TTS Generator -->
