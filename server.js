@@ -88,8 +88,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 8. Bộ lọc chống NoSQL & XSS Injection
 app.use(advancedSanitizeInput);
 
-// 9. Tệp tĩnh giao diện
-app.use(express.static(path.join(__dirname, 'public')));
+const PUBLIC_DIR = fs.existsSync(path.join(process.cwd(), 'public'))
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, 'public');
+
+app.use(express.static(PUBLIC_DIR));
 
 // ==================== ĐỊNH TUYẾN MÔ-ĐUN (MODULAR ROUTES) ====================
 
@@ -108,19 +111,27 @@ app.use('/api', generalRoutes);
 
 // Trang giao diện chính
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'), (err) => {
+    if (err && !res.headersSent) res.status(200).send('<h1>Social Content Factory API Active</h1>');
+  });
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  res.sendFile(path.join(PUBLIC_DIR, 'login.html'), (err) => {
+    if (err && !res.headersSent) res.redirect('/');
+  });
 });
 
 app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+  res.sendFile(path.join(PUBLIC_DIR, 'privacy.html'), (err) => {
+    if (err && !res.headersSent) res.status(404).send('Privacy policy not found');
+  });
 });
 
 app.get('/terms', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+  res.sendFile(path.join(PUBLIC_DIR, 'terms.html'), (err) => {
+    if (err && !res.headersSent) res.status(404).send('Terms of service not found');
+  });
 });
 
 app.get('/register', (req, res) => {
