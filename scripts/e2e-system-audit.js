@@ -244,6 +244,25 @@ async function runFullSystemAudit() {
   }
 
   // -------------------------------------------------------------
+  // TEST SUITE 5.1: AUTO B-ROLL FOOTAGE MATCHER & DOWNLOADER
+  // -------------------------------------------------------------
+  console.log('\n--- 5.1. KIỂM THỬ AUTO B-ROLL FOOTAGE MATCHER (PHASE 7.1) ---');
+
+  const brollRes = await request('/api/broll/match', {
+    method: 'POST',
+    body: JSON.stringify({
+      scriptText: 'Trí tuệ nhân tạo đang thay đổi thế giới. Lập trình viên kiếm hàng triệu đô mỗi năm nhờ công nghệ mới.',
+      preferredTheme: 'tech_ai'
+    })
+  });
+
+  if (brollRes.ok && brollRes.body?.success && Array.isArray(brollRes.body.matches)) {
+    logTest('BROLL_ENGINE', 'Tự động trích xuất & Ghép B-Roll cảnh quay thật', 'PASS', `Đã ghép thành công ${brollRes.body.matches.length} đoạn footage Full HD`);
+  } else {
+    logTest('BROLL_ENGINE', 'Tự động trích xuất & Ghép B-Roll cảnh quay thật', 'FAIL', brollRes.body?.message || 'Lỗi ghép B-Roll');
+  }
+
+  // -------------------------------------------------------------
   // TEST SUITE 6: VIDEO RENDERING & KARAOKE COMPOSITOR
   // -------------------------------------------------------------
   console.log('\n--- 6. KIỂM THỬ VIDEO RENDERING & KARAOKE SUBTITLES ---');

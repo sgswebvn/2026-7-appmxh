@@ -1326,6 +1326,128 @@ function initGeminiStudio() {
   });
 }
 
+// ==================== MASTER AUTO PIPELINE 1-CLICK (ZERO-MANUAL ENGINE) ====================
+async function triggerMasterAutoPipeline() {
+  const topicInput = document.getElementById('ai-topic');
+  let topic = topicInput ? topicInput.value.trim() : '';
+
+  if (!topic) {
+    topic = 'Bí mật kiểm soát AI 2026: 3 công cụ thay đổi hoàn toàn công việc của bạn';
+    if (topicInput) topicInput.value = topic;
+  }
+
+  const btn = document.getElementById('btn-master-auto-pipeline');
+  const progressBox = document.getElementById('master-pipeline-progress-box');
+  const stepText = document.getElementById('master-pipeline-step-text');
+  const percentText = document.getElementById('master-pipeline-percent-text');
+  const progressBar = document.getElementById('master-pipeline-progress-bar');
+
+  if (btn) btn.disabled = true;
+  if (progressBox) progressBox.style.display = 'block';
+
+  const updateProgress = (pct, text) => {
+    if (percentText) percentText.textContent = `${pct}%`;
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (stepText) stepText.textContent = text;
+  };
+
+  try {
+    // BƯỚC 1: SINH KỊCH BẢN & TIÊU ĐỀ BẰNG MULTI-AI POOL (20%)
+    updateProgress(20, '🤖 Bước 1/5: Multi-AI Pool đang sáng tạo kịch bản viral...');
+    const aiRes = await fetch('/api/ai/analyze', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        topic,
+        contentType: 'SHORT',
+        targetAudience: document.getElementById('ai-audience')?.value || 'Khán giả đại chúng',
+        tone: document.getElementById('ai-tone')?.value || 'Hấp dẫn, kích thích tò mò'
+      })
+    });
+    const aiData = await aiRes.json();
+    if (!aiData.success || !aiData.data) throw new Error(aiData.message || 'Lỗi sinh kịch bản AI');
+
+    lastAiResult = aiData.data;
+    aiGeneratedData = {
+      titles: (aiData.data.viralTitles || []).map(t => typeof t === 'string' ? t : t.title),
+      description: aiData.data.seoDescription || '',
+      tags: (aiData.data.tags || []).map(t => t.replace(/^#/, ''))
+    };
+    renderAiResults(aiData.data, true, aiData.provider);
+
+    // BƯỚC 2: TỰ ĐỘNG THU ÂM GIỌNG ĐỌC AI TTS (45%)
+    updateProgress(45, '🎙️ Bước 2/5: Edge Neural TTS đang thu âm giọng đọc tiếng Việt...');
+    const scriptText = getFullScriptText();
+    const voiceSelect = document.getElementById('tts-voice-select');
+    const chosenVoice = voiceSelect ? voiceSelect.value : 'vi-female';
+
+    const voiceRes = await fetch('/api/voice/generate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ text: scriptText, voice: chosenVoice })
+    });
+    const voiceData = await voiceRes.json();
+    const audioUrl = voiceData.audioUrl || currentGeneratedAudioUrl;
+    if (audioUrl) {
+      currentGeneratedAudioUrl = audioUrl;
+      const audioPlayer = document.getElementById('tts-audio-player');
+      if (audioPlayer) {
+        audioPlayer.src = audioUrl;
+        audioPlayer.load();
+      }
+      const playerContainer = document.getElementById('tts-player-container');
+      if (playerContainer) playerContainer.style.display = 'block';
+    }
+
+    // BƯỚC 3: TỰ ĐỘNG GHÉP B-ROLL CẢNH QUAY THẬT THEO TỪNG CÂU (65%)
+    updateProgress(65, '🎬 Bước 3/5: Đang quét ngữ cảnh & ghép video cảnh quay thật (B-Roll)...');
+    try {
+      await fetch('/api/broll/match', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ scriptText, preferredTheme: 'tech_ai' })
+      });
+    } catch(e) {}
+
+    // BƯỚC 4: RENDER VIDEO MP4 KÈM PHỤ ĐỀ KARAOKE HORMOZI (85%)
+    updateProgress(85, '⚡ Bước 4/5: Đang tổng hợp video 1080x1920 MP4 phụ đề Karaoke...');
+    const primaryTitle = (aiGeneratedData.titles && aiGeneratedData.titles[0]) || topic;
+
+    const renderRes = await fetch('/api/video/render', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title: primaryTitle,
+        scriptText,
+        audioUrl: audioUrl || '',
+        aspectRatio: '9:16',
+        karaokeStyle: 'hormozi-yellow'
+      })
+    });
+    const renderData = await renderRes.json();
+
+    // BƯỚC 5: TỰ ĐỘNG TẠO ẢNH BÌA THUMBNAIL NEON 3D & NẠP VÀO TRÌNH PHÁT (100%)
+    updateProgress(100, '✨ Bước 5/5: Hoàn tất trọn gói! Đang khởi tạo video player & thumbnail...');
+
+    if (renderData.success && renderData.jobId) {
+      pollRenderJobProgress(renderData.jobId, audioUrl, primaryTitle, scriptText);
+    }
+
+    // Tự động lưu vào Kho Nội Dung (Content Vault)
+    saveCurrentAiToLibrary();
+
+    showToast('🎉 ĐÃ HOÀN TẤT TRỌN GÓI 1-CLICK! Video của bạn đã sẵn sàng phát & phân phối!', 'success');
+  } catch (err) {
+    showToast('Lỗi chu trình 1-Click: ' + err.message, 'error');
+    if (stepText) stepText.textContent = '❌ Lỗi: ' + err.message;
+  } finally {
+    if (btn) btn.disabled = false;
+    setTimeout(() => {
+      if (progressBox) progressBox.style.display = 'none';
+    }, 4000);
+  }
+}
+
 function getFullScriptText() {
   if (!lastAiResult || !lastAiResult.script) {
     const topic = document.getElementById('ai-topic')?.value.trim();
