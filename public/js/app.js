@@ -2329,6 +2329,160 @@ async function connectTikTok() {
   }
 }
 
+async function generateVoiceFromScript() {
+  const scriptText = document.getElementById('ai-script-preview')?.value.trim();
+  if (!scriptText) {
+    showToast('Vui lòng tạo kịch bản trước khi tạo giọng đọc voiceover.', 'warning');
+    return;
+  }
+
+  const voiceSelect = document.getElementById('tts-voice-select');
+  const voiceId = voiceSelect ? voiceSelect.value : 'vi-female';
+  const btn = document.getElementById('btn-generate-voice');
+
+  btn.disabled = true;
+  btn.textContent = 'Đang chuyển đổi giọng đọc...';
+
+  try {
+    const res = await fetch('/api/voice/generate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ text: scriptText, voice: voiceId })
+    });
+    const data = await res.json();
+    if (data.success && data.audioUrl) {
+      currentGeneratedAudioUrl = data.audioUrl;
+      const playerContainer = document.getElementById('tts-player-container');
+      const audioPlayer = document.getElementById('tts-audio-player');
+      audioPlayer.src = data.audioUrl;
+      playerContainer.style.display = 'block';
+      audioPlayer.play().catch(() => {});
+      showToast('Đã tạo file âm thanh MP3 thành công!', 'success');
+    } else {
+      showToast(data.message || 'Lỗi khi tạo giọng đọc', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối TTS: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Tạo File Âm Thanh MP3';
+  }
+}
+
+let currentGeneratedAudioUrl = '';
+let currentRenderedVideoData = null;
+
+async function renderVideoFromAiStudio() {
+  const scriptText = document.getElementById('ai-script-preview')?.value.trim();
+  if (!scriptText) {
+    showToast('Vui lòng tạo kịch bản trước khi ghép video.', 'warning');
+    return;
+  }
+
+  const aspectSelect = document.getElementById('video-aspect-select');
+  const aspectRatio = aspectSelect ? aspectSelect.value : '9:16';
+  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video Tự Động Phân Phối';
+
+  const btn = document.getElementById('btn-render-video');
+  const progressBox = document.getElementById('render-progress-box');
+  const resultBox = document.getElementById('render-result-box');
+  const progressBar = document.getElementById('render-progress-bar');
+  const percentText = document.getElementById('render-percent-text');
+  const statusText = document.getElementById('render-status-text');
+
+  btn.disabled = true;
+  progressBox.style.display = 'block';
+  resultBox.style.display = 'none';
+  progressBar.style.width = '20%';
+  percentText.textContent = '20%';
+  statusText.textContent = 'Đang chuẩn bị media assets và phụ đề...';
+
+  try {
+    const res = await fetch('/api/video/render', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title,
+        script: scriptText,
+        audioPath: currentGeneratedAudioUrl,
+        aspectRatio
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.jobId) {
+      progressBar.style.width = '60%';
+      percentText.textContent = '60%';
+      statusText.textContent = 'Đang ghép video và chuẩn hóa chuẩn nén H.264...';
+
+      // Poll kiểm tra tiến độ
+      let pollCount = 0;
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        try {
+          const statusRes = await fetch(`/api/video/status/${data.jobId}`, { headers: getAuthHeaders() });
+          const statusData = await statusRes.json();
+          if (statusData.success && statusData.job) {
+            const job = statusData.job;
+            progressBar.style.width = `${job.progress}%`;
+            percentText.textContent = `${job.progress}%`;
+
+            if (job.status === 'SUCCESS') {
+              clearInterval(pollInterval);
+              currentRenderedVideoData = job;
+              statusText.textContent = 'Hoàn thành render video!';
+              resultBox.style.display = 'flex';
+              btn.disabled = false;
+              showToast('Đã tạo thành công video MP4 sẵn sàng xuất bản!', 'success');
+            } else if (job.status === 'FAILED') {
+              clearInterval(pollInterval);
+              btn.disabled = false;
+              showToast(job.error || 'Lỗi khi render video', 'error');
+            }
+          }
+        } catch (e) {}
+
+        if (pollCount > 30) {
+          clearInterval(pollInterval);
+          btn.disabled = false;
+        }
+      }, 1000);
+    } else {
+      btn.disabled = false;
+      showToast(data.message || 'Lỗi khởi chạy render', 'error');
+    }
+  } catch (err) {
+    btn.disabled = false;
+    showToast('Lỗi render video: ' + err.message, 'error');
+  }
+}
+
+function pushRenderedVideoToPublisher() {
+  if (!currentRenderedVideoData) {
+    showToast('Chưa có video render nào hoàn thành', 'warning');
+    return;
+  }
+
+  // Tự động điền dữ liệu AI vào Form Phân Phối Video
+  if (aiGeneratedData?.titles && aiGeneratedData.titles.length > 0) {
+    const titleInput = document.getElementById('video-title');
+    if (titleInput) titleInput.value = aiGeneratedData.titles[0];
+  }
+
+  const descInput = document.getElementById('video-description');
+  if (descInput && aiGeneratedData?.description) {
+    descInput.value = aiGeneratedData.description;
+  }
+
+  const tagsInput = document.getElementById('video-tags');
+  if (tagsInput && aiGeneratedData?.tags) {
+    tagsInput.value = aiGeneratedData.tags.join(', ');
+  }
+
+  showToast('Đã chuyển toàn bộ Kịch bản, Tiêu đề và Mô tả sang Bảng Phân Phối Video!', 'success');
+  switchTab('publish-tab');
+}
+
 // ==================== HƯỚNG DẪN SỬ DỤNG TƯƠNG TÁC (INTERACTIVE GUIDE SYSTEM) ====================
 const GUIDE_TOPICS = {
   'publish-tab': {

@@ -31,6 +31,7 @@ const contentRoutes = require('./routes/content');
 const plannerRoutes = require('./routes/planner');
 const socialRoutes = require('./routes/social');
 const voiceRoutes = require('./routes/voice');
+const videoRoutes = require('./routes/video');
 const generalRoutes = require('./routes/general');
 
 const app = express();
@@ -108,6 +109,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/planner', plannerRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/voice', voiceRoutes);
+app.use('/api/video', videoRoutes);
 app.use('/api', generalRoutes);
 
 // Trang giao diện chính
