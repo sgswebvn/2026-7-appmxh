@@ -2294,15 +2294,37 @@ async function connectTikTok() {
     window.location.href = '/login';
     return;
   }
+  
+  const width = 600;
+  const height = 750;
+  const left = window.screen.width / 2 - width / 2;
+  const top = window.screen.height / 2 - height / 2;
+  const popup = window.open('about:blank', 'TikTokAuth', `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,status=yes`);
+  
   try {
     const res = await fetch('/api/social/tiktok/url', { headers: getAuthHeaders() });
     const data = await res.json();
     if (data.success && data.authUrl) {
-      window.open(data.authUrl, 'TikTokAuth', 'width=600,height=700');
+      if (popup) {
+        popup.location.href = data.authUrl;
+      } else {
+        window.location.href = data.authUrl;
+      }
+      
+      const interval = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(interval);
+          setTimeout(() => {
+            loadChannels();
+          }, 1000);
+        }
+      }, 1000);
     } else {
+      if (popup) popup.close();
       showToast(data.message || 'Chưa cấu hình TikTok Client Credentials', 'error');
     }
   } catch (err) {
+    if (popup) popup.close();
     showToast('Lỗi kết nối TikTok: ' + err.message, 'error');
   }
 }

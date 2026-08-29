@@ -14,14 +14,20 @@ const TIKTOK_CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET || '';
 class TikTokService {
   // 1. URL ủy quyền tài khoản TikTok
   getAuthUrl(redirectUri, state = 'default_user') {
-    const scopes = 'user.info.basic,video.upload,video.publish';
-    return `https://www.tiktok.com/v2/auth/authorize/?client_key=${TIKTOK_CLIENT_KEY}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
+    const clientKey = (process.env.TIKTOK_CLIENT_KEY || 'awrggyvwtjg30xy7').trim();
+    if (!clientKey) {
+      throw new Error('Chưa cấu hình TIKTOK_CLIENT_KEY trong cài đặt');
+    }
+    const scopes = 'user.info.basic,user.info.profile,user.info.stats,video.upload,video.publish';
+    return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${encodeURIComponent(scopes)}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
   }
 
   // 2. Đổi Code lấy Token
   async handleCallback(code, redirectUri) {
-    if (!TIKTOK_CLIENT_KEY || !TIKTOK_CLIENT_SECRET) {
-      throw new Error('Chưa cấu hình TIKTOK_CLIENT_KEY và TIKTOK_CLIENT_SECRET trong .env');
+    const clientKey = (process.env.TIKTOK_CLIENT_KEY || 'awrggyvwtjg30xy7').trim();
+    const clientSecret = (process.env.TIKTOK_CLIENT_SECRET || 'yDLpKDRHdYtyB7VzB3puxlEyAkv2aQKV').trim();
+    if (!clientKey || !clientSecret) {
+      throw new Error('Chưa cấu hình TIKTOK_CLIENT_KEY và TIKTOK_CLIENT_SECRET');
     }
 
     const tokenUrl = 'https://open.tiktokapis.com/v2/oauth/token/';
