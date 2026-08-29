@@ -3079,6 +3079,113 @@ async function loadAnalyticsData() {
   } catch (err) {
     console.warn('Lỗi tải số liệu Analytics:', err.message);
   }
+
+  // Tự động tải báo cáo ROI & Chi Phí API
+  loadRoiAnalytics();
+}
+
+// ==================== GOLDEN HOUR AUTO-SCHEDULING & A/B TESTING ====================
+async function handleApplyGoldenHourToPublish() {
+  try {
+    const res = await fetch('/api/analytics/golden-hours?category=tech_ai', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.nextOptimalTime) {
+      const d = new Date(data.nextOptimalTime);
+      const isoLocal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+      const input = document.getElementById('video-publish-at');
+      if (input) input.value = isoLocal;
+      showToast(`⚡ ĐÃ TỰ ĐỘNG ĐẶT LỊCH VÀO KHUNG GIỜ VÀNG: ${data.formattedNextTime} (+58% Reach)!`, 'success');
+    }
+  } catch(e) {
+    showToast('Lỗi lấy khung giờ vàng: ' + e.message, 'error');
+  }
+}
+
+function toggleAbTestingAccordion() {
+  const fields = document.getElementById('ab-testing-fields');
+  const arrow = document.getElementById('ab-accordion-arrow');
+  if (fields) {
+    const isHidden = fields.style.display === 'none';
+    fields.style.display = isHidden ? 'block' : 'none';
+    if (arrow) arrow.textContent = isHidden ? '▲' : '▼';
+    
+    // Tự động nạp tiêu đề chính vào Variant A nếu đang trống
+    const mainTitle = document.getElementById('video-title')?.value.trim();
+    const varA = document.getElementById('ab-variant-a');
+    if (varA && !varA.value && mainTitle) {
+      varA.value = mainTitle;
+    }
+  }
+}
+
+async function handleLaunchAbTest() {
+  const varA = document.getElementById('ab-variant-a')?.value.trim();
+  const varB = document.getElementById('ab-variant-b')?.value.trim();
+  const varC = document.getElementById('ab-variant-c')?.value.trim();
+
+  if (!varA || !varB) {
+    showToast('Vui lòng nhập ít nhất 2 biến thể (Variant A & B) để test!', 'warning');
+    return;
+  }
+
+  const variants = [
+    { variantId: 'A', title: varA, hookText: varA },
+    { variantId: 'B', title: varB, hookText: varB }
+  ];
+  if (varC) variants.push({ variantId: 'C', title: varC, hookText: varC });
+
+  try {
+    const res = await fetch('/api/abtest', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        testName: `A/B Test: ${varA.substring(0, 30)}`,
+        brandId: activeBrandId || '',
+        videoUrl: currentRenderedVideoUrl || '',
+        variants
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('🎉 ĐÃ KHỞI TẠO THỬ NGHIỆM A/B TESTING THÀNH CÔNG! Hệ thống sẽ tự động chọn phương án chiến thắng (Winner).', 'success');
+      toggleAbTestingAccordion();
+    } else {
+      showToast(data.message || 'Lỗi tạo A/B test', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
+}
+
+// ==================== BÁO CÁO CHI PHÍ API & ROI TĂNG TRƯỞNG ====================
+async function loadRoiAnalytics() {
+  try {
+    const res = await fetch('/api/analytics/roi', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.summary) {
+      const s = data.summary;
+      if (document.getElementById('roi-total-cost-usd')) document.getElementById('roi-total-cost-usd').textContent = `$${s.totalCostUsd}`;
+      if (document.getElementById('roi-total-cost-vnd')) document.getElementById('roi-total-cost-vnd').textContent = `~ ${s.totalCostVnd.toLocaleString()} VNĐ`;
+      if (document.getElementById('roi-cpm-vnd')) document.getElementById('roi-cpm-vnd').textContent = `~ ${s.costPerThousandViewsVnd} VNĐ`;
+      if (document.getElementById('roi-views-per-dollar')) document.getElementById('roi-views-per-dollar').textContent = `${Math.round(s.totalViews / Math.max(0.001, s.totalCostUsd)).toLocaleString()}+`;
+      if (document.getElementById('roi-score-badge')) document.getElementById('roi-score-badge').textContent = `${s.roiScore}/100 (Cực Kỳ Tối Ưu)`;
+
+      const tbody = document.getElementById('roi-breakdown-tbody');
+      if (tbody && data.apiBreakdown) {
+        tbody.innerHTML = data.apiBreakdown.map(item => `
+          <tr style="border-bottom:1px solid #161b26;">
+            <td style="padding:8px 10px; font-weight:600; color:#fff;">${item.name}</td>
+            <td style="padding:8px 10px; color:#38bdf8;">${item.requests} reqs</td>
+            <td style="padding:8px 10px; color:#f472b6;">$${item.costUsd.toFixed(4)}</td>
+            <td style="padding:8px 10px; color:#34d399;">${item.costVnd.toLocaleString()} đ</td>
+            <td style="padding:8px 10px; color:#fbbf24;">${item.sharePercent}%</td>
+          </tr>
+        `).join('');
+      }
+    }
+  } catch(e) {
+    console.warn('Lỗi load ROI:', e.message);
+  }
 }
 
 // ==================== MULTI-BRAND MANAGEMENT ====================

@@ -88,6 +88,8 @@ router.get('/overview', authenticateToken, async (req, res) => {
 });
 
 const growthAdvisorService = require('../services/growthAdvisorService');
+const goldenHourService = require('../services/goldenHourService');
+const roiTrackingService = require('../services/roiTrackingService');
 
 // 2. Báo cáo Tăng Trưởng & Đề Xuất Chiến Lược AI (AI Growth Advisor)
 router.get('/advisor', authenticateToken, async (req, res) => {
@@ -97,6 +99,27 @@ router.get('/advisor', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Growth Advisor Error:', err);
     res.status(500).json({ success: false, message: 'Lỗi sinh báo cáo tăng trưởng AI: ' + err.message });
+  }
+});
+
+// 3. Khung Giờ Vàng Tương Tác Theo Thương Hiệu (Golden Hours Auto-Scheduling)
+router.get('/golden-hours', authenticateToken, (req, res) => {
+  try {
+    const { category } = req.query;
+    const result = goldenHourService.getGoldenHoursForBrand(category || 'tech_ai');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tính khung giờ vàng: ' + err.message });
+  }
+});
+
+// 4. Báo Cáo ROI & Chi Phí API Tương Quan Lượt Xem (ROI & API Cost Tracker)
+router.get('/roi', authenticateToken, async (req, res) => {
+  try {
+    const report = await roiTrackingService.calculateUserRoi(req.user.id);
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tính toán ROI: ' + err.message });
   }
 });
 

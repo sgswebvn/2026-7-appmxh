@@ -256,7 +256,12 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="video-publish-at">Hẹn giờ đăng (Tùy chọn)</label>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label class="form-label" for="video-publish-at" style="margin-bottom:0;">Hẹn giờ đăng (Tùy chọn)</label>
+                    <button type="button" class="btn btn-sm btn-outline" id="btn-apply-golden-hour" onclick="handleApplyGoldenHourToPublish()" style="border-color:#fbbf24; color:#fbbf24; padding:2px 8px; font-size:0.72rem; font-weight:600;">
+                      ⚡ Áp Dụng Giờ Vàng (+58% Reach)
+                    </button>
+                  </div>
                   <input type="datetime-local" id="video-publish-at" class="form-input">
                 </div>
 
@@ -266,6 +271,36 @@
                     <option value="false">Không dành cho trẻ em</option>
                     <option value="true">Dành cho trẻ em</option>
                   </select>
+                </div>
+              </div>
+
+              <!-- ==================== A/B TESTING TIÊU ĐỀ & HOOK ==================== -->
+              <div class="accordion" id="ab-testing-accordion" style="border-color:rgba(236, 72, 153, 0.4); margin-bottom:12px;">
+                <div class="accordion-header" onclick="toggleAbTestingAccordion()" style="background:#130b1c;">
+                  <span style="color:#f472b6; font-weight:600; display:flex; align-items:center; gap:6px;">
+                    <span>🧪</span> A/B Testing Tiêu Đề & Hook (Thử Nghiệm 2-3 Biến Thể)
+                  </span>
+                  <span id="ab-accordion-arrow">▼</span>
+                </div>
+                <div class="accordion-body" id="ab-testing-fields" style="display:none; background:#090d16; padding:12px;">
+                  <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">
+                    Hệ thống sẽ thử nghiệm đồng thời các tiêu đề/hook khác nhau, theo dõi CTR và <strong>tự động giữ lại phương án chiến thắng</strong>:
+                  </p>
+                  <div class="form-group" style="margin-bottom:8px;">
+                    <label class="form-label" style="font-size:0.75rem; color:#34d399;">Biến Thể A (Chính):</label>
+                    <input type="text" id="ab-variant-a" class="form-input" placeholder="Tiêu đề biến thể A">
+                  </div>
+                  <div class="form-group" style="margin-bottom:8px;">
+                    <label class="form-label" style="font-size:0.75rem; color:#38bdf8;">Biến Thể B (Kích thích tò mò):</label>
+                    <input type="text" id="ab-variant-b" class="form-input" placeholder="Tiêu đề biến thể B (VD: Bạn sẽ sốc khi biết...)">
+                  </div>
+                  <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label" style="font-size:0.75rem; color:#fbbf24;">Biến Thể C (Cảnh báo / FOMO - Tùy chọn):</label>
+                    <input type="text" id="ab-variant-c" class="form-input" placeholder="Tiêu đề biến thể C (VD: Đừng mắc sai lầm này...)">
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="handleLaunchAbTest()" style="border-color:#ec4899; color:#f472b6; width:100%; font-size:0.78rem;">
+                    🚀 Kích Hoạt Thử Nghiệm A/B Cho Video Này
+                  </button>
                 </div>
               </div>
 
@@ -951,9 +986,57 @@
 
           <div class="glass-panel" style="background:var(--bg-input); padding:16px;">
             <h4 style="color:#fff; font-size:0.88rem; margin-bottom:12px; font-weight:600;">Tỷ Lệ Tải Lên Thành Công / Thất Bại</h4>
-            <div style="position:relative; height:240px;">
-              <canvas id="successRateChart"></canvas>
+        <!-- BÁO CÁO CHI PHÍ API & ROI TĂNG TRƯỞNG (ROI & API COST ANALYTICS) -->
+        <div id="roi-analytics-panel" class="glass-panel" style="background:#090d16; border:1px solid #34d399; padding:18px; margin-top:20px; border-radius:var(--radius-sm);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.3rem;">💰</span>
+              <div>
+                <h4 style="color:#34d399; font-size:0.95rem; font-weight:700;">Báo Cáo ROI & Chi Phí API Tương Quan Lượt Xem</h4>
+                <p style="font-size:0.75rem; color:var(--text-muted);">Đo lường chi phí tiêu thụ Quota AI/TTS/Storage so với hiệu quả tăng trưởng</p>
+              </div>
             </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:0.75rem; color:#94a3b8;">Tỷ Suất ROI:</span>
+              <span id="roi-score-badge" style="font-size:0.95rem; font-weight:700; color:#34d399; background:#064e3b; padding:3px 12px; border-radius:12px; border:1px solid #059669;">94/100 (Cực Kỳ Tối Ưu)</span>
+              <button type="button" class="btn btn-sm btn-outline" onclick="loadRoiAnalytics()" style="padding:3px 10px; font-size:0.75rem; border-color:#34d399; color:#34d399;">Cập nhật ROI</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:14px;">
+            <div class="kpi-card" style="background:#0c101a;">
+              <div class="kpi-label">Tổng Chi Phí API Đã Dùng</div>
+              <div class="kpi-value" id="roi-total-cost-usd" style="color:#f472b6;">$0.0082</div>
+              <div class="kpi-sub" id="roi-total-cost-vnd">~ 208 VNĐ</div>
+            </div>
+            <div class="kpi-card" style="background:#0c101a;">
+              <div class="kpi-label">Chi Phí / 1,000 Views (CPM)</div>
+              <div class="kpi-value" id="roi-cpm-vnd" style="color:#38bdf8;">~ 120 VNĐ</div>
+              <div class="kpi-sub">Rẻ hơn 98% quảng cáo trả phí</div>
+            </div>
+            <div class="kpi-card" style="background:#0c101a;">
+              <div class="kpi-label">Lượt Xem Tạo Ra / $1 Chi Phí</div>
+              <div class="kpi-value" id="roi-views-per-dollar" style="color:#fbbf24;">15,400+</div>
+              <div class="kpi-sub">Hiệu suất chuyển đổi vượt bậc</div>
+            </div>
+          </div>
+
+          <!-- Bảng Chi Tiết Từng Hạng Mục API -->
+          <div style="background:#06080e; border:1px solid #1e293b; border-radius:6px; padding:12px; overflow-x:auto;">
+            <table style="width:100%; font-size:0.78rem; text-align:left; border-collapse:collapse;">
+              <thead>
+                <tr style="border-bottom:1px solid #1e293b; color:#94a3b8;">
+                  <th style="padding:6px 10px;">Dịch Vụ API</th>
+                  <th style="padding:6px 10px;">Số Request</th>
+                  <th style="padding:6px 10px;">Chi Phí ($ USD)</th>
+                  <th style="padding:6px 10px;">Chi Phí (VNĐ)</th>
+                  <th style="padding:6px 10px;">Tỷ Trọng</th>
+                </tr>
+              </thead>
+              <tbody id="roi-breakdown-tbody">
+                <tr><td colspan="5" style="padding:10px; text-align:center; color:var(--text-muted);">Đang tải dữ liệu chi phí API...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

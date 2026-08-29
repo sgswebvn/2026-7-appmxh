@@ -334,6 +334,50 @@ async function runFullSystemAudit() {
     logTest('ANALYTICS', 'Báo Cáo Cố Vấn Tăng Trưởng AI (AI Growth Advisor)', 'FAIL', advisorRes.body?.message || 'Lỗi advisor');
   }
 
+  // 8.2 Khung Giờ Vàng Auto-Scheduling
+  const goldenRes = await request('/api/analytics/golden-hours?category=tech_ai');
+  if (goldenRes.ok && goldenRes.body?.success && goldenRes.body.slots?.length > 0) {
+    logTest('GOLDEN_HOUR', 'Tính toán Khung Giờ Vàng Đăng Bài', 'PASS', `Next Slot: ${goldenRes.body.formattedNextTime} (${goldenRes.body.slots[0].boostRate})`);
+  } else {
+    logTest('GOLDEN_HOUR', 'Tính toán Khung Giờ Vàng Đăng Bài', 'FAIL', goldenRes.body?.message || 'Lỗi tính khung giờ');
+  }
+
+  // 8.3 Báo Cáo ROI & Chi Phí API
+  const roiRes = await request('/api/analytics/roi');
+  if (roiRes.ok && roiRes.body?.success && roiRes.body.summary) {
+    logTest('ROI_ANALYTICS', 'Theo dõi Chi Phí API & Tỷ Suất ROI', 'PASS', `Chi Phí: $${roiRes.body.summary.totalCostUsd} | Điểm ROI: ${roiRes.body.summary.roiScore}/100`);
+  } else {
+    logTest('ROI_ANALYTICS', 'Theo dõi Chi Phí API & Tỷ Suất ROI', 'FAIL', roiRes.body?.message || 'Lỗi tính ROI');
+  }
+
+  // -------------------------------------------------------------
+  // TEST SUITE 8.4: A/B TESTING TIÊU ĐỀ & HOOK
+  // -------------------------------------------------------------
+  console.log('\n--- 8.4. KIỂM THỬ A/B TESTING TIÊU ĐỀ & HOOK ---');
+
+  const abRes = await request('/api/abtest', {
+    method: 'POST',
+    body: JSON.stringify({
+      testName: 'QA A/B Title & Hook Test',
+      variants: [
+        { variantId: 'A', title: 'Tiêu đề A: Bí mật kiếm tiền AI', hookText: 'Bạn đang bỏ lỡ điều này' },
+        { variantId: 'B', title: 'Tiêu đề B: 3 sai lầm AI chết người', hookText: 'Dừng lại ngay nếu bạn làm vậy' }
+      ]
+    })
+  });
+
+  if (abRes.ok && abRes.body?.success && abRes.body.test?._id) {
+    const abTestId = abRes.body.test._id;
+    const winnerRes = await request(`/api/abtest/${abTestId}/select-winner`, { method: 'POST' });
+    if (winnerRes.ok && winnerRes.body?.success) {
+      logTest('AB_TESTING', 'A/B Testing Tiêu Đề & Tự Động Chọn Winner', 'PASS', winnerRes.body.message);
+    } else {
+      logTest('AB_TESTING', 'A/B Testing Tiêu Đề & Tự Động Chọn Winner', 'FAIL', 'Lỗi chọn winner');
+    }
+  } else {
+    logTest('AB_TESTING', 'A/B Testing Tiêu Đề & Tự Động Chọn Winner', 'FAIL', abRes.body?.message || 'Lỗi khởi tạo A/B test');
+  }
+
   // -------------------------------------------------------------
   // TEST SUITE 9: SECURITY FUZZING & BOUNDARY DEFENSE
   // -------------------------------------------------------------
