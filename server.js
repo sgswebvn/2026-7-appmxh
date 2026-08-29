@@ -32,6 +32,8 @@ const plannerRoutes = require('./routes/planner');
 const socialRoutes = require('./routes/social');
 const voiceRoutes = require('./routes/voice');
 const videoRoutes = require('./routes/video');
+const telegramRoutes = require('./routes/telegram');
+const browserRoutes = require('./routes/browser');
 const generalRoutes = require('./routes/general');
 
 const app = express();
@@ -110,6 +112,8 @@ app.use('/api/planner', plannerRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/video', videoRoutes);
+app.use('/api/telegram', telegramRoutes);
+app.use('/api/browser', browserRoutes);
 app.use('/api', generalRoutes);
 
 // Trang giao diện chính

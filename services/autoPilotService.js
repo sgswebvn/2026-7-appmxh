@@ -9,6 +9,7 @@
 const aiTrendAgentService = require('./aiTrendAgentService');
 const voiceService = require('./voiceService');
 const videoRenderService = require('./videoRenderService');
+const telegramBotService = require('./telegramBotService');
 const dbService = require('./dbService');
 
 class AutoPilotService {
@@ -91,6 +92,19 @@ class AutoPilotService {
     });
 
     cycleLog.push({ step: 5, name: 'Hoàn Thành Chu Trình Auto-Pilot', message: `Đã phân phối thành công tới toàn bộ ${targetChannels.length} kênh trong nhóm!` });
+
+    // Tự động gửi thông báo Telegram nếu đã cấu hình
+    try {
+      await telegramBotService.notifyAutoPilotSuccess({
+        cycleId: renderRes.jobId,
+        topic,
+        title: chosenTitle,
+        channelsCount: targetChannels.length,
+        videoUrl: renderRes.initialStatus?.videoUrl
+      });
+    } catch (err) {
+      // Bỏ qua lỗi Telegram để không gián đoạn luồng chính
+    }
 
     return {
       success: true,

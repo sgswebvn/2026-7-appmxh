@@ -3359,6 +3359,123 @@ renderChannelGroupsUI = function() {
   }
 };
 
+// ==================== TELEGRAM NOTIFICATION BOT ====================
+function openTelegramModal() {
+  const modal = document.getElementById('telegram-modal');
+  const tokenInput = document.getElementById('tele-bot-token');
+  const chatIdInput = document.getElementById('tele-chat-id');
+
+  if (tokenInput) tokenInput.value = localStorage.getItem('tele_bot_token') || '';
+  if (chatIdInput) chatIdInput.value = localStorage.getItem('tele_chat_id') || '';
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeTelegramModal() {
+  const modal = document.getElementById('telegram-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function handleSaveTelegramConfig(e) {
+  e.preventDefault();
+  const token = document.getElementById('tele-bot-token').value.trim();
+  const chatId = document.getElementById('tele-chat-id').value.trim();
+
+  localStorage.setItem('tele_bot_token', token);
+  localStorage.setItem('tele_chat_id', chatId);
+
+  showToast('Đã lưu cấu hình Telegram Bot thành công!', 'success');
+  closeTelegramModal();
+}
+
+async function handleTestTelegram() {
+  const token = document.getElementById('tele-bot-token').value.trim();
+  const chatId = document.getElementById('tele-chat-id').value.trim();
+
+  if (!token || !chatId) {
+    showToast('Vui lòng nhập đầy đủ Bot Token và Chat ID trước khi test!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-test-telegram');
+  btn.disabled = true;
+  btn.textContent = 'Đang gửi...';
+
+  try {
+    const res = await fetch('/api/telegram/test', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ botToken: token, chatId })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã gửi tin nhắn test thành công tới Telegram của bạn!', 'success');
+    } else {
+      showToast(data.message || 'Lỗi gửi tin nhắn Telegram', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Gửi Tin Nhắn Thử';
+  }
+}
+
+// ==================== AUTONOMOUS WEB AGENT LIVE TRENDS SCANNER ====================
+async function scanLiveTrends(platform = 'TIKTOK') {
+  const box = document.getElementById('live-trends-results-box');
+  const header = document.getElementById('live-trends-header');
+  const container = document.getElementById('live-trends-chips-container');
+
+  if (box) box.style.display = 'block';
+  if (header) header.textContent = `⏳ Web Agent đang cào xu hướng thời gian thực từ ${platform}...`;
+  if (container) container.innerHTML = '<div style="color:#38bdf8; font-size:0.75rem;">Đang kết nối DOM & phân tích mẫu tương tác...</div>';
+
+  try {
+    const res = await fetch('/api/browser/scan-trends', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ platform })
+    });
+
+    const data = await res.json();
+    if (data.success && data.trends) {
+      if (header) header.textContent = `🔥 Top Xu Hướng Hot Nhất ${platform} (Bấm vào từ khóa để tạo kịch bản ngay):`;
+      if (container) {
+        container.innerHTML = '';
+        data.trends.forEach(t => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'btn btn-sm btn-outline';
+          chip.style.padding = '4px 8px';
+          chip.style.fontSize = '0.74rem';
+          chip.style.borderColor = '#38bdf8';
+          chip.style.color = '#fff';
+          chip.style.background = '#090d16';
+          chip.innerHTML = `<strong>#${t.rank}</strong> ${t.keyword} <span style="color:#34d399; font-size:0.68rem;">(${t.growthRate || '+100%'})</span>`;
+
+          chip.onclick = () => {
+            const topicInput = document.getElementById('ai-topic');
+            if (topicInput) {
+              topicInput.value = `${t.keyword} - ${t.insight || ''}`;
+              showToast(`Đã áp dụng chủ đề: "${t.keyword}" vào AI Script Studio!`, 'success');
+              topicInput.focus();
+            }
+          };
+
+          container.appendChild(chip);
+        });
+      }
+      showToast(`Web Agent đã quét thành công ${data.trends.length} xu hướng hot!`, 'success');
+    } else {
+      if (container) container.innerHTML = '<div style="color:#f43f5e; font-size:0.75rem;">Không thể quét trend. Vui lòng thử lại.</div>';
+    }
+  } catch (err) {
+    if (container) container.innerHTML = `<div style="color:#f43f5e; font-size:0.75rem;">Lỗi kết nối: ${err.message}</div>`;
+  }
+}
+
 
 
 
