@@ -885,7 +885,10 @@ async function createChannelGroup(userId, groupData) {
 async function updateChannelGroup(userId, groupId, updateData) {
   await ensureMongoConnected();
   if (isConnectedToMongo()) {
-    return ChannelGroup.findOneAndUpdate({ userId, _id: groupId }, { $set: updateData }, { new: true });
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return null;
+    }
+    return ChannelGroup.findOneAndUpdate({ userId, _id: groupId }, { $set: updateData }, { returnDocument: 'after' });
   }
   const db = readLocalDB();
   if (!db.channelGroups) db.channelGroups = [];
@@ -901,6 +904,9 @@ async function updateChannelGroup(userId, groupId, updateData) {
 async function deleteChannelGroup(userId, groupId) {
   await ensureMongoConnected();
   if (isConnectedToMongo()) {
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return { deletedCount: 0 };
+    }
     return ChannelGroup.deleteOne({ userId, _id: groupId });
   }
   const db = readLocalDB();

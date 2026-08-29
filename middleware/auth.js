@@ -52,7 +52,7 @@ async function authenticateToken(req, res, next) {
 
     next();
   } catch (err) {
-    return res.status(401).json({
+    return res.status(403).json({
       success: false,
       message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.'
     });
