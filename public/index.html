@@ -8,61 +8,118 @@
 </head>
 <body>
 
-  <!-- THANH ĐIỀU HƯỚNG (NAVBAR) -->
-  <nav class="navbar">
-    <a href="#" class="brand">
-      <div class="brand-badge">Y</div>
-      <div class="brand-text">
-        <h1>YouTube Multi-Publisher</h1>
-        <span>Hệ thống phân phối video đa kênh</span>
-      </div>
-    </a>
+<div class="app-container">
 
-    <div class="nav-tabs">
-      <button class="nav-tab active" data-tab="publish-tab">
-        Phân Phối Video
-      </button>
-      <button class="nav-tab" data-tab="gemini-tab">
-        Soạn Thảo & Gợi Ý
-      </button>
-      <button class="nav-tab" data-tab="channels-tab">
-        Quản Lý Kênh (<span id="channel-count-badge">0</span>)
-      </button>
-      <button class="nav-tab" data-tab="history-tab">
-        Lịch Sử & Hạn Mức
-      </button>
-      <button class="nav-tab" data-tab="admin-tab" id="nav-tab-admin" style="display:none; color:#fb7185; border-color:rgba(225, 29, 72, 0.3);">
-        Quản Trị Admin
+  <!-- ==================== CỘT TRÁI: THANH ĐIỀU HƯỚNG SIDEBAR ==================== -->
+  <aside class="app-sidebar">
+    <div class="sidebar-header">
+      <a href="#" class="sidebar-brand">
+        <div class="brand-badge">S</div>
+        <div class="brand-text">
+          <h1>Social Factory</h1>
+          <span>Multi-Brand</span>
+        </div>
+      </a>
+      <button type="button" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Thu gọn menu" style="padding:2px 6px;">
+        Thu gọn
       </button>
     </div>
 
-    <div class="nav-right">
-      <div class="quota-pill" id="test-timer-pill" style="display:none; border-color:#f59e0b; color:#fbbf24; background:rgba(245, 158, 11, 0.1);">
+    <!-- Bộ Chọn Brand Đang Hoạt Động -->
+    <div class="sidebar-brand-picker">
+      <label for="nav-brand-select">Thương Hiệu Đang Chọn</label>
+      <select id="nav-brand-select" class="form-select" style="width:100%; font-size:0.8rem; padding:6px 8px;">
+        <option value="">(Tất Cả / Mặc Định)</option>
+      </select>
+    </div>
+
+    <!-- Danh Sách Tab Menu Dọc -->
+    <nav class="sidebar-nav nav-tabs">
+      <button class="nav-tab active" data-tab="publish-tab">
+        <span>Phân Phối Video</span>
+      </button>
+      <button class="nav-tab" data-tab="gemini-tab">
+        <span>AI Script Studio</span>
+      </button>
+      <button class="nav-tab" data-tab="content-tab">
+        <span>Kho Nội Dung</span>
+        <span class="tab-badge" id="content-count-badge">0</span>
+      </button>
+      <button class="nav-tab" data-tab="planner-tab">
+        <span>Lịch Ma Trận</span>
+      </button>
+      <button class="nav-tab" data-tab="brands-tab">
+        <span>Quản Lý Brand</span>
+        <span class="tab-badge" id="brand-count-badge">0</span>
+      </button>
+      <button class="nav-tab" data-tab="channels-tab">
+        <span>Mạng Xã Hội</span>
+        <span class="tab-badge" id="channel-count-badge">0</span>
+      </button>
+      <button class="nav-tab" data-tab="analytics-tab">
+        <span>Thống Kê & Tăng Trưởng</span>
+      </button>
+      <button class="nav-tab" data-tab="history-tab">
+        <span>Lịch Sử & Hạn Mức</span>
+      </button>
+      <button class="nav-tab" data-tab="admin-tab" id="nav-tab-admin" style="display:none; color:#fb7185; border-color:rgba(225, 29, 72, 0.3);">
+        <span>Quản Trị Admin</span>
+      </button>
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <div class="quota-pill" id="test-timer-pill" style="display:none; border-color:#f59e0b; color:#fbbf24; background:rgba(245, 158, 11, 0.1); width:100%; justify-content:center;">
         <span id="test-timer-text">Dùng thử: 10:00</span>
       </div>
 
-      <div class="quota-pill" id="db-status-pill">
-        <div class="status-dot" id="db-status-dot"></div>
-        <span id="db-status-text">MongoDB Atlas</span>
+      <div class="quota-pill" id="db-status-pill" style="width:100%; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <div class="status-dot" id="db-status-dot"></div>
+          <span id="db-status-text">MongoDB Atlas</span>
+        </div>
       </div>
 
-      <div class="quota-pill" id="quota-display">
+      <div class="quota-pill" id="quota-display" style="width:100%; justify-content:space-between;">
         <span>Quota: <strong id="quota-used-text" style="color:var(--text-primary)">0</strong> / 10.000</span>
       </div>
 
-      <div id="auth-nav-container">
-        <a href="/login" class="btn btn-sm btn-accent">
+      <button type="button" class="btn btn-outline btn-sm" onclick="openGuideModal()" style="width:100%; justify-content:center; margin-top:4px;">
+        Hướng Dẫn Sử Dụng
+      </button>
+
+      <div id="auth-nav-container" style="margin-top:4px;">
+        <a href="/login" class="btn btn-sm btn-accent" style="width:100%; justify-content:center;">
           Đăng Nhập
         </a>
       </div>
     </div>
-  </nav>
+  </aside>
 
-  <!-- NỘI DUNG CHÍNH (MAIN CONTENT) -->
-  <main class="main-content">
+  <!-- ==================== CỘT PHẢI: NỘI DUNG CHÍNH (MAIN PANEL) ==================== -->
+  <div class="app-main">
+    
+    <!-- Topbar Header -->
+    <header class="app-topbar">
+      <div class="page-breadcrumb">
+        <button type="button" class="sidebar-toggle-btn" id="topbar-toggle-sidebar" onclick="toggleSidebar()" style="display:none;" title="Mở rộng menu">
+          Menu
+        </button>
+        <span id="topbar-page-title">Phân Phối Video Đa Kênh</span>
+      </div>
 
-    <!-- ==================== TAB 1: PHÂN PHỐI VIDEO ==================== -->
-    <section id="publish-tab" class="tab-pane active">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button type="button" class="btn btn-sm btn-outline" onclick="openGuideModal()">
+          Hướng Dẫn Sử Dụng
+        </button>
+      </div>
+    </header>
+
+    <!-- NỘI DUNG CHÍNH (MAIN CONTENT) -->
+    <main class="main-content">
+
+      <!-- ==================== TAB 1: PHÂN PHỐI VIDEO ==================== -->
+      <section id="publish-tab" class="tab-pane active">
       <form id="upload-form">
         <div class="grid-2">
           
@@ -215,79 +272,123 @@
       </form>
     </section>
 
-    <!-- ==================== TAB 2: SOẠN THẢO & GỢI Ý ==================== -->
+    <!-- ==================== TAB 2: AI SCRIPT STUDIO (MULTI-AI FAILOVER POOL) ==================== -->
     <section id="gemini-tab" class="tab-pane">
       <div class="glass-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Soạn Thảo & Gợi Ý Nội Dung</h3>
+            <h3 class="panel-title">Multi-AI Script Studio & SEO Generator</h3>
             <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
-              Gợi ý tiêu đề, mô tả chuẩn và bộ thẻ từ khóa phù hợp cho từng kênh.
+              Hệ thống tự động luân chuyển model: <strong>Groq (Llama 3.3 70B)</strong> ➔ <strong>Google Gemini (2.5 Flash)</strong> ➔ <strong>OpenRouter Free Pool</strong> (0ms Downtime).
             </p>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="status-badge status-success" style="font-size:0.75rem;">AI Pool: Active</span>
           </div>
         </div>
 
         <form id="gemini-ai-form">
           <div class="grid-2">
             <div class="form-group">
-              <label class="form-label" for="ai-topic">Chủ đề Video hoặc Tóm tắt nội dung *</label>
-              <textarea id="ai-topic" class="form-textarea" placeholder="Nhập chủ đề hoặc dàn ý video..." required style="min-height:75px;"></textarea>
+              <label class="form-label" for="ai-topic">Chủ đề Video hoặc Ý tưởng kịch bản *</label>
+              <textarea id="ai-topic" class="form-textarea" placeholder="Nhập chủ đề video (Ví dụ: 5 công cụ AI lập trình đỉnh nhất 2026)..." required style="min-height:85px;"></textarea>
             </div>
 
             <div>
               <div class="form-group">
-                <label class="form-label" for="ai-audience">Đối tượng khán giả</label>
-                <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Người xem trẻ, giới văn phòng...">
+                <label class="form-label" for="ai-audience">Đối tượng khán giả mục tiêu</label>
+                <input type="text" id="ai-audience" class="form-input" placeholder="Ví dụ: Lập trình viên, người làm MMO, học sinh sinh viên...">
               </div>
 
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="ai-tone">Giọng điệu</label>
+                  <label class="form-label" for="ai-tone">Giọng văn / Tone of Voice</label>
                   <select id="ai-tone" class="form-select">
                     <option value="Hấp dẫn, kích thích tò mò">Hấp dẫn & Tò mò</option>
-                    <option value="Hài hước, vui vẻ">Hài hước & Vui vẻ</option>
-                    <option value="Chuyên sâu, thực tế">Chuyên sâu & Thực tế</option>
-                    <option value="Kịch tính, cảnh báo">Kịch tính & Cảnh báo</option>
+                    <option value="Hài hước, vui vẻ, năng lượng">Hài hước & Vui vẻ</option>
+                    <option value="Chuyên sâu, thực tế, uy tín">Chuyên sâu & Thực tế</option>
+                    <option value="Kịch tính, cảnh báo giật gân">Kịch tính & Cảnh báo</option>
+                    <option value="Kể chuyện (Storytelling)">Kể chuyện (Storytelling)</option>
                   </select>
                 </div>
 
                 <div class="form-group">
                   <label class="form-label" for="ai-key-input">Khóa API riêng (Tùy chọn)</label>
-                  <input type="password" id="ai-key-input" class="form-input" placeholder="Để trống để dùng mặc định">
+                  <input type="password" id="ai-key-input" class="form-input" placeholder="Tự động dùng AI Pool miễn phí">
                 </div>
               </div>
             </div>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-            <button type="submit" class="btn btn-primary" id="btn-generate-ai" style="padding:9px 18px;">
-              Tạo Gợi Ý Nội Dung
+            <button type="submit" class="btn btn-primary" id="btn-generate-ai" style="padding:9px 20px;">
+              Sinh Kịch Bản & Gói SEO (Auto-Failover AI)
             </button>
-            <span id="ai-loading-text" style="display:none; color:var(--text-muted); font-size:0.82rem;">Đang tạo gợi ý nội dung...</span>
+            <span id="ai-loading-text" style="display:none; color:#38bdf8; font-size:0.82rem;">Đang điều phối qua Multi-AI Pool...</span>
           </div>
         </form>
 
         <div id="ai-results-wrapper" style="display:none; margin-top:18px;">
           
-          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); border:1px solid var(--border-subtle); padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); border:1px solid var(--border-subtle); padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:12px; flex-wrap:wrap; gap:8px;">
             <div>
-              <h4 style="color:#fff; font-size:0.9rem; font-weight:600;">Gợi Ý Đã Sẵn Sàng</h4>
-              <p style="font-size:0.75rem; color:var(--text-muted);" id="ai-engine-source">Bộ tạo nội dung tự động</p>
+              <h4 style="color:#fff; font-size:0.9rem; font-weight:600;">Gói Nội Dung Sẵn Sàng</h4>
+              <p style="font-size:0.75rem; color:#38bdf8;" id="ai-engine-source">Được sinh bởi Multi-AI Pool Engine</p>
             </div>
-            <button type="button" class="btn btn-accent btn-sm" id="btn-apply-all-to-publisher" onclick="applyAllAiToPublisher()">
-              Áp Dụng Vào Bảng Đăng Video
-            </button>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="saveCurrentAiToLibrary()">
+                Lưu Vào Kho Nội Dung
+              </button>
+              <button type="button" class="btn btn-accent btn-sm" id="btn-apply-all-to-publisher" onclick="applyAllAiToPublisher()">
+                Áp Dụng Vào Bảng Đăng Video
+              </button>
+            </div>
+          </div>
+
+          <!-- Kịch bản chi tiết (Script & Hook) -->
+          <div class="glass-panel" style="background:var(--bg-input); padding:14px; margin-bottom:12px;" id="ai-script-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h4 style="color:var(--text-primary); font-size:0.88rem; font-weight:600;">Kịch Bản Video Ngắn (Shorts / Reels / TikTok):</h4>
+              <button type="button" class="btn btn-sm btn-outline" onclick="copyFullScript()">Sao chép kịch bản</button>
+            </div>
+            <div id="ai-script-hook" style="background:#11151f; border-left:3px solid #e11d48; padding:8px 12px; border-radius:4px; font-size:0.82rem; margin-bottom:8px;">
+              <strong>Hook 3s đầu:</strong> <span id="ai-hook-text">...</span>
+            </div>
+            <div id="ai-script-body-container" style="font-size:0.82rem; line-height:1.6; color:var(--text-secondary);"></div>
+            <div id="ai-script-cta" style="background:#11151f; border-left:3px solid #34d399; padding:8px 12px; border-radius:4px; font-size:0.82rem; margin-top:8px;">
+              <strong>Lời kêu gọi (CTA):</strong> <span id="ai-cta-text">...</span>
+            </div>
+
+            <!-- Voiceover TTS Generator -->
+            <div style="background:#141824; border:1px solid var(--border-subtle); padding:10px 14px; border-radius:var(--radius-sm); margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <label style="font-size:0.78rem; font-weight:600; color:#fff;">Tạo Voiceover AI:</label>
+                  <select id="tts-voice-select" class="form-select" style="width:auto; padding:4px 8px; font-size:0.78rem;">
+                    <option value="vi-female">Hoài My (Nữ - Tiếng Việt)</option>
+                    <option value="vi-male">Nam Minh (Nam - Tiếng Việt)</option>
+                    <option value="en-female">Jenny (Nữ - Tiếng Anh)</option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" id="btn-generate-voice" onclick="generateVoiceFromScript()">
+                  Tạo File Âm Thanh MP3
+                </button>
+              </div>
+              <div id="tts-player-container" style="display:none; margin-top:8px;">
+                <audio id="tts-audio-player" controls style="width:100%; height:32px;"></audio>
+              </div>
+            </div>
           </div>
 
           <div class="glass-panel" style="background:var(--bg-input); padding:14px; margin-bottom:12px;">
-            <h4 style="color:var(--text-primary); margin-bottom:8px; font-size:0.86rem; font-weight:600;">Gợi ý tiêu đề (Bấm để chọn):</h4>
+            <h4 style="color:var(--text-primary); margin-bottom:8px; font-size:0.86rem; font-weight:600;">Gợi ý 5 Tiêu đề Viral CTR Cao (Bấm để chọn):</h4>
             <div id="ai-titles-list"></div>
           </div>
 
           <div class="grid-2">
             <div class="glass-panel" style="background:var(--bg-input); padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <h4 style="color:var(--text-primary); font-size:0.86rem; font-weight:600;">Mô Tả Video:</h4>
+                <h4 style="color:var(--text-primary); font-size:0.86rem; font-weight:600;">Mô Tả Chuẩn SEO:</h4>
                 <button type="button" class="btn btn-sm btn-outline" onclick="copyAiDescription()">Sao chép</button>
               </div>
               <textarea id="ai-generated-desc" class="form-textarea" style="min-height:120px; font-size:0.82rem;" readonly></textarea>
@@ -307,37 +408,274 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 3: QUẢN LÝ KÊNH ==================== -->
-    <section id="channels-tab" class="tab-pane">
+    <!-- ==================== TAB: KHO NỘI DUNG & Ý TƯỞNG (CONTENT LIBRARY) ==================== -->
+    <section id="content-tab" class="tab-pane">
       <div class="glass-panel">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">Danh Sách Kênh YouTube Đã Liên Kết</h3>
+            <h3 class="panel-title">Kho Lưu Trữ & Thư Viện Nội Dung (Content Vault)</h3>
             <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
-              Quản lý các kênh YouTube được ủy quyền đăng video.
+              Quản lý các Idea, Script, Video thành phẩm được phân loại theo từng Brand.
             </p>
           </div>
           <div style="display:flex; gap:8px;">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-sync-channels" onclick="syncChannelsFromYouTube()">
-              Đồng bộ số liệu từ YouTube
+            <button type="button" class="btn btn-outline btn-sm" onclick="loadContentProjects()">
+              Làm mới kho
             </button>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-add-channel">
-              + Thêm Kênh Mới
+            <button type="button" class="btn btn-primary btn-sm" onclick="switchTab('gemini-tab')">
+              + Tạo Nội Dung Mới Bằng AI
             </button>
           </div>
         </div>
 
-        <div id="channels-grid-container" class="grid-3"></div>
+        <!-- Filter Status -->
+        <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+          <button class="btn btn-sm btn-outline active-filter" onclick="filterContentStatus('ALL')">Tất cả</button>
+          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('IDEA')">Ý tưởng (Idea)</button>
+          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('SCRIPT_GENERATED')">Đã có kịch bản</button>
+          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('READY')">Sẵn sàng đăng</button>
+          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('PUBLISHED')">Đã xuất bản</button>
+        </div>
 
-        <div id="empty-channels-state" style="text-align:center; padding: 40px 16px; display:none;">
-          <h3 style="color:#fff; margin-bottom: 4px; font-size:1rem;">Chưa có kênh nào được liên kết</h3>
+        <div id="content-projects-grid" class="grid-3"></div>
+
+        <div id="empty-content-state" style="text-align:center; padding: 40px 16px; display:none;">
+          <h3 style="color:#fff; margin-bottom: 4px; font-size:1rem;">Kho nội dung đang trống</h3>
           <p style="color:var(--text-muted); max-width: 380px; margin: 0 auto 12px; font-size:0.82rem;">
-            Bấm nút bên dưới để cấp quyền kết nối kênh của bạn qua Google OAuth.
+            Hãy dùng AI Script Studio để sinh kịch bản đầu tiên và lưu vào thư viện.
           </p>
-          <button type="button" class="btn btn-accent btn-sm" onclick="openOAuthPopup()">
-            Liên Kết Kênh Ngay
+          <button type="button" class="btn btn-accent btn-sm" onclick="switchTab('gemini-tab')">
+            Mở AI Script Studio
           </button>
         </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB: LỊCH MA TRẬN PHÂN PHỐI (CONTENT MATRIX PLANNER) ==================== -->
+    <section id="planner-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Lịch Ma Trận Phân Phối Đa Kênh (Matrix Scheduler)</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Quy hoạch lịch xuất bản tự động theo ngày trong tuần và khung giờ vàng (YouTube, Facebook, TikTok).
+            </p>
+          </div>
+          <div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">
+              + Thêm Slot Lịch Đăng
+            </button>
+          </div>
+        </div>
+
+        <!-- Matrix Week View -->
+        <div class="planner-matrix-grid" id="planner-matrix-container"></div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2.5: QUẢN LÝ BRAND (MULTI-BRAND HUB) ==================== -->
+    <section id="brands-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Quản Trị Hệ Thống Đa Thương Hiệu (Multi-Brand Hub)</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Tạo và quản lý các Brand riêng biệt với tệp khán giả, giọng văn và nhận diện thương hiệu độc lập.
+            </p>
+          </div>
+          <div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openCreateBrandModal()">
+              + Tạo Brand Mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Danh sách Brands Grid -->
+        <div id="brands-grid-container" class="grid-3"></div>
+
+        <div id="empty-brands-state" style="text-align:center; padding: 40px 16px; display:none;">
+          <h3 style="color:#fff; margin-bottom: 4px; font-size:1rem;">Chưa có Brand nào được tạo</h3>
+          <p style="color:var(--text-muted); max-width: 380px; margin: 0 auto 12px; font-size:0.82rem;">
+            Tạo Brand đầu tiên để định hình tệp khán giả và phong cách sản xuất nội dung tự động.
+          </p>
+          <button type="button" class="btn btn-accent btn-sm" onclick="openCreateBrandModal()">
+            Tạo Brand Ngay
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: QUẢN LÝ KÊNH & MẠNG XÃ HỘI ==================== -->
+    <section id="channels-tab" class="tab-pane">
+      
+      <!-- Bộ Lọc Nền Tảng Trên Cùng -->
+      <div class="platform-filter-tabs">
+        <button class="platform-filter-tab active" id="tab-filter-all" onclick="filterPlatformView('all')">
+          Tất Cả Mạng Xã Hội <span class="tab-badge" id="badge-count-all">0</span>
+        </button>
+        <button class="platform-filter-tab" id="tab-filter-youtube" onclick="filterPlatformView('youtube')">
+          YouTube Channels <span class="tab-badge" id="badge-count-yt">0</span>
+        </button>
+        <button class="platform-filter-tab" id="tab-filter-facebook" onclick="filterPlatformView('facebook')">
+          Facebook Fanpages <span class="tab-badge" id="badge-count-fb">0</span>
+        </button>
+        <button class="platform-filter-tab" id="tab-filter-tiktok" onclick="filterPlatformView('tiktok')">
+          TikTok Accounts <span class="tab-badge" id="badge-count-tt">0</span>
+        </button>
+      </div>
+
+      <!-- 1. PHÂN VÙNG YOUTUBE CHANNELS -->
+      <div class="platform-section-block" id="sec-platform-youtube">
+        <div class="platform-section-header">
+          <div class="platform-title-group">
+            <span class="platform-tag platform-tag-yt">YouTube Hub</span>
+            <div>
+              <h3 class="panel-title">Kênh YouTube Đã Kết Nối</h3>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Quản lý đăng tải video dài & Shorts qua Google OAuth 2.0</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="syncChannelsFromYouTube()">
+              Đồng bộ số liệu
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openOAuthPopup()" style="background:#dc2626; border-color:#dc2626;">
+              Thêm Kênh YouTube
+            </button>
+          </div>
+        </div>
+        <div id="youtube-channels-grid" class="grid-3"></div>
+        <div id="empty-yt-state" style="text-align:center; padding: 24px 16px; display:none; background:var(--bg-input); border-radius:var(--radius-sm);">
+          <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:8px;">Chưa có kênh YouTube nào được liên kết.</p>
+          <button type="button" class="btn btn-outline btn-sm" onclick="openOAuthPopup()">+ Kết Nối YouTube Ngay</button>
+        </div>
+      </div>
+
+      <!-- 2. PHÂN VÙNG FACEBOOK FANPAGES -->
+      <div class="platform-section-block" id="sec-platform-facebook">
+        <div class="platform-section-header">
+          <div class="platform-title-group">
+            <span class="platform-tag platform-tag-fb">Facebook Hub</span>
+            <div>
+              <h3 class="panel-title">Fanpage Facebook Đã Kết Nối</h3>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Tự động đăng Video & Facebook Reels qua Meta Graph API</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="connectFacebook()" style="background:#1877f2; border-color:#1877f2;">
+              Kết Nối Facebook OAuth
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openFbTokenModal()" style="border-color:#1877f2; color:#60a5fa;">
+              Nhập User Token
+            </button>
+          </div>
+        </div>
+        <div id="facebook-channels-grid" class="grid-3"></div>
+        <div id="empty-fb-state" style="text-align:center; padding: 24px 16px; display:none; background:var(--bg-input); border-radius:var(--radius-sm);">
+          <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:8px;">Chưa có Fanpage Facebook nào được liên kết.</p>
+          <button type="button" class="btn btn-outline btn-sm" onclick="openFbTokenModal()">+ Nhập Token Facebook Ngay</button>
+        </div>
+      </div>
+
+      <!-- 3. PHÂN VÙNG TIKTOK ACCOUNTS -->
+      <div class="platform-section-block" id="sec-platform-tiktok">
+        <div class="platform-section-header">
+          <div class="platform-title-group">
+            <span class="platform-tag platform-tag-tt">TikTok Hub</span>
+            <div>
+              <h3 class="panel-title">Tài Khoản TikTok Đã Kết Nối</h3>
+              <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Phân phối video trực tiếp qua TikTok Content Posting API v2</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="connectTikTok()" style="background:#141824; border:1px solid #475569;">
+              Kết Nối Tài Khoản TikTok
+            </button>
+          </div>
+        </div>
+        <div id="tiktok-channels-grid" class="grid-3"></div>
+        <div id="empty-tt-state" style="text-align:center; padding: 24px 16px; display:none; background:var(--bg-input); border-radius:var(--radius-sm);">
+          <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:8px;">Chưa có tài khoản TikTok nào được liên kết.</p>
+          <button type="button" class="btn btn-outline btn-sm" onclick="connectTikTok()">+ Kết Nối TikTok Ngay</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 3.5: THỐNG KÊ & TĂNG TRƯỞNG (ANALYTICS DASHBOARD) ==================== -->
+    <section id="analytics-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Bảng Điều Khiển Thống Kê & Tăng Trưởng Kênh</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Trực quan hóa số liệu người đăng ký, lượt xem, hiệu suất phân phối video theo thời gian thực.
+            </p>
+          </div>
+          <div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-analytics" onclick="loadAnalyticsData()">
+              Làm mới số liệu
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng Kênh Liên Kết</div>
+            <div class="kpi-value" id="kpi-total-channels">0</div>
+            <div class="kpi-sub">Đang hoạt động</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng Người Đăng Ký</div>
+            <div class="kpi-value" id="kpi-total-subscribers" style="color:#38bdf8;">0</div>
+            <div class="kpi-sub">Tất cả các kênh</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tổng Lượt Xem</div>
+            <div class="kpi-value" id="kpi-total-views" style="color:#a78bfa;">0</div>
+            <div class="kpi-sub">Lượt xem tích lũy</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Video Đã Phân Phối</div>
+            <div class="kpi-value" id="kpi-total-videos" style="color:#34d399;">0</div>
+            <div class="kpi-sub">Tải lên thành công</div>
+          </div>
+        </div>
+
+        <!-- Charts Grid Row 1 -->
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="glass-panel" style="background:var(--bg-input); padding:16px;">
+            <h4 style="color:#fff; font-size:0.88rem; margin-bottom:12px; font-weight:600;">Quy Mô Kênh (Người Đăng Ký & Lượt Xem)</h4>
+            <div style="position:relative; height:260px;">
+              <canvas id="channelStatsChart"></canvas>
+            </div>
+          </div>
+
+          <div class="glass-panel" style="background:var(--bg-input); padding:16px;">
+            <h4 style="color:#fff; font-size:0.88rem; margin-bottom:12px; font-weight:600;">Xu Hướng Phân Phối Video (7 Ngày Gần Nhất)</h4>
+            <div style="position:relative; height:260px;">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid Row 2 -->
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="glass-panel" style="background:var(--bg-input); padding:16px;">
+            <h4 style="color:#fff; font-size:0.88rem; margin-bottom:12px; font-weight:600;">Số Lượng Video Từng Kênh Sở Hữu</h4>
+            <div style="position:relative; height:240px;">
+              <canvas id="videoDistChart"></canvas>
+            </div>
+          </div>
+
+          <div class="glass-panel" style="background:var(--bg-input); padding:16px;">
+            <h4 style="color:#fff; font-size:0.88rem; margin-bottom:12px; font-weight:600;">Tỷ Lệ Tải Lên Thành Công / Thất Bại</h4>
+            <div style="position:relative; height:240px;">
+              <canvas id="successRateChart"></canvas>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -454,14 +792,56 @@
       </div>
     </section>
 
-  </main>
+    </main>
+  </div> <!-- Đóng app-main -->
+</div> <!-- Đóng app-container -->
 
-  <!-- MODAL TIẾN TRÌNH TẢI LÊN -->
-  <div class="modal-backdrop" id="upload-modal">
-    <div class="modal-dialog">
-      <div class="panel-header">
-        <h3 class="panel-title" id="modal-title">Đang Phân Phối Video Lên Các Kênh...</h3>
+<!-- THANH NÚT HƯỚNG DẪN Ở CUỐI TRANG -->
+<div class="bottom-guide-bar" onclick="openGuideModal()" title="Bấm để xem hướng dẫn sử dụng chi tiết chức năng trang hiện tại">
+  <span class="guide-bar-text">Hướng Dẫn Trang Này</span>
+</div>
+
+<!-- ==================== MODAL HƯỚNG DẪN SỬ DỤNG THEO TỪNG TRANG ==================== -->
+<div class="modal-backdrop" id="guide-modal">
+  <div class="modal-dialog" style="max-width: 680px;">
+    <div class="panel-header">
+      <div>
+        <h3 class="panel-title" id="guide-modal-title">Hướng Dẫn Sử Dụng Tính Năng</h3>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Tài liệu thao tác nhanh cho từng module trong hệ thống</p>
       </div>
+      <button type="button" class="btn btn-sm btn-outline" onclick="closeGuideModal()">Đóng</button>
+    </div>
+
+    <!-- Sub-tabs chọn nhanh hướng dẫn từng module -->
+    <div style="display:flex; gap:4px; overflow-x:auto; padding:6px 0; border-bottom:1px solid var(--border-subtle); margin-bottom:14px;">
+      <button class="btn btn-sm btn-outline active-guide-tab" onclick="switchGuideTopic('publish-tab')">Phân Phối</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('gemini-tab')">AI Studio</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('content-tab')">Kho Nội Dung</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('planner-tab')">Lịch Ma Trận</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('brands-tab')">Quản Lý Brand</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('channels-tab')">Mạng Xã Hội</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('analytics-tab')">Thống Kê</button>
+      <button class="btn btn-sm btn-outline" onclick="switchGuideTopic('admin-tab')">Admin Khách</button>
+    </div>
+
+    <!-- Nội dung hướng dẫn động theo trang -->
+    <div id="guide-modal-content" style="max-height:360px; overflow-y:auto; line-height:1.6; font-size:0.84rem; color:var(--text-secondary);">
+      <!-- Sẽ được fill động qua hàm renderGuideContent() trong JS -->
+    </div>
+
+    <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:12px;">
+      <span style="font-size:0.75rem; color:var(--text-muted);">Hệ thống tự nhận diện trang đang xem khi mở hướng dẫn.</span>
+      <button type="button" class="btn btn-primary btn-sm" onclick="closeGuideModal()">Đã Hiểu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TIẾN TRÌNH TẢI LÊN -->
+<div class="modal-backdrop" id="upload-modal">
+  <div class="modal-dialog">
+    <div class="panel-header">
+      <h3 class="panel-title" id="modal-title">Đang Phân Phối Video Lên Các Kênh...</h3>
+    </div>
 
       <div style="margin-bottom: 12px;">
         <p id="modal-subtitle" style="font-size: 0.82rem; color: var(--text-muted);">Vui lòng giữ nguyên trình duyệt trong quá trình tải lên.</p>
@@ -480,8 +860,134 @@
     </div>
   </div>
 
+  <!-- MODAL TẠO BRAND MỚI -->
+  <div class="modal-backdrop" id="brand-modal">
+    <div class="modal-dialog">
+      <div class="panel-header">
+        <h3 class="panel-title" id="brand-modal-title">Tạo Thương Hiệu Mới (Brand)</h3>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeBrandModal()">✕</button>
+      </div>
+
+      <form id="brand-form" style="margin-top: 12px;">
+        <input type="hidden" id="brand-id-hidden">
+        
+        <div class="form-group">
+          <label class="form-label" for="brand-name-input">Tên Thương Hiệu (Brand Name) *</label>
+          <input type="text" id="brand-name-input" class="form-input" placeholder="Ví dụ: AI Master Studio, Tech Review..." required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="brand-desc-input">Mô Tả Định Vị Thương Hiệu</label>
+          <textarea id="brand-desc-input" class="form-textarea" placeholder="Giới thiệu mục tiêu, chuyên môn của Brand..." style="min-height:60px;"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="brand-audience-input">Tệp Khán Giả Mục Tiêu</label>
+            <input type="text" id="brand-audience-input" class="form-input" placeholder="Ví dụ: Người làm MMO, Developer..." value="Khán giả đại chúng">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="brand-tone-input">Tone of Voice (Giọng văn)</label>
+            <select id="brand-tone-input" class="form-select">
+              <option value="Hấp dẫn, kích thích tò mò">Hấp dẫn & Tò mò</option>
+              <option value="Hài hước, vui vẻ, năng lượng">Hài hước & Vui vẻ</option>
+              <option value="Chuyên sâu, thực tế, uy tín">Chuyên sâu & Thực tế</option>
+              <option value="Kịch tính, cảnh báo giật gân">Kịch tính & Cảnh báo</option>
+              <option value="Kể chuyện (Storytelling)">Kể chuyện (Storytelling)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeBrandModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-save-brand">Lưu Thương Hiệu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL TẠO LỊCH MA TRẬN PLANNER -->
+  <div class="modal-backdrop" id="plan-modal">
+    <div class="modal-dialog">
+      <div class="panel-header">
+        <h3 class="panel-title">Thêm Slot Phân Phối Tự Động (Matrix Schedule)</h3>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeCreatePlanModal()">✕</button>
+      </div>
+
+      <form id="plan-form" style="margin-top: 12px;">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="plan-day-select">Ngày trong tuần *</label>
+            <select id="plan-day-select" class="form-select" required>
+              <option value="MONDAY">Thứ 2 (Monday)</option>
+              <option value="TUESDAY">Thứ 3 (Tuesday)</option>
+              <option value="WEDNESDAY">Thứ 4 (Wednesday)</option>
+              <option value="THURSDAY">Thứ 5 (Thursday)</option>
+              <option value="FRIDAY">Thứ 6 (Friday)</option>
+              <option value="SATURDAY">Thứ 7 (Saturday)</option>
+              <option value="SUNDAY">Chủ Nhật (Sunday)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="plan-time-input">Khung Giờ Đăng (HH:mm) *</label>
+            <input type="time" id="plan-time-input" class="form-input" value="09:00" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="plan-theme-input">Chủ Đề Định Kỳ (Topic Theme) *</label>
+          <input type="text" id="plan-theme-input" class="form-input" placeholder="Ví dụ: AI News, Tips & Tricks, Review Tool..." required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nền Tảng Phân Phối Mục Tiêu</label>
+          <div style="display:flex; gap:12px; margin-top:4px;">
+            <label style="font-size:0.8rem; color:var(--text-secondary); cursor:pointer;"><input type="checkbox" id="plan-plat-yt" checked> YouTube Shorts</label>
+            <label style="font-size:0.8rem; color:var(--text-secondary); cursor:pointer;"><input type="checkbox" id="plan-plat-fb" checked> Facebook Reels</label>
+            <label style="font-size:0.8rem; color:var(--text-secondary); cursor:pointer;"><input type="checkbox" id="plan-plat-tt" checked> TikTok</label>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeCreatePlanModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary btn-sm">Lưu Slot Lịch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL NHẬP ACCESS TOKEN FACEBOOK TRỰC TIẾP -->
+  <div class="modal-backdrop" id="fb-token-modal">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="panel-header">
+        <div>
+          <h3 class="panel-title">Nhập Access Token Facebook</h3>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Nhập User Access Token để tự động quét & liên kết toàn bộ Fanpage</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeFbTokenModal()">✕</button>
+      </div>
+      <form id="fb-token-form" onsubmit="submitFbToken(event)">
+        <div class="form-group">
+          <label class="form-label" for="fb-token-input">User Access Token *</label>
+          <textarea id="fb-token-input" class="form-textarea" rows="4" placeholder="Dán mã Token (bắt đầu bằng EAAP... hoặc EAA...) vào đây" required style="font-family:'JetBrains Mono', monospace; font-size:0.75rem;"></textarea>
+          <p style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+            Lấy từ Meta Graph API Explorer hoặc công cụ quản trị Facebook của bạn.
+          </p>
+        </div>
+        <div style="margin-top: 16px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeFbTokenModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-fb-token">Liên Kết Fanpage Ngay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- Thư viện Chart.js cho Analytics Dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

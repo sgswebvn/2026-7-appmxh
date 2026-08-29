@@ -5,14 +5,15 @@
 ---
 
 ## 🌟 1. TỔNG QUAN DỰ ÁN (PROJECT OVERVIEW)
-- **Tên dự án:** YouTube Multi-Publisher v2.5 (Hệ thống phân phối video YouTube đa kênh tự động hóa).
+- **Tên dự án:** YouTube Multi-Publisher v3.0 (Hệ thống phân phối video YouTube đa kênh tự động hóa & Hàng đợi nền).
 - **Mục tiêu cốt lõi:**
-  1. Cho phép 1-Click tải lên và phân phối 1 video đến hàng loạt kênh YouTube cùng lúc.
-  2. Tùy biến tiêu đề, mô tả riêng cho từng kênh để chống thuật toán YouTube phạt trùng lặp nội dung.
-  3. Tích hợp **Gemini AI (Model: `gemini-2.5-flash`)** tự động tạo gói nội dung SEO (5 tiêu đề Viral giật tít CTR, mô tả chuẩn SEO, tags từ khóa và biến thể riêng từng kênh).
-  4. Quản lý xác thực người dùng (Đăng ký, Đăng nhập, JWT, Bcrypt), lưu trữ dữ liệu trực tiếp vào cụm **MongoDB Atlas Cloud** (Database: `ytb-multi`).
-  5. Hệ thống bảo mật cao cấp: Chống DDoS, tự động khóa IP spam, chống brute-force, lọc NoSQL/XSS đệ quy và nén dữ liệu Brotli.
-  6. Bộ máy tự phục hồi và sửa lỗi tự động (**Self-Healing AutoFix Engine**) giải quyết 300 kịch bản lỗi thực tế.
+  1. **1-Click Tải lên & Phân phối qua Hàng đợi nền (Background Queue Engine):** Xử lý tải video nặng (>2GB) trên hàng chục kênh cùng lúc với cơ chế kiểm soát Concurrency và theo dõi tiến trình thời gian thực (Job ID polling).
+  2. **Kiến trúc Router Mô-đun (Modular Routes Architecture):** Hệ thống phân tách thành các router chuyên trách (`auth.js`, `channels.js`, `upload.js`, `ai.js`, `admin.js`, `analytics.js`, `general.js`).
+  3. **Analytics Dashboard (Chart.js):** Bảng điều khiển trực quan hóa số liệu kênh, thống kê tăng trưởng lượt xem, người đăng ký, phân bổ video và tỷ lệ thành công.
+  4. Tùy biến tiêu đề, mô tả riêng cho từng kênh để chống thuật toán YouTube phạt trùng lặp nội dung.
+  5. Tích hợp **Gemini AI (Model: `gemini-2.5-flash`)** tự động tạo gói nội dung SEO (5 tiêu đề Viral CTR cao, mô tả chuẩn SEO có timestamps, tags và biến thể kênh).
+  6. Quản lý xác thực người dùng & Cấp tài khoản dùng thử 10 phút tự động khóa.
+  7. Bộ máy tự phục hồi và sửa lỗi tự động (**Self-Healing AutoFix Engine**) giải quyết 300 kịch bản lỗi thực tế.
 - **Kho lưu trữ GitHub:** [https://github.com/sgswebvn/2026-4-ytbmuti.git](https://github.com/sgswebvn/2026-4-ytbmuti.git) (Nhánh `main`).
 
 ---

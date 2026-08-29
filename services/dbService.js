@@ -9,6 +9,9 @@ const User = require('../models/User');
 const Channel = require('../models/Channel');
 const History = require('../models/History');
 const GeminiDraft = require('../models/GeminiDraft');
+const Brand = require('../models/Brand');
+const ContentProject = require('../models/ContentProject');
+const ContentPlan = require('../models/ContentPlan');
 
 function isConnectedToMongo() {
   return mongoose.connection.readyState === 1;
@@ -639,6 +642,204 @@ function addQuotaUsage(units) {
   return db.quotaUsage;
 }
 
+// ==================== MULTI-BRAND OPERATIONS ====================
+async function getBrands(userId) {
+  if (isConnectedToMongo()) {
+    return Brand.find({ userId }).sort({ createdAt: -1 });
+  }
+  const db = readLocalDB();
+  return (db.brands || []).filter(b => b.userId === userId);
+}
+
+async function getBrandById(userId, brandId) {
+  if (isConnectedToMongo()) {
+    return Brand.findOne({ userId, _id: brandId });
+  }
+  const db = readLocalDB();
+  return (db.brands || []).find(b => b.userId === userId && (b._id === brandId || b.id === brandId));
+}
+
+async function createBrand(userId, brandData) {
+  if (isConnectedToMongo()) {
+    return Brand.create({
+      userId,
+      name: brandData.name,
+      description: brandData.description || '',
+      targetAudience: brandData.targetAudience || 'Khán giả đại chúng',
+      toneOfVoice: brandData.toneOfVoice || 'Hấp dẫn, kích thích tò mò',
+      primaryColor: brandData.primaryColor || '#e11d48',
+      socialChannels: brandData.socialChannels || []
+    });
+  }
+  const db = readLocalDB();
+  if (!db.brands) db.brands = [];
+  const newBrand = {
+    id: uuidv4(),
+    _id: uuidv4(),
+    userId,
+    name: brandData.name,
+    description: brandData.description || '',
+    targetAudience: brandData.targetAudience || 'Khán giả đại chúng',
+    toneOfVoice: brandData.toneOfVoice || 'Hấp dẫn, kích thích tò mò',
+    primaryColor: brandData.primaryColor || '#e11d48',
+    socialChannels: brandData.socialChannels || [],
+    createdAt: new Date()
+  };
+  db.brands.unshift(newBrand);
+  writeLocalDB(db);
+  return newBrand;
+}
+
+async function updateBrand(userId, brandId, brandData) {
+  if (isConnectedToMongo()) {
+    return Brand.findOneAndUpdate(
+      { userId, _id: brandId },
+      { $set: { ...brandData, updatedAt: new Date() } },
+      { new: true }
+    );
+  }
+  const db = readLocalDB();
+  if (!db.brands) db.brands = [];
+  const idx = db.brands.findIndex(b => b.userId === userId && (b._id === brandId || b.id === brandId));
+  if (idx !== -1) {
+    db.brands[idx] = { ...db.brands[idx], ...brandData, updatedAt: new Date() };
+    writeLocalDB(db);
+    return db.brands[idx];
+  }
+  return null;
+}
+
+async function deleteBrand(userId, brandId) {
+  if (isConnectedToMongo()) {
+    return Brand.deleteOne({ userId, _id: brandId });
+  }
+  const db = readLocalDB();
+  if (!db.brands) db.brands = [];
+  db.brands = db.brands.filter(b => !(b.userId === userId && (b._id === brandId || b.id === brandId)));
+  writeLocalDB(db);
+  return true;
+}
+
+// ==================== CONTENT PROJECTS (CONTENT LIBRARY) ====================
+async function getContentProjects(userId, brandId = null) {
+  const query = { userId };
+  if (brandId) query.brandId = brandId;
+
+  if (isConnectedToMongo()) {
+    return ContentProject.find(query).sort({ updatedAt: -1 });
+  }
+  const db = readLocalDB();
+  return (db.contentProjects || []).filter(p => p.userId === userId && (!brandId || p.brandId === brandId));
+}
+
+async function createContentProject(userId, projectData) {
+  if (isConnectedToMongo()) {
+    return ContentProject.create({
+      userId,
+      brandId: projectData.brandId || '',
+      title: projectData.title,
+      topic: projectData.topic || '',
+      contentType: projectData.contentType || 'SHORT',
+      status: projectData.status || 'IDEA',
+      scriptData: projectData.scriptData || null,
+      seoMetadata: projectData.seoMetadata || null,
+      mediaFiles: projectData.mediaFiles || [],
+      scheduledAt: projectData.scheduledAt || null
+    });
+  }
+  const db = readLocalDB();
+  if (!db.contentProjects) db.contentProjects = [];
+  const newProj = {
+    id: uuidv4(),
+    _id: uuidv4(),
+    userId,
+    ...projectData,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  db.contentProjects.unshift(newProj);
+  writeLocalDB(db);
+  return newProj;
+}
+
+async function updateContentProject(userId, projectId, projectData) {
+  if (isConnectedToMongo()) {
+    return ContentProject.findOneAndUpdate(
+      { userId, _id: projectId },
+      { $set: { ...projectData, updatedAt: new Date() } },
+      { new: true }
+    );
+  }
+  const db = readLocalDB();
+  if (!db.contentProjects) db.contentProjects = [];
+  const idx = db.contentProjects.findIndex(p => p.userId === userId && (p._id === projectId || p.id === projectId));
+  if (idx !== -1) {
+    db.contentProjects[idx] = { ...db.contentProjects[idx], ...projectData, updatedAt: new Date() };
+    writeLocalDB(db);
+    return db.contentProjects[idx];
+  }
+  return null;
+}
+
+async function deleteContentProject(userId, projectId) {
+  if (isConnectedToMongo()) {
+    return ContentProject.deleteOne({ userId, _id: projectId });
+  }
+  const db = readLocalDB();
+  if (!db.contentProjects) db.contentProjects = [];
+  db.contentProjects = db.contentProjects.filter(p => !(p.userId === userId && (p._id === projectId || p.id === projectId)));
+  writeLocalDB(db);
+  return true;
+}
+
+// ==================== CONTENT MATRIX PLANNER ====================
+async function getContentPlans(userId, brandId = null) {
+  const query = { userId };
+  if (brandId) query.brandId = brandId;
+
+  if (isConnectedToMongo()) {
+    return ContentPlan.find(query).sort({ timeSlot: 1 });
+  }
+  const db = readLocalDB();
+  return (db.contentPlans || []).filter(p => p.userId === userId && (!brandId || p.brandId === brandId));
+}
+
+async function saveContentPlan(userId, planData) {
+  if (isConnectedToMongo()) {
+    return ContentPlan.create({
+      userId,
+      brandId: planData.brandId || '',
+      dayOfWeek: planData.dayOfWeek,
+      timeSlot: planData.timeSlot,
+      topicTheme: planData.topicTheme,
+      targetPlatforms: planData.targetPlatforms || ['YOUTUBE', 'FACEBOOK', 'TIKTOK']
+    });
+  }
+  const db = readLocalDB();
+  if (!db.contentPlans) db.contentPlans = [];
+  const newPlan = {
+    id: uuidv4(),
+    _id: uuidv4(),
+    userId,
+    ...planData,
+    createdAt: new Date()
+  };
+  db.contentPlans.push(newPlan);
+  writeLocalDB(db);
+  return newPlan;
+}
+
+async function deleteContentPlan(userId, planId) {
+  if (isConnectedToMongo()) {
+    return ContentPlan.deleteOne({ userId, _id: planId });
+  }
+  const db = readLocalDB();
+  if (!db.contentPlans) db.contentPlans = [];
+  db.contentPlans = db.contentPlans.filter(p => !(p.userId === userId && (p._id === planId || p.id === planId)));
+  writeLocalDB(db);
+  return true;
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -663,5 +864,17 @@ module.exports = {
   saveGeminiDraft,
   getGeminiDrafts,
   getQuotaUsage,
-  addQuotaUsage
+  addQuotaUsage,
+  getBrands,
+  getBrandById,
+  createBrand,
+  updateBrand,
+  deleteBrand,
+  getContentProjects,
+  createContentProject,
+  updateContentProject,
+  deleteContentProject,
+  getContentPlans,
+  saveContentPlan,
+  deleteContentPlan
 };

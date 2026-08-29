@@ -17,6 +17,12 @@ let lastAiResult = null;
 let testUserTimerInterval = null;
 let adminUsersInterval = null;
 let adminTestUsersList = [];
+let uploadJobPollInterval = null;
+let chartInstances = {};
+let brandsState = [];
+let activeBrandId = localStorage.getItem('ytb_active_brand') || '';
+let contentProjectsState = [];
+let contentPlansState = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Hiển thị ngay trạng thái người dùng đã lưu từ trước (tránh giật lag khi F5)
@@ -24,15 +30,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   handleUserRolesAndTimers();
 
   initTabs();
+  initSidebarState();
   initDropzones();
   loadCategories();
   initGeminiStudio();
   initFormSubmit();
+  initBrandFormSubmit();
+  initPlanFormSubmit();
   initOAuthListener();
   checkDbHealth();
   initAdminPanel();
 
   await checkAuthStatus();
+  loadBrands();
 
   document.getElementById('btn-add-channel').addEventListener('click', openOAuthPopup);
   document.getElementById('btn-refresh-history').addEventListener('click', () => {
@@ -262,9 +272,35 @@ function switchTab(tabId) {
     p.classList.toggle('active', p.id === tabId);
   });
 
+  // Cập nhật tiêu đề Topbar
+  const tabTitles = {
+    'publish-tab': 'Phân Phối Video Đa Kênh',
+    'gemini-tab': 'Multi-AI Script Studio & SEO Generator',
+    'content-tab': 'Kho Lưu Trữ & Thư Viện Nội Dung',
+    'planner-tab': 'Lịch Ma Trận Phân Phối Đa Kênh',
+    'brands-tab': 'Quản Trị Hệ Thống Đa Thương Hiệu',
+    'channels-tab': 'Quản Lý Mạng Xã Hội Đã Liên Kết',
+    'analytics-tab': 'Báo Cáo Thống Kê & Phân Tích Tăng Trưởng',
+    'history-tab': 'Lịch Sử Phân Phối & Hạn Mức Quota',
+    'admin-tab': 'Bảng Điều Khiển Quản Trị Hệ Thống'
+  };
+  const currentTitle = tabTitles[tabId] || 'Bảng Điều Khiển';
+  if (document.getElementById('topbar-page-title')) document.getElementById('topbar-page-title').textContent = currentTitle;
+
   // Lưu trạng thái tab hiện tại
   localStorage.setItem('ytb_active_tab', tabId);
   history.replaceState(null, null, '#' + tabId);
+
+  // Tự động load dữ liệu khi mở các Tab tương ứng
+  if (tabId === 'analytics-tab') {
+    loadAnalyticsData();
+  } else if (tabId === 'brands-tab') {
+    loadBrands();
+  } else if (tabId === 'content-tab') {
+    loadContentProjects();
+  } else if (tabId === 'planner-tab') {
+    loadContentPlans();
+  }
 }
 
 // ==================== CHANNELS MANAGEMENT ====================
@@ -329,62 +365,137 @@ async function syncChannelsFromYouTube() {
   }
 }
 
+function getChannelPlatform(channel) {
+  if (channel.tokens?.platform === 'FACEBOOK' || channel.id?.startsWith('fb_') || channel.title?.startsWith('[FB')) return 'FACEBOOK';
+  if (channel.tokens?.platform === 'TIKTOK' || channel.id?.startsWith('tt_') || channel.title?.startsWith('[TikTok')) return 'TIKTOK';
+  return 'YOUTUBE';
+}
+
+function filterPlatformView(platform) {
+  document.querySelectorAll('.platform-filter-tab').forEach(t => t.classList.remove('active'));
+  const activeTabBtn = document.getElementById(`tab-filter-${platform}`);
+  if (activeTabBtn) activeTabBtn.classList.add('active');
+
+  const secYt = document.getElementById('sec-platform-youtube');
+  const secFb = document.getElementById('sec-platform-facebook');
+  const secTt = document.getElementById('sec-platform-tiktok');
+
+  if (secYt) secYt.style.display = (platform === 'all' || platform === 'youtube') ? 'block' : 'none';
+  if (secFb) secFb.style.display = (platform === 'all' || platform === 'facebook') ? 'block' : 'none';
+  if (secTt) secTt.style.display = (platform === 'all' || platform === 'tiktok') ? 'block' : 'none';
+}
+
+function createChannelSelectCard(channel) {
+  const isSelected = selectedChannelIds.has(channel.id);
+  const card = document.createElement('div');
+  card.className = `channel-card-select ${isSelected ? 'selected' : ''}`;
+  card.dataset.id = channel.id;
+
+  const plat = getChannelPlatform(channel);
+  const defaultThumb = plat === 'FACEBOOK' ? 'https://via.placeholder.com/36?text=FB' : plat === 'TIKTOK' ? 'https://via.placeholder.com/36?text=TT' : 'https://via.placeholder.com/36?text=YT';
+  const avatarUrl = channel.thumbnailUrl || defaultThumb;
+  const subText = plat === 'FACEBOOK' ? 'Fanpage Facebook' : plat === 'TIKTOK' ? 'TikTok Creator' : `${formatNumber(channel.subscriberCount)} sub • ${formatNumber(channel.videoCount)} video`;
+
+  card.innerHTML = `
+    <input type="checkbox" ${isSelected ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:var(--accent-red);">
+    <img src="${avatarUrl}" class="channel-avatar" alt="Avatar">
+    <div style="overflow:hidden; flex:1;">
+      <div style="font-weight:500; font-size:0.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${channel.title}</div>
+      <div style="font-size:0.7rem; color:var(--text-muted);">${subText}</div>
+    </div>
+  `;
+
+  card.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'INPUT') {
+      const checkbox = card.querySelector('input');
+      checkbox.checked = !checkbox.checked;
+    }
+    const checkbox = card.querySelector('input');
+    if (checkbox.checked) {
+      selectedChannelIds.add(channel.id);
+      card.classList.add('selected');
+    } else {
+      selectedChannelIds.delete(channel.id);
+      card.classList.remove('selected');
+    }
+    updateSelectAllStatus();
+    renderChannelOverrides();
+  });
+
+  return card;
+}
+
 function renderChannelSelection() {
   const container = document.getElementById('channel-selection-list');
   const emptyPrompt = document.getElementById('no-channels-prompt');
+  if (!container) return;
   container.innerHTML = '';
 
   if (channelsState.length === 0) {
-    emptyPrompt.style.display = 'block';
+    if (emptyPrompt) emptyPrompt.style.display = 'block';
     return;
   }
-  emptyPrompt.style.display = 'none';
+  if (emptyPrompt) emptyPrompt.style.display = 'none';
 
   selectedChannelIds = new Set(channelsState.map(c => c.id));
-  document.getElementById('select-all-channels').checked = true;
+  if (document.getElementById('select-all-channels')) document.getElementById('select-all-channels').checked = true;
 
-  channelsState.forEach(channel => {
-    const isSelected = selectedChannelIds.has(channel.id);
-    const card = document.createElement('div');
-    card.className = `channel-card-select ${isSelected ? 'selected' : ''}`;
-    card.dataset.id = channel.id;
+  const ytChannels = channelsState.filter(c => getChannelPlatform(c) === 'YOUTUBE');
+  const fbChannels = channelsState.filter(c => getChannelPlatform(c) === 'FACEBOOK');
+  const ttChannels = channelsState.filter(c => getChannelPlatform(c) === 'TIKTOK');
 
-    const avatarUrl = channel.thumbnailUrl || 'https://via.placeholder.com/36?text=YTB';
-    card.innerHTML = `
-      <input type="checkbox" ${isSelected ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:var(--accent-red);">
-      <img src="${avatarUrl}" class="channel-avatar" alt="Avatar">
-      <div style="overflow:hidden; flex:1;">
-        <div style="font-weight:500; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${channel.title}</div>
-        <div style="font-size:0.72rem; color:var(--text-muted);">${formatNumber(channel.subscriberCount)} sub • ${formatNumber(channel.videoCount)} video</div>
+  const renderGroup = (title, badgeClass, list, platKey) => {
+    if (list.length === 0) return;
+    const groupEl = document.createElement('div');
+    groupEl.className = 'publisher-platform-group';
+    groupEl.innerHTML = `
+      <div class="publisher-group-header">
+        <div class="publisher-group-title">
+          <span class="platform-tag ${badgeClass}">${platKey}</span>
+          <span>${title} (${list.length})</span>
+        </div>
+        <label class="publisher-group-select-all">
+          <input type="checkbox" class="plat-group-check" data-platform="${platKey}" checked> Chọn tất cả ${platKey}
+        </label>
       </div>
+      <div class="channel-grid" id="plat-group-grid-${platKey}"></div>
     `;
 
-    card.addEventListener('click', (e) => {
-      if (e.target.tagName !== 'INPUT') {
-        const checkbox = card.querySelector('input');
-        checkbox.checked = !checkbox.checked;
-      }
-      const checkbox = card.querySelector('input');
-      if (checkbox.checked) {
-        selectedChannelIds.add(channel.id);
-        card.classList.add('selected');
-      } else {
-        selectedChannelIds.delete(channel.id);
-        card.classList.remove('selected');
-      }
+    const grid = groupEl.querySelector(`#plat-group-grid-${platKey}`);
+    list.forEach(channel => {
+      grid.appendChild(createChannelSelectCard(channel));
+    });
+
+    const groupCheck = groupEl.querySelector('.plat-group-check');
+    groupCheck.addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      list.forEach(c => {
+        if (isChecked) selectedChannelIds.add(c.id);
+        else selectedChannelIds.delete(c.id);
+        const cardEl = groupEl.querySelector(`.channel-card-select[data-id="${c.id}"]`);
+        if (cardEl) {
+          cardEl.classList.toggle('selected', isChecked);
+          const inp = cardEl.querySelector('input');
+          if (inp) inp.checked = isChecked;
+        }
+      });
       updateSelectAllStatus();
       renderChannelOverrides();
     });
 
-    container.appendChild(card);
-  });
+    container.appendChild(groupEl);
+  };
+
+  renderGroup('Kênh YouTube', 'platform-tag-yt', ytChannels, 'YT');
+  renderGroup('Fanpage Facebook', 'platform-tag-fb', fbChannels, 'FB');
+  renderGroup('Tài Khoản TikTok', 'platform-tag-tt', ttChannels, 'TT');
 
   renderChannelOverrides();
 }
 
 function updateSelectAllStatus() {
   const selectAll = document.getElementById('select-all-channels');
-  selectAll.checked = selectedChannelIds.size === channelsState.length && channelsState.length > 0;
+  if (selectAll) selectAll.checked = selectedChannelIds.size === channelsState.length && channelsState.length > 0;
 }
 
 function toggleSelectAllChannels(checked) {
@@ -392,7 +503,7 @@ function toggleSelectAllChannels(checked) {
   cards.forEach(card => {
     const id = card.dataset.id;
     const checkbox = card.querySelector('input');
-    checkbox.checked = checked;
+    if (checkbox) checkbox.checked = checked;
     if (checked) {
       selectedChannelIds.add(id);
       card.classList.add('selected');
@@ -401,60 +512,133 @@ function toggleSelectAllChannels(checked) {
       card.classList.remove('selected');
     }
   });
+  document.querySelectorAll('.plat-group-check').forEach(c => c.checked = checked);
   renderChannelOverrides();
 }
 
-function renderChannelsManager() {
-  const grid = document.getElementById('channels-grid-container');
-  const emptyState = document.getElementById('empty-channels-state');
-  grid.innerHTML = '';
+function createChannelItemCard(channel, platform) {
+  const card = document.createElement('div');
+  card.className = 'channel-item-card';
 
-  if (channelsState.length === 0) {
-    emptyState.style.display = 'block';
-    return;
+  const defaultThumb = platform === 'FACEBOOK' ? 'https://via.placeholder.com/44?text=FB' : platform === 'TIKTOK' ? 'https://via.placeholder.com/44?text=TT' : 'https://via.placeholder.com/44?text=YT';
+  const avatarUrl = channel.thumbnailUrl || defaultThumb;
+  const linkText = platform === 'FACEBOOK' ? 'Xem Fanpage ↗' : platform === 'TIKTOK' ? 'Xem TikTok ↗' : 'Trang chủ kênh ↗';
+  
+  const cleanId = (channel.id || '').replace(/^fb_/, '').replace(/^tt_/, '');
+  let targetUrl = channel.channelUrl;
+  if (!targetUrl || targetUrl.includes('youtube.com/@fb.com')) {
+    if (platform === 'FACEBOOK') {
+      targetUrl = `https://www.facebook.com/${cleanId}`;
+    } else if (platform === 'TIKTOK') {
+      targetUrl = `https://www.tiktok.com/@${cleanId}`;
+    } else {
+      targetUrl = `https://www.youtube.com/channel/${channel.id}`;
+    }
   }
-  emptyState.style.display = 'none';
 
-  channelsState.forEach(channel => {
-    const card = document.createElement('div');
-    card.className = 'channel-item-card';
-
-    const avatarUrl = channel.thumbnailUrl || 'https://via.placeholder.com/44?text=YTB';
-    card.innerHTML = `
-      <div>
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-          <img src="${avatarUrl}" style="width:44px; height:44px; border-radius:50%; border:1px solid var(--border-subtle);" alt="Avatar">
-          <div style="overflow:hidden;">
-            <h4 style="font-size:0.95rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              ${channel.title}
-            </h4>
-            <a href="${channel.channelUrl}" target="_blank" class="channel-link-btn" title="Mở trang chủ YouTube của kênh này">
-              Trang chủ kênh ↗
-            </a>
-          </div>
+  let statsHtml = '';
+  if (platform === 'YOUTUBE') {
+    statsHtml = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:8px; background:var(--bg-input); border-radius:var(--radius-sm); margin-bottom:12px; font-size:0.74rem;">
+        <div>
+          <span style="color:var(--text-muted); display:block;">Người đăng ký:</span>
+          <strong>${formatNumber(channel.subscriberCount)}</strong>
         </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:8px; background:var(--bg-input); border-radius:var(--radius-sm); margin-bottom:12px; font-size:0.76rem;">
-          <div>
-            <span style="color:var(--text-muted); display:block;">Người đăng ký:</span>
-            <strong>${formatNumber(channel.subscriberCount)}</strong>
-          </div>
-          <div>
-            <span style="color:var(--text-muted); display:block;">Video đã đăng:</span>
-            <strong style="color:#fff;">${formatNumber(channel.videoCount)}</strong>
-          </div>
+        <div>
+          <span style="color:var(--text-muted); display:block;">Video đã phát:</span>
+          <strong style="color:#fff;">${formatNumber(channel.videoCount)}</strong>
         </div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:10px;">
-        <span class="status-badge status-success">Đã xác thực</span>
-        <button type="button" class="btn btn-sm btn-danger-outline" onclick="deleteChannel('${channel.id}', '${channel.title.replace(/'/g, "\\'")}')">
-          Gỡ kênh
-        </button>
       </div>
     `;
+  } else if (platform === 'FACEBOOK') {
+    statsHtml = `
+      <div style="padding:8px; background:var(--bg-input); border-radius:var(--radius-sm); margin-bottom:12px; font-size:0.74rem;">
+        <span style="color:var(--text-muted); display:block;">Page ID: <code>${channel.id.replace('fb_', '')}</code></span>
+        <span style="color:#38bdf8; display:block; margin-top:2px;">Meta Graph API Active</span>
+      </div>
+    `;
+  } else {
+    statsHtml = `
+      <div style="padding:8px; background:var(--bg-input); border-radius:var(--radius-sm); margin-bottom:12px; font-size:0.74rem;">
+        <span style="color:var(--text-muted); display:block;">TikTok Creator Direct Post</span>
+        <span style="color:#34d399; display:block; margin-top:2px;">Sẵn sàng phân phối video</span>
+      </div>
+    `;
+  }
 
-    grid.appendChild(card);
+  card.innerHTML = `
+    <div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <img src="${avatarUrl}" style="width:42px; height:42px; border-radius:50%; border:1px solid var(--border-subtle); object-fit:cover;" alt="Avatar">
+        <div style="overflow:hidden; flex:1;">
+          <h4 style="font-size:0.9rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff;">
+            ${channel.title}
+          </h4>
+          <a href="${targetUrl}" target="_blank" class="channel-link-btn" style="font-size:0.74rem; color:var(--text-muted);">
+            ${linkText}
+          </a>
+        </div>
+      </div>
+      ${statsHtml}
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:10px;">
+      <span class="status-badge status-success">Đã kết nối</span>
+      <button type="button" class="btn btn-sm btn-danger-outline" onclick="deleteChannel('${channel.id}', '${channel.title.replace(/'/g, "\\'")}')">
+        Gỡ liên kết
+      </button>
+    </div>
+  `;
+
+  return card;
+}
+
+function renderChannelsManager() {
+  const ytGrid = document.getElementById('youtube-channels-grid');
+  const fbGrid = document.getElementById('facebook-channels-grid');
+  const ttGrid = document.getElementById('tiktok-channels-grid');
+
+  const emptyYt = document.getElementById('empty-yt-state');
+  const emptyFb = document.getElementById('empty-fb-state');
+  const emptyTt = document.getElementById('empty-tt-state');
+
+  if (ytGrid) ytGrid.innerHTML = '';
+  if (fbGrid) fbGrid.innerHTML = '';
+  if (ttGrid) ttGrid.innerHTML = '';
+
+  const ytChannels = [];
+  const fbChannels = [];
+  const ttChannels = [];
+
+  channelsState.forEach(c => {
+    const plat = getChannelPlatform(c);
+    if (plat === 'FACEBOOK') fbChannels.push(c);
+    else if (plat === 'TIKTOK') ttChannels.push(c);
+    else ytChannels.push(c);
+  });
+
+  if (document.getElementById('badge-count-all')) document.getElementById('badge-count-all').textContent = channelsState.length;
+  if (document.getElementById('badge-count-yt')) document.getElementById('badge-count-yt').textContent = ytChannels.length;
+  if (document.getElementById('badge-count-fb')) document.getElementById('badge-count-fb').textContent = fbChannels.length;
+  if (document.getElementById('badge-count-tt')) document.getElementById('badge-count-tt').textContent = ttChannels.length;
+  if (document.getElementById('channel-count-badge')) document.getElementById('channel-count-badge').textContent = channelsState.length;
+
+  // Render YouTube
+  if (emptyYt) emptyYt.style.display = ytChannels.length === 0 ? 'block' : 'none';
+  ytChannels.forEach(channel => {
+    if (ytGrid) ytGrid.appendChild(createChannelItemCard(channel, 'YOUTUBE'));
+  });
+
+  // Render Facebook
+  if (emptyFb) emptyFb.style.display = fbChannels.length === 0 ? 'block' : 'none';
+  fbChannels.forEach(channel => {
+    if (fbGrid) fbGrid.appendChild(createChannelItemCard(channel, 'FACEBOOK'));
+  });
+
+  // Render TikTok
+  if (emptyTt) emptyTt.style.display = ttChannels.length === 0 ? 'block' : 'none';
+  ttChannels.forEach(channel => {
+    if (ttGrid) ttGrid.appendChild(createChannelItemCard(channel, 'TIKTOK'));
   });
 }
 
@@ -550,6 +734,10 @@ function initGeminiStudio() {
     const tone = document.getElementById('ai-tone').value;
     const customKey = document.getElementById('ai-key-input').value.trim();
 
+    // Tìm tên Brand đang chọn nếu có
+    const selectedBrand = brandsState.find(b => (b._id || b.id) === activeBrandId);
+    const brandName = selectedBrand ? selectedBrand.name : '';
+
     const btn = document.getElementById('btn-generate-ai');
     const loadingText = document.getElementById('ai-loading-text');
 
@@ -564,6 +752,7 @@ function initGeminiStudio() {
           topic,
           targetAudience,
           tone,
+          brandName,
           apiKey: customKey
         })
       });
@@ -571,8 +760,8 @@ function initGeminiStudio() {
       const data = await res.json();
       if (data.success && data.data) {
         lastAiResult = data.data;
-        renderAiResults(data.data, data.isAiGenerated);
-        showToast('Phân tích nội dung hoàn tất.');
+        renderAiResults(data.data, data.isAiGenerated, data.provider);
+        showToast('Multi-AI Pool đã hoàn tất sinh kịch bản!', 'success');
       } else {
         showToast(data.message || 'Lỗi phân tích nội dung', 'error');
       }
@@ -587,18 +776,36 @@ function initGeminiStudio() {
         if (cooldown < 0) {
           clearInterval(interval);
           btn.disabled = false;
-          btn.textContent = 'Tạo Gợi Ý Nội Dung';
+          btn.textContent = 'Sinh Kịch Bản & Gói SEO (Auto-Failover AI)';
         }
       }, 1000);
     }
   });
 }
 
-function renderAiResults(data, isAiGenerated) {
+function renderAiResults(data, isAiGenerated, providerName) {
   const wrapper = document.getElementById('ai-results-wrapper');
   wrapper.style.display = 'block';
 
-  document.getElementById('ai-engine-source').textContent = 'Bộ gợi ý nội dung tối ưu';
+  document.getElementById('ai-engine-source').textContent = providerName ? `Xử lý bởi: ${providerName}` : 'Xử lý bởi Multi-AI Failover Pool';
+
+  // Render Script (Hook, Body, CTA)
+  if (data.script) {
+    document.getElementById('ai-script-panel').style.display = 'block';
+    document.getElementById('ai-hook-text').textContent = data.script.hook || 'Chưa có hook';
+    document.getElementById('ai-cta-text').textContent = data.script.callToAction || 'Chưa có CTA';
+    
+    const bodyContainer = document.getElementById('ai-script-body-container');
+    bodyContainer.innerHTML = '';
+    if (data.script.bodySections && Array.isArray(data.script.bodySections)) {
+      data.script.bodySections.forEach(sec => {
+        const p = document.createElement('div');
+        p.style.marginBottom = '6px';
+        p.innerHTML = `<strong style="color:#f8fafc;">[${sec.time || '00:00'}] ${sec.heading || ''}:</strong> ${sec.content || ''}`;
+        bodyContainer.appendChild(p);
+      });
+    }
+  }
 
   // Render Titles
   const titlesList = document.getElementById('ai-titles-list');
@@ -639,22 +846,38 @@ function renderAiResults(data, isAiGenerated) {
   variantsContainer.innerHTML = '';
   if (data.channelVariants && data.channelVariants.length > 0) {
     data.channelVariants.forEach(v => {
-      const div = document.createElement('div');
-      div.style.padding = '6px 10px';
-      div.style.background = 'var(--bg-surface)';
-      div.style.borderRadius = 'var(--radius-sm)';
-      div.style.marginBottom = '4px';
-      div.innerHTML = `
-        <strong style="color:var(--text-primary);">${v.channelTitle}:</strong>
-        <span style="color:var(--text-secondary);"> "${v.customTitle}"</span>
+      const vCard = document.createElement('div');
+      vCard.style.padding = '8px';
+      vCard.style.border = '1px solid var(--border-subtle)';
+      vCard.style.borderRadius = 'var(--radius-sm)';
+      vCard.style.marginBottom = '6px';
+      vCard.innerHTML = `
+        <div style="color:var(--text-primary); font-weight:600;">${v.channelTitle}</div>
+        <div style="color:var(--text-secondary); margin-top:2px;">Tiêu đề: ${v.customTitle}</div>
       `;
-      variantsContainer.appendChild(div);
+      variantsContainer.appendChild(vCard);
     });
   } else {
-    variantsContainer.innerHTML = '<p style="color:var(--text-muted);">Chưa có kênh nào để tạo biến thể riêng.</p>';
+    variantsContainer.innerHTML = '<em>Không có biến thể riêng từng kênh.</em>';
   }
+}
 
-  wrapper.scrollIntoView({ behavior: 'smooth' });
+function copyFullScript() {
+  if (!lastAiResult || !lastAiResult.script) return;
+  const s = lastAiResult.script;
+  let text = `KỊCH BẢN VIDEO:\n\nHOOK:\n${s.hook}\n\nNỘI DUNG CHÍNH:\n`;
+  if (s.bodySections) {
+    s.bodySections.forEach(b => {
+      text += `[${b.time}] ${b.heading}: ${b.content}\n`;
+    });
+  }
+  text += `\nCALL TO ACTION:\n${s.callToAction}`;
+  
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Đã sao chép kịch bản đầy đủ vào Clipboard.', 'success');
+  }).catch(() => {
+    showToast('Đã tạo kịch bản.');
+  });
 }
 
 function selectAiTitle(title) {
@@ -918,7 +1141,7 @@ async function loadHistory() {
   }
 }
 
-// ==================== FORM SUBMISSION & UPLOAD MODAL ====================
+// ==================== FORM SUBMISSION & BACKGROUND QUEUE UPLOAD ====================
 function initFormSubmit() {
   const form = document.getElementById('upload-form');
   form.addEventListener('submit', async (e) => {
@@ -981,14 +1204,11 @@ function initFormSubmit() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        updateModalResults(data.results);
-        showToast('Đã hoàn tất phân phối video.');
-        loadChannels(); // Cập nhật lại số lượng videoCount của kênh ngay lập tức
-        loadQuota();
-        loadHistory();
+      if (data.success && data.jobId) {
+        showToast(data.message || 'Đã khởi tạo tiến trình xử lý nền.');
+        startUploadJobPolling(data.jobId);
       } else {
-        updateModalError(data.message || 'Xảy ra lỗi khi upload.');
+        updateModalError(data.message || 'Xảy ra lỗi khi tiếp nhận upload.');
         showToast(data.message || 'Lỗi upload', 'error');
       }
     } catch (err) {
@@ -1006,11 +1226,16 @@ function openUploadModal() {
   const title = document.getElementById('modal-title');
   const subtitle = document.getElementById('modal-subtitle');
 
+  if (uploadJobPollInterval) {
+    clearInterval(uploadJobPollInterval);
+    uploadJobPollInterval = null;
+  }
+
   statusList.innerHTML = '';
   closeBtn.style.display = 'none';
-  progressBar.style.width = '30%';
+  progressBar.style.width = '10%';
   title.textContent = 'Đang Phân Phối Video...';
-  subtitle.textContent = `Đang tải lên ${selectedChannelIds.size} kênh. Vui lòng chờ...`;
+  subtitle.textContent = `Đang đưa ${selectedChannelIds.size} kênh vào hàng đợi nền. Vui lòng chờ...`;
 
   selectedChannelIds.forEach(id => {
     const channel = channelsState.find(c => c.id === id);
@@ -1022,7 +1247,7 @@ function openUploadModal() {
         <img src="${channel ? channel.thumbnailUrl : ''}" style="width:22px; height:22px; border-radius:50%;">
         <strong>${channel ? channel.title : id}</strong>
       </div>
-      <span class="status-badge status-pending" id="status-badge-${id}">Đang xử lý...</span>
+      <span class="status-badge status-pending" id="status-badge-${id}">Đang chờ...</span>
     `;
     statusList.appendChild(row);
   });
@@ -1030,32 +1255,83 @@ function openUploadModal() {
   modal.classList.add('active');
 }
 
-function updateModalResults(results) {
-  const closeBtn = document.getElementById('btn-close-modal');
+// Polling tiến độ Background Job
+function startUploadJobPolling(jobId) {
+  if (uploadJobPollInterval) clearInterval(uploadJobPollInterval);
+
+  uploadJobPollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/upload/job/${jobId}`, {
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        renderJobProgress(data.job);
+        if (data.job.status === 'completed' || data.job.status === 'failed') {
+          clearInterval(uploadJobPollInterval);
+          uploadJobPollInterval = null;
+          loadChannels();
+          loadQuota();
+          loadHistory();
+          if (document.getElementById('analytics-tab').classList.contains('active')) {
+            loadAnalyticsData();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi polling Job tiến trình:', e.message);
+    }
+  }, 1200);
+}
+
+function renderJobProgress(job) {
   const progressBar = document.getElementById('overall-progress-bar');
   const title = document.getElementById('modal-title');
   const subtitle = document.getElementById('modal-subtitle');
+  const closeBtn = document.getElementById('btn-close-modal');
 
-  progressBar.style.width = '100%';
-  title.textContent = 'Phân Phối Hoàn Tất';
-  subtitle.textContent = 'Đã đăng tải thành công lên các kênh đã chọn.';
-  closeBtn.style.display = 'inline-flex';
+  progressBar.style.width = `${job.overallProgress}%`;
 
-  results.forEach(res => {
-    const badge = document.getElementById(`status-badge-${res.channelId}`);
-    if (badge) {
-      if (res.success) {
-        badge.className = 'status-badge status-success';
-        badge.innerHTML = `Hoàn tất - <a href="${res.videoUrl}" target="_blank" style="color:var(--text-primary); text-decoration:underline;">Xem trên YouTube ↗</a>`;
-      } else {
-        badge.className = 'status-badge status-failed';
-        badge.innerHTML = `Thất bại (${res.error || 'Lỗi'})`;
+  if (job.status === 'processing') {
+    title.textContent = `Đang Tải Lên Nền (${job.overallProgress}%)...`;
+    subtitle.textContent = `Đã hoàn thành ${job.completedChannels}/${job.totalChannels} kênh.`;
+  } else if (job.status === 'completed') {
+    title.textContent = 'Phân Phối Hoàn Tất!';
+    subtitle.textContent = `Đã hoàn tất tải lên ${job.completedChannels}/${job.totalChannels} kênh.`;
+    closeBtn.style.display = 'inline-flex';
+    showToast('Đã hoàn tất phân phối video đa kênh!', 'success');
+  } else if (job.status === 'failed') {
+    title.textContent = 'Phân Phối Thất Bại';
+    subtitle.textContent = `Tất cả kênh đều gặp sự cố khi tải lên.`;
+    closeBtn.style.display = 'inline-flex';
+    showToast('Phân phối video gặp lỗi', 'error');
+  }
+
+  // Cập nhật trạng thái từng kênh
+  if (job.channelsProgress && Array.isArray(job.channelsProgress)) {
+    job.channelsProgress.forEach(ch => {
+      const badge = document.getElementById(`status-badge-${ch.channelId}`);
+      if (badge) {
+        if (ch.status === 'uploading') {
+          badge.className = 'status-badge status-pending';
+          badge.textContent = `Đang tải (${ch.progress || 0}%)`;
+        } else if (ch.status === 'success') {
+          badge.className = 'status-badge status-success';
+          badge.innerHTML = `Hoàn tất - <a href="${ch.videoUrl}" target="_blank" style="color:var(--text-primary); text-decoration:underline;">Xem YouTube ↗</a>`;
+        } else if (ch.status === 'failed') {
+          badge.className = 'status-badge status-failed';
+          badge.innerHTML = `Lỗi (${ch.error || 'Thất bại'})`;
+        }
       }
-    }
-  });
+    });
+  }
 }
 
 function updateModalError(errMsg) {
+  if (uploadJobPollInterval) {
+    clearInterval(uploadJobPollInterval);
+    uploadJobPollInterval = null;
+  }
   const closeBtn = document.getElementById('btn-close-modal');
   const title = document.getElementById('modal-title');
   const subtitle = document.getElementById('modal-subtitle');
@@ -1065,6 +1341,10 @@ function updateModalError(errMsg) {
 }
 
 function closeUploadModal() {
+  if (uploadJobPollInterval) {
+    clearInterval(uploadJobPollInterval);
+    uploadJobPollInterval = null;
+  }
   document.getElementById('upload-modal').classList.remove('active');
 }
 
@@ -1333,4 +1613,923 @@ function formatBytes(bytes, decimals = 2) {
 function formatNumber(num) {
   return new Intl.NumberFormat('vi-VN').format(num || 0);
 }
+
+// ==================== ANALYTICS DASHBOARD & CHART.JS ====================
+async function loadAnalyticsData() {
+  if (!authToken || typeof Chart === 'undefined') return;
+
+  try {
+    const res = await fetch('/api/analytics/overview', {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (!data.success || !data.data) return;
+
+    const { kpi, channelStats, distributionStatus, recentTrend } = data.data;
+
+    // 1. Cập nhật các thẻ KPI
+    document.getElementById('kpi-total-channels').textContent = formatNumber(kpi.totalChannels);
+    document.getElementById('kpi-total-subscribers').textContent = formatNumber(kpi.totalSubscribers);
+    document.getElementById('kpi-total-views').textContent = formatNumber(kpi.totalViews);
+    document.getElementById('kpi-total-videos').textContent = formatNumber(kpi.totalVideosPublished);
+
+    // Cấu hình chung cho Chart.js nền tối
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = '#232838';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+    // 2. Chart 1: Quy mô kênh (Subscribers & Views)
+    const ctx1 = document.getElementById('channelStatsChart')?.getContext('2d');
+    if (ctx1) {
+      if (chartInstances.channelStats) chartInstances.channelStats.destroy();
+      chartInstances.channelStats = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: channelStats.labels.length > 0 ? channelStats.labels : ['Chưa có kênh'],
+          datasets: [
+            {
+              label: 'Người đăng ký',
+              data: channelStats.subscribers.length > 0 ? channelStats.subscribers : [0],
+              backgroundColor: 'rgba(56, 189, 248, 0.75)',
+              borderColor: '#38bdf8',
+              borderWidth: 1,
+              borderRadius: 4
+            },
+            {
+              label: 'Lượt xem',
+              data: channelStats.views.length > 0 ? channelStats.views : [0],
+              backgroundColor: 'rgba(167, 139, 250, 0.75)',
+              borderColor: '#a78bfa',
+              borderWidth: 1,
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#1e2433' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // 3. Chart 2: Xu hướng đăng video 7 ngày
+    const ctx2 = document.getElementById('trendChart')?.getContext('2d');
+    if (ctx2) {
+      if (chartInstances.trend) chartInstances.trend.destroy();
+      chartInstances.trend = new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: recentTrend.labels,
+          datasets: [{
+            label: 'Video đã đăng',
+            data: recentTrend.data,
+            borderColor: '#e11d48',
+            backgroundColor: 'rgba(225, 29, 72, 0.12)',
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#e11d48',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#1e2433' } },
+            x: { grid: { color: '#1e2433' } }
+          }
+        }
+      });
+    }
+
+    // 4. Chart 3: Phân bổ số video từng kênh
+    const ctx3 = document.getElementById('videoDistChart')?.getContext('2d');
+    if (ctx3) {
+      if (chartInstances.videoDist) chartInstances.videoDist.destroy();
+      chartInstances.videoDist = new Chart(ctx3, {
+        type: 'bar',
+        data: {
+          labels: channelStats.labels.length > 0 ? channelStats.labels : ['Chưa có kênh'],
+          datasets: [{
+            label: 'Số lượng video',
+            data: channelStats.videos.length > 0 ? channelStats.videos : [0],
+            backgroundColor: 'rgba(52, 211, 153, 0.75)',
+            borderColor: '#34d399',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, grid: { color: '#1e2433' } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // 5. Chart 4: Tỷ lệ phân phối thành công / thất bại
+    const ctx4 = document.getElementById('successRateChart')?.getContext('2d');
+    if (ctx4) {
+      if (chartInstances.successRate) chartInstances.successRate.destroy();
+      const hasData = distributionStatus.data.some(v => v > 0);
+      chartInstances.successRate = new Chart(ctx4, {
+        type: 'doughnut',
+        data: {
+          labels: distributionStatus.labels,
+          datasets: [{
+            data: hasData ? distributionStatus.data : [1, 0],
+            backgroundColor: hasData ? ['#34d399', '#f87171'] : ['#293043', '#1e2433'],
+            borderColor: '#141721',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+  } catch (err) {
+    console.warn('Lỗi tải số liệu Analytics:', err.message);
+  }
+}
+
+// ==================== MULTI-BRAND MANAGEMENT ====================
+async function loadBrands() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/brands', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.brands) {
+      brandsState = data.brands;
+      document.getElementById('brand-count-badge').textContent = brandsState.length;
+      renderNavBrandSelector();
+      renderBrandsManager();
+    }
+  } catch (e) {
+    console.warn('Lỗi tải danh sách Brand:', e.message);
+  }
+}
+
+function renderNavBrandSelector() {
+  const select = document.getElementById('nav-brand-select');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">(Tất Cả / Mặc Định)</option>';
+  brandsState.forEach(b => {
+    const bId = b._id || b.id;
+    const opt = document.createElement('option');
+    opt.value = bId;
+    opt.textContent = b.name;
+    if (bId === activeBrandId) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  select.onchange = (e) => {
+    activeBrandId = e.target.value;
+    localStorage.setItem('ytb_active_brand', activeBrandId);
+    showToast(activeBrandId ? `Đã chọn Brand: ${e.target.options[e.target.selectedIndex].text}` : 'Đã chọn chế độ Chung.');
+    
+    // Tự động điền tệp khán giả và giọng văn tương ứng vào AI Studio
+    const found = brandsState.find(b => (b._id || b.id) === activeBrandId);
+    if (found) {
+      if (document.getElementById('ai-audience')) document.getElementById('ai-audience').value = found.targetAudience || '';
+      if (document.getElementById('ai-tone')) document.getElementById('ai-tone').value = found.toneOfVoice || 'Hấp dẫn, kích thích tò mò';
+    }
+  };
+}
+
+function renderBrandsManager() {
+  const container = document.getElementById('brands-grid-container');
+  const emptyState = document.getElementById('empty-brands-state');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (brandsState.length === 0) {
+    if (emptyState) emptyState.style.display = 'block';
+    return;
+  }
+  if (emptyState) emptyState.style.display = 'none';
+
+  brandsState.forEach(brand => {
+    const bId = brand._id || brand.id;
+    const isCurrentActive = bId === activeBrandId;
+    const card = document.createElement('div');
+    card.className = 'glass-panel';
+    card.style.background = 'var(--bg-input)';
+    card.style.padding = '16px';
+    card.style.borderColor = isCurrentActive ? '#38bdf8' : 'var(--border-subtle)';
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:12px; height:12px; border-radius:50%; background:${brand.primaryColor || '#e11d48'};"></div>
+          <h4 style="color:#fff; font-size:0.95rem; font-weight:700; margin:0;">${brand.name}</h4>
+        </div>
+        ${isCurrentActive ? '<span class="status-badge status-success" style="font-size:0.7rem;">Đang chọn</span>' : ''}
+      </div>
+
+      <p style="font-size:0.8rem; color:var(--text-muted); min-height:36px; margin-bottom:12px;">
+        ${brand.description || 'Chưa có mô tả định vị thương hiệu.'}
+      </p>
+
+      <div style="background:#121622; padding:10px; border-radius:var(--radius-sm); font-size:0.75rem; color:var(--text-secondary); margin-bottom:14px;">
+        <div><strong>Khán giả:</strong> ${brand.targetAudience || 'Khán giả đại chúng'}</div>
+        <div style="margin-top:3px;"><strong>Giọng văn:</strong> ${brand.toneOfVoice || 'Hấp dẫn, kích thích tò mò'}</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn-sm ${isCurrentActive ? 'btn-outline' : 'btn-primary'}" onclick="setActiveBrandId('${bId}')">
+          ${isCurrentActive ? 'Đang kích hoạt' : 'Kích hoạt Brand này'}
+        </button>
+        <button type="button" class="btn btn-sm btn-danger-outline" onclick="deleteBrandItem('${bId}')">
+          Xóa
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function setActiveBrandId(id) {
+  activeBrandId = id;
+  localStorage.setItem('ytb_active_brand', activeBrandId);
+  renderNavBrandSelector();
+  renderBrandsManager();
+  showToast('Đã chuyển đổi Brand làm việc thành công!', 'success');
+}
+
+function openCreateBrandModal() {
+  document.getElementById('brand-id-hidden').value = '';
+  document.getElementById('brand-name-input').value = '';
+  document.getElementById('brand-desc-input').value = '';
+  document.getElementById('brand-audience-input').value = 'Khán giả đại chúng';
+  document.getElementById('brand-tone-input').value = 'Hấp dẫn, kích thích tò mò';
+  document.getElementById('brand-modal-title').textContent = 'Tạo Thương Hiệu Mới (Brand)';
+  document.getElementById('brand-modal').classList.add('active');
+}
+
+function closeBrandModal() {
+  document.getElementById('brand-modal').classList.remove('active');
+}
+
+function initBrandFormSubmit() {
+  const form = document.getElementById('brand-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('brand-name-input').value.trim();
+    const description = document.getElementById('brand-desc-input').value.trim();
+    const targetAudience = document.getElementById('brand-audience-input').value.trim();
+    const toneOfVoice = document.getElementById('brand-tone-input').value;
+
+    if (!name) {
+      showToast('Vui lòng nhập tên Brand!', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/brands', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name, description, targetAudience, toneOfVoice })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Đã tạo Brand thành công!', 'success');
+        closeBrandModal();
+        loadBrands();
+      } else {
+        showToast(data.message || 'Lỗi tạo Brand', 'error');
+      }
+    } catch (err) {
+      showToast('Lỗi gửi request: ' + err.message, 'error');
+    }
+  });
+}
+
+async function deleteBrandItem(id) {
+  if (!confirm('Bạn có chắc chắn muốn xóa Brand này?')) return;
+  try {
+    const res = await fetch(`/api/brands/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (activeBrandId === id) {
+        activeBrandId = '';
+        localStorage.removeItem('ytb_active_brand');
+      }
+      showToast('Đã xóa Brand thành công.', 'success');
+      loadBrands();
+    } else {
+      showToast(data.message || 'Lỗi xóa Brand', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
+}
+
+// ==================== CONTENT LIBRARY (KHO NỘI DUNG) ====================
+async function loadContentProjects() {
+  if (!authToken) return;
+  try {
+    const url = activeBrandId ? `/api/content?brandId=${activeBrandId}` : '/api/content';
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.projects) {
+      contentProjectsState = data.projects;
+      document.getElementById('content-count-badge').textContent = contentProjectsState.length;
+      renderContentProjects('ALL');
+    }
+  } catch (e) {
+    console.warn('Lỗi tải kho nội dung:', e.message);
+  }
+}
+
+function renderContentProjects(filterStatus = 'ALL') {
+  const container = document.getElementById('content-projects-grid');
+  const emptyState = document.getElementById('empty-content-state');
+  if (!container) return;
+
+  container.innerHTML = '';
+  const filtered = filterStatus === 'ALL' ? contentProjectsState : contentProjectsState.filter(p => p.status === filterStatus);
+
+  if (filtered.length === 0) {
+    if (emptyState) emptyState.style.display = 'block';
+    return;
+  }
+  if (emptyState) emptyState.style.display = 'none';
+
+  filtered.forEach(proj => {
+    const pId = proj._id || proj.id;
+    const card = document.createElement('div');
+    card.className = 'glass-panel';
+    card.style.background = 'var(--bg-input)';
+    card.style.padding = '14px';
+
+    const statusBadge = {
+      IDEA: '<span class="status-badge status-pending">Ý tưởng</span>',
+      SCRIPT_GENERATED: '<span class="status-badge" style="background:#1e293b; color:#38bdf8; border:1px solid #38bdf8;">Đã có kịch bản</span>',
+      READY: '<span class="status-badge status-success">Sẵn sàng</span>',
+      PUBLISHED: '<span class="status-badge" style="background:#064e3b; color:#34d399;">Đã xuất bản</span>'
+    }[proj.status] || '<span class="status-badge status-pending">Bản nháp</span>';
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+        <h4 style="color:#fff; font-size:0.92rem; font-weight:700; margin:0; flex:1; padding-right:8px;">${proj.title}</h4>
+        ${statusBadge}
+      </div>
+
+      <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+        Chủ đề: ${proj.topic || 'Tổng quan'}
+      </p>
+
+      ${proj.scriptData?.hook ? `
+        <div style="background:#121622; padding:8px 10px; border-radius:4px; font-size:0.75rem; color:var(--text-secondary); margin-bottom:12px; border-left:2px solid #e11d48;">
+          <strong>Hook:</strong> ${proj.scriptData.hook.substring(0, 75)}...
+        </div>
+      ` : ''}
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="applyContentProjectToPublisher('${pId}')">
+          Đăng video này
+        </button>
+        <button type="button" class="btn btn-sm btn-danger-outline" onclick="deleteContentProjectItem('${pId}')">
+          Xóa
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function filterContentStatus(status) {
+  document.querySelectorAll('.active-filter').forEach(el => el.classList.remove('active-filter'));
+  event.target.classList.add('active-filter');
+  renderContentProjects(status);
+}
+
+async function saveCurrentAiToLibrary() {
+  if (!lastAiResult) {
+    showToast('Chưa có nội dung AI nào để lưu!', 'error');
+    return;
+  }
+
+  const title = lastAiResult.viralTitles?.[0]?.title || document.getElementById('video-title')?.value || 'Nội dung Video Mới';
+  const topic = document.getElementById('ai-topic')?.value || title;
+
+  try {
+    const res = await fetch('/api/content', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        brandId: activeBrandId,
+        title,
+        topic,
+        contentType: 'SHORT',
+        status: 'SCRIPT_GENERATED',
+        scriptData: lastAiResult.script,
+        seoMetadata: {
+          viralTitles: lastAiResult.viralTitles,
+          description: lastAiResult.seoDescription,
+          tags: lastAiResult.tags
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã lưu kịch bản vào Kho Nội Dung (Content Vault)!', 'success');
+      loadContentProjects();
+    } else {
+      showToast(data.message || 'Lỗi lưu kho', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi request: ' + err.message, 'error');
+  }
+}
+
+function applyContentProjectToPublisher(id) {
+  const proj = contentProjectsState.find(p => (p._id || p.id) === id);
+  if (!proj) return;
+
+  if (proj.title) document.getElementById('video-title').value = proj.title;
+  if (proj.seoMetadata?.description) document.getElementById('video-description').value = proj.seoMetadata.description;
+  if (proj.seoMetadata?.tags) document.getElementById('video-tags').value = proj.seoMetadata.tags.join(', ');
+
+  switchTab('publish-tab');
+  showToast('Đã điền tiêu đề và mô tả từ Kho Nội Dung vào form đăng video!');
+}
+
+async function deleteContentProjectItem(id) {
+  if (!confirm('Bạn có chắc chắn muốn xóa nội dung này?')) return;
+  try {
+    const res = await fetch(`/api/content/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã xóa nội dung.', 'success');
+      loadContentProjects();
+    } else {
+      showToast(data.message || 'Lỗi xóa', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
+}
+
+// ==================== CONTENT MATRIX PLANNER ====================
+async function loadContentPlans() {
+  if (!authToken) return;
+  try {
+    const url = activeBrandId ? `/api/planner?brandId=${activeBrandId}` : '/api/planner';
+    const res = await fetch(url, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.plans) {
+      contentPlansState = data.plans;
+      renderContentPlansMatrix();
+    }
+  } catch (e) {
+    console.warn('Lỗi tải lịch Planner:', e.message);
+  }
+}
+
+function renderContentPlansMatrix() {
+  const container = document.getElementById('planner-matrix-container');
+  if (!container) return;
+
+  const days = [
+    { key: 'MONDAY', label: 'Thứ Hai' },
+    { key: 'TUESDAY', label: 'Thứ Ba' },
+    { key: 'WEDNESDAY', label: 'Thứ Tư' },
+    { key: 'THURSDAY', label: 'Thứ Năm' },
+    { key: 'FRIDAY', label: 'Thứ Sáu' },
+    { key: 'SATURDAY', label: 'Thứ Bảy' },
+    { key: 'SUNDAY', label: 'Chủ Nhật' }
+  ];
+
+  container.innerHTML = '';
+  days.forEach(day => {
+    const dayCol = document.createElement('div');
+    dayCol.className = 'matrix-day-col';
+    dayCol.innerHTML = `<div class="matrix-day-header">${day.label}</div>`;
+
+    const dayPlans = contentPlansState.filter(p => p.dayOfWeek === day.key);
+    if (dayPlans.length === 0) {
+      dayCol.innerHTML += '<p style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:20px;">Trống</p>';
+    } else {
+      dayPlans.forEach(slot => {
+        const slotEl = document.createElement('div');
+        slotEl.className = 'plan-slot-card';
+        slotEl.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="plan-slot-time">${slot.timeSlot}</div>
+            <button type="button" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem;" onclick="deletePlanItem('${slot._id || slot.id}')">✕</button>
+          </div>
+          <div class="plan-slot-theme">${slot.topicTheme}</div>
+          <div class="plan-slot-badges">
+            ${(slot.targetPlatforms || []).map(p => `<span class="platform-badge">${p === 'YOUTUBE' ? 'YT' : p === 'FACEBOOK' ? 'FB' : 'TT'}</span>`).join('')}
+          </div>
+        `;
+        dayCol.appendChild(slotEl);
+      });
+    }
+    container.appendChild(dayCol);
+  });
+}
+
+function openCreatePlanModal() {
+  document.getElementById('plan-modal').classList.add('active');
+}
+
+function closeCreatePlanModal() {
+  document.getElementById('plan-modal').classList.remove('active');
+}
+
+function initPlanFormSubmit() {
+  const form = document.getElementById('plan-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const dayOfWeek = document.getElementById('plan-day-select').value;
+    const timeSlot = document.getElementById('plan-time-input').value;
+    const topicTheme = document.getElementById('plan-theme-input').value.trim();
+
+    const targetPlatforms = [];
+    if (document.getElementById('plan-plat-yt').checked) targetPlatforms.push('YOUTUBE');
+    if (document.getElementById('plan-plat-fb').checked) targetPlatforms.push('FACEBOOK');
+    if (document.getElementById('plan-plat-tt').checked) targetPlatforms.push('TIKTOK');
+
+    try {
+      const res = await fetch('/api/planner', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          brandId: activeBrandId,
+          dayOfWeek,
+          timeSlot,
+          topicTheme,
+          targetPlatforms
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast('Đã thêm slot lịch đăng ma trận!', 'success');
+        closeCreatePlanModal();
+        loadContentPlans();
+      } else {
+        showToast(data.message || 'Lỗi thêm lịch', 'error');
+      }
+    } catch (err) {
+      showToast('Lỗi gửi request: ' + err.message, 'error');
+    }
+  });
+}
+
+async function deletePlanItem(id) {
+  try {
+    const res = await fetch(`/api/planner/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã xóa slot lịch.', 'success');
+      loadContentPlans();
+    }
+  } catch (e) {
+    showToast('Lỗi xóa lịch: ' + e.message, 'error');
+  }
+}
+
+// ==================== MULTI-PLATFORM SOCIAL CONNECTORS ====================
+async function connectFacebook() {
+  if (!currentUser) {
+    window.location.href = '/login';
+    return;
+  }
+  try {
+    const res = await fetch('/api/social/facebook/url', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.authUrl) {
+      window.open(data.authUrl, 'FacebookAuth', 'width=600,height=700');
+    } else {
+      openFbTokenModal();
+    }
+  } catch (err) {
+    openFbTokenModal();
+  }
+}
+
+function openFbTokenModal() {
+  document.getElementById('fb-token-modal').classList.add('active');
+}
+
+function closeFbTokenModal() {
+  document.getElementById('fb-token-modal').classList.remove('active');
+}
+
+async function submitFbToken(e) {
+  e.preventDefault();
+  const token = document.getElementById('fb-token-input').value.trim();
+  if (!token) return;
+
+  const btn = document.getElementById('btn-submit-fb-token');
+  btn.disabled = true;
+  btn.textContent = 'Đang quét Fanpage...';
+
+  try {
+    const res = await fetch('/api/social/facebook/token', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Đã liên kết Fanpage thành công!', 'success');
+      closeFbTokenModal();
+      document.getElementById('fb-token-input').value = '';
+      loadChannels();
+      loadQuota();
+    } else {
+      showToast(data.message || 'Lỗi liên kết Fanpage', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi token: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Liên Kết Fanpage Ngay';
+  }
+}
+
+async function connectTikTok() {
+  if (!currentUser) {
+    window.location.href = '/login';
+    return;
+  }
+  try {
+    const res = await fetch('/api/social/tiktok/url', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.authUrl) {
+      window.open(data.authUrl, 'TikTokAuth', 'width=600,height=700');
+    } else {
+      showToast(data.message || 'Chưa cấu hình TikTok Client Credentials', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối TikTok: ' + err.message, 'error');
+  }
+}
+
+// ==================== HƯỚNG DẪN SỬ DỤNG TƯƠNG TÁC (INTERACTIVE GUIDE SYSTEM) ====================
+const GUIDE_TOPICS = {
+  'publish-tab': {
+    title: 'Hướng Dẫn: Phân Phối Video Đa Kênh (Publishing Engine)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #e11d48; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Tải lên 1 video và phân phối đồng thời sang hàng chục kênh YouTube, Fanpage Facebook, TikTok cùng lúc mà không lo nghẽn mạng hay khóa trình duyệt.
+      </div>
+      <h4 style="color:#f8fafc; margin-bottom:6px;">Quy trình 4 bước thực hiện:</h4>
+      <ol style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Bước 1 - Chọn Video & Thumbnail:</strong> Kéo thả hoặc bấm chọn file video (MP4, MOV, MKV) và ảnh bìa Thumbnail tùy chọn.</li>
+        <li style="margin-bottom:6px;"><strong>Bước 2 - Chọn Kênh Nhận Video:</strong> Tích chọn các kênh bạn muốn đăng (có thể dùng nút <em>"Chọn tất cả kênh"</em> để thao tác nhanh).</li>
+        <li style="margin-bottom:6px;"><strong>Bước 3 - Soạn Tiêu Đề & Mô Tả:</strong> Nhập tiêu đề, mô tả chuẩn SEO, bộ thẻ Tags hoặc bấm <em>"Áp dụng từ AI Studio"</em> để tự động điền trong 1 giây.</li>
+        <li style="margin-bottom:6px;"><strong>Bước 4 - Tùy Chọn Lập Lịch & Đăng:</strong> Đặt chế độ <em>Công khai (Public)</em> hoặc <em>Hẹn giờ (Scheduled)</em>, sau đó bấm <strong>"Bắt Đầu Phân Phối Video"</strong>.</li>
+      </ol>
+      <div style="background:#121724; border:1px solid #232838; padding:10px 12px; border-radius:6px;">
+        <strong style="color:#38bdf8;">Tính năng Hàng Đợi Nền (Background Queue):</strong>
+        <p style="margin-top:4px; font-size:0.8rem; color:var(--text-muted);">
+          Hệ thống sử dụng Resumable Stream Worker chạy nền. Khi bấm đăng, cửa sổ tiến trình hiển thị tỷ lệ % từng kênh theo thời gian thực và bạn có thể yên tâm làm việc khác.
+        </p>
+      </div>
+    `
+  },
+  'gemini-tab': {
+    title: 'Hướng Dẫn: AI Script Studio & Multi-AI Failover Pool',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #38bdf8; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Tự động sinh kịch bản video ngắn (Shorts/Reels), Hook 3s cuốn hút, 5 tiêu đề viral CTR cao và gói từ khóa SEO tối ưu.
+      </div>
+      <h4 style="color:#f8fafc; margin-bottom:6px;">Cách thao tác:</h4>
+      <ol style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Nhập ý tưởng / chủ đề:</strong> Điền chủ đề bạn muốn làm video (Ví dụ: <em>Top 5 công cụ AI lập trình đỉnh nhất 2026</em>).</li>
+        <li style="margin-bottom:6px;"><strong>Chọn Giọng Văn (Tone):</strong> Chọn phong cách phù hợp như <em>Hấp dẫn & Tò mò</em>, <em>Kịch tính & Cảnh báo</em>, <em>Hài hước</em>, hoặc <em>Chuyên sâu</em>.</li>
+        <li style="margin-bottom:6px;"><strong>Bấm "Sinh Kịch Bản":</strong> Hệ thống tự động kết nối qua <strong>Multi-AI Failover Pool</strong> (Groq Llama 3.3 ➔ Gemini 2.5 Flash ➔ OpenRouter ➔ Smart Fallback Engine) để đảm bảo không bao giờ gián đoạn.</li>
+        <li style="margin-bottom:6px;"><strong>Sử dụng kết quả:</strong> Bấm <em>"Sao chép kịch bản"</em>, bấm <em>"Lưu vào kho nội dung"</em> hoặc bấm <em>"Áp dụng vào bảng đăng video"</em> để xuất bản ngay.</li>
+      </ol>
+    `
+  },
+  'content-tab': {
+    title: 'Hướng Dẫn: Kho Lưu Trữ Nội Dung (Content Vault)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #34d399; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Quản lý vòng đời sản xuất content từ khâu Ý tưởng (Idea) ➔ Kịch bản (Script) ➔ Sẵn sàng (Ready) ➔ Đã xuất bản (Published).
+      </div>
+      <ul style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Lưu trữ tự động:</strong> Mỗi kịch bản sinh từ AI Studio có thể lưu trực tiếp vào Kho gắn liền với Brand đang chọn.</li>
+        <li style="margin-bottom:6px;"><strong>Bộ lọc trạng thái:</strong> Lọc nhanh các bài viết đang ở giai đoạn nào để lên lịch sản xuất video phù hợp.</li>
+        <li style="margin-bottom:6px;"><strong>1-Click Phân Phối:</strong> Bấm nút <em>"Đăng video này"</em> trên thẻ bài viết để tự động điền toàn bộ kịch bản, tiêu đề, tags vào bảng đăng video.</li>
+      </ul>
+    `
+  },
+  'planner-tab': {
+    title: 'Hướng Dẫn: Lịch Ma Trận Phân Phối Đa Kênh (Matrix Scheduler)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #f59e0b; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Quy hoạch lịch xuất bản tự động theo 7 ngày trong tuần và các khung giờ vàng (Prime Time).
+      </div>
+      <ol style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;">Bấm nút <strong>"Thêm Slot Lịch Đăng"</strong> ở góc trên bên phải.</li>
+        <li style="margin-bottom:6px;">Chọn Thứ trong tuần (Thứ 2 đến Chủ Nhật) và khung giờ đăng mong muốn (Ví dụ: <code>09:00</code>, <code>15:00</code>, <code>20:00</code>).</li>
+        <li style="margin-bottom:6px;">Nhập Chủ đề bài đăng định kỳ (Ví dụ: <em>AI News Thứ 2</em>, <em>Review Tool Thứ 4</em>).</li>
+        <li style="margin-bottom:6px;">Tích chọn các nền tảng mục tiêu (YouTube Shorts, Facebook Reels, TikTok) và bấm <em>Lưu Slot Lịch</em>.</li>
+      </ol>
+    `
+  },
+  'brands-tab': {
+    title: 'Hướng Dẫn: Quản Trị Đa Thương Hiệu (Multi-Brand Hub)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #a855f7; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Tạo và quản lý không giới hạn các Brand độc lập cho từng khách hàng hoặc từng dự án kinh doanh.
+      </div>
+      <ul style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Tạo Brand mới:</strong> Bấm <em>"Tạo Brand Mới"</em>, điền Tên thương hiệu, Mô tả định vị, Tệp khán giả mục tiêu và Giọng văn (Tone of Voice).</li>
+        <li style="margin-bottom:6px;"><strong>Chuyển đổi Brand:</strong> Dùng bộ chọn <em>"Thương Hiệu Đang Chọn"</em> ở trên cùng của Sidebar bên trái để đổi Brand làm việc trong 1-click.</li>
+        <li style="margin-bottom:6px;"><strong>Tự động đồng bộ:</strong> Khi bạn chọn Brand nào, AI Script Studio và Kho nội dung sẽ tự động nhận diện persona của Brand đó để sinh nội dung đúng chất riêng.</li>
+      </ul>
+    `
+  },
+  'channels-tab': {
+    title: 'Hướng Dẫn: Quản Lý Mạng Xã Hội (YouTube / Facebook / TikTok)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #0284c7; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Ủy quyền và liên kết các kênh YouTube, Fanpage Facebook và TikTok Creator vào hệ thống.
+      </div>
+      <ol style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Thêm Kênh YouTube:</strong> Bấm nút <code>Thêm Kênh YouTube</code> ➔ Đăng nhập tài khoản Google và cấp quyền quản trị kênh.</li>
+        <li style="margin-bottom:6px;"><strong>Thêm Fanpage Facebook:</strong> Bấm nút <code>Kết Nối Facebook</code> ➔ Ủy quyền Meta Graph API để hệ thống tự động nhận diện danh sách Fanpage.</li>
+        <li style="margin-bottom:6px;"><strong>Thêm Tài Khoản TikTok:</strong> Bấm nút <code>Kết Nối TikTok</code> ➔ Đăng nhập tài khoản TikTok Creator để kích hoạt Direct Post API.</li>
+        <li style="margin-bottom:6px;"><strong>Đồng bộ số liệu:</strong> Bấm <em>"Đồng bộ số liệu"</em> để cập nhật số người đăng ký và tổng số video mới nhất từ server.</li>
+      </ol>
+    `
+  },
+  'analytics-tab': {
+    title: 'Hướng Dẫn: Báo Cáo Thống Kê & Tăng Trưởng (Analytics Dashboard)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #10b981; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Theo dõi tổng thể chỉ số phát triển trên toàn bộ hệ thống kênh theo thời gian thực.
+      </div>
+      <ul style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Thẻ KPI Tổng Quan:</strong> Xem nhanh Tổng số kênh, Tổng lượng người đăng ký (Subscribers), Tổng lượt xem (Views) và Tổng số video đã phát.</li>
+        <li style="margin-bottom:6px;"><strong>Biểu đồ so sánh Kênh:</strong> Trực quan hóa kênh nào đang có lượng tương tác và số lượng video nhiều nhất.</li>
+        <li style="margin-bottom:6px;"><strong>Xu hướng phân phối 7 ngày:</strong> Theo dõi mật độ phát video đều đặn qua các ngày trong tuần.</li>
+        <li style="margin-bottom:6px;"><strong>Tỷ lệ Thành Công (Success Rate):</strong> Đánh giá hiệu suất phân phối không lỗi.</li>
+      </ul>
+    `
+  },
+  'admin-tab': {
+    title: 'Hướng Dẫn: Quản Trị Khách Dùng Thử (Admin Portal)',
+    html: `
+      <div style="background:#11151f; border-left:3px solid #fb7185; padding:10px 14px; border-radius:4px; margin-bottom:12px;">
+        <strong>Mục tiêu:</strong> Cấp tài khoản dùng thử có thời hạn tự động (Auto-Expiry) cho khách hàng trải nghiệm an toàn.
+      </div>
+      <ol style="padding-left:20px; margin-bottom:12px;">
+        <li style="margin-bottom:6px;"><strong>Cấp tài khoản mới:</strong> Nhập Email, Mật khẩu cấp cho khách và thời lượng (mặc định 10 phút).</li>
+        <li style="margin-bottom:6px;"><strong>Tự động khóa:</strong> Khi hết 10 phút, tài khoản của khách tự động bị khóa và đăng xuất ngay lập tức.</li>
+        <li style="margin-bottom:6px;"><strong>Gia hạn / Khóa thủ công:</strong> Bấm <em>"+10 Phút"</em> để gia hạn thêm hoặc bấm <em>"Khóa ngay"</em> / <em>"Mở khóa"</em> bất cứ lúc nào.</li>
+      </ol>
+    `
+  }
+};
+
+function openGuideModal(topicId = null) {
+  const currentTab = topicId || localStorage.getItem('ytb_active_tab') || 'publish-tab';
+  switchGuideTopic(currentTab);
+  document.getElementById('guide-modal').classList.add('active');
+}
+
+function closeGuideModal() {
+  document.getElementById('guide-modal').classList.remove('active');
+}
+
+function switchGuideTopic(topicId) {
+  const topic = GUIDE_TOPICS[topicId] || GUIDE_TOPICS['publish-tab'];
+  
+  // Highlight subtab
+  document.querySelectorAll('#guide-modal .btn-outline, #guide-modal .active-guide-tab').forEach(b => {
+    if (b.getAttribute('onclick')?.includes(topicId)) {
+      b.classList.add('active-guide-tab');
+      b.style.background = 'var(--accent-red)';
+      b.style.borderColor = 'var(--accent-red)';
+      b.style.color = '#fff';
+    } else {
+      b.classList.remove('active-guide-tab');
+      b.style.background = 'transparent';
+      b.style.borderColor = 'var(--border-subtle)';
+      b.style.color = 'var(--text-secondary)';
+    }
+  });
+
+  document.getElementById('guide-modal-title').textContent = topic.title;
+  document.getElementById('guide-modal-content').innerHTML = topic.html;
+}
+
+// ==================== SIDEBAR COLLAPSE TOGGLE ====================
+function initSidebarState() {
+  const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+  const sidebar = document.querySelector('.app-sidebar');
+  const topbarToggle = document.getElementById('topbar-toggle-sidebar');
+  if (isCollapsed && sidebar) {
+    sidebar.classList.add('collapsed');
+    if (topbarToggle) topbarToggle.style.display = 'inline-block';
+  }
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.app-sidebar');
+  const topbarToggle = document.getElementById('topbar-toggle-sidebar');
+  if (!sidebar) return;
+
+  const isNowCollapsed = sidebar.classList.toggle('collapsed');
+  localStorage.setItem('sidebar_collapsed', isNowCollapsed ? 'true' : 'false');
+  if (topbarToggle) {
+    topbarToggle.style.display = isNowCollapsed ? 'inline-block' : 'none';
+  }
+}
+
+// ==================== AI VOICEOVER TTS GENERATION ====================
+async function generateVoiceFromScript() {
+  if (!lastAiResult || !lastAiResult.script) {
+    showToast('Chưa có kịch bản AI để tạo giọng đọc!', 'error');
+    return;
+  }
+  const s = lastAiResult.script;
+  let fullScriptText = `${s.hook || ''}. `;
+  if (s.bodySections && Array.isArray(s.bodySections)) {
+    s.bodySections.forEach(b => {
+      fullScriptText += `${b.content || ''} `;
+    });
+  }
+  fullScriptText += `${s.callToAction || ''}`;
+
+  const voiceKey = document.getElementById('tts-voice-select').value;
+  const btn = document.getElementById('btn-generate-voice');
+  btn.disabled = true;
+  btn.textContent = 'Đang tổng hợp giọng nói...';
+
+  try {
+    const res = await fetch('/api/voice/generate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ text: fullScriptText, voiceKey })
+    });
+    const data = await res.json();
+    if (data.success && data.data?.url) {
+      const container = document.getElementById('tts-player-container');
+      const player = document.getElementById('tts-audio-player');
+      player.src = data.data.url;
+      container.style.display = 'block';
+      player.play();
+      showToast('Đã tạo file âm thanh Voiceover MP3 thành công!', 'success');
+    } else {
+      showToast(data.message || 'Lỗi tạo giọng đọc', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối TTS: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Tạo File Âm Thanh MP3';
+  }
+}
+
+
+
+
+
 
