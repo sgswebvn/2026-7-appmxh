@@ -12,6 +12,7 @@ const GeminiDraft = require('../models/GeminiDraft');
 const Brand = require('../models/Brand');
 const ContentProject = require('../models/ContentProject');
 const ContentPlan = require('../models/ContentPlan');
+const ChannelGroup = require('../models/ChannelGroup');
 
 function isConnectedToMongo() {
   return mongoose.connection.readyState === 1;
@@ -840,6 +841,75 @@ async function deleteContentPlan(userId, planId) {
   return true;
 }
 
+// ==================== CHANNEL GROUPS (PHÂN NHÓM KÊNH & FANPAGE THEO CHỦ ĐỀ) ====================
+async function getChannelGroups(userId) {
+  await ensureMongoConnected();
+  if (isConnectedToMongo()) {
+    return ChannelGroup.find({ userId }).sort({ createdAt: -1 });
+  }
+  const db = readLocalDB();
+  return (db.channelGroups || []).filter(g => g.userId === userId);
+}
+
+async function createChannelGroup(userId, groupData) {
+  await ensureMongoConnected();
+  if (isConnectedToMongo()) {
+    const group = new ChannelGroup({
+      userId,
+      name: groupData.name,
+      topic: groupData.topic || 'Chung',
+      color: groupData.color || '#38bdf8',
+      description: groupData.description || '',
+      channelIds: groupData.channelIds || []
+    });
+    return group.save();
+  }
+  const db = readLocalDB();
+  if (!db.channelGroups) db.channelGroups = [];
+  const newGroup = {
+    _id: uuidv4(),
+    id: uuidv4(),
+    userId,
+    name: groupData.name,
+    topic: groupData.topic || 'Chung',
+    color: groupData.color || '#38bdf8',
+    description: groupData.description || '',
+    channelIds: groupData.channelIds || [],
+    createdAt: new Date().toISOString()
+  };
+  db.channelGroups.push(newGroup);
+  writeLocalDB(db);
+  return newGroup;
+}
+
+async function updateChannelGroup(userId, groupId, updateData) {
+  await ensureMongoConnected();
+  if (isConnectedToMongo()) {
+    return ChannelGroup.findOneAndUpdate({ userId, _id: groupId }, { $set: updateData }, { new: true });
+  }
+  const db = readLocalDB();
+  if (!db.channelGroups) db.channelGroups = [];
+  const idx = db.channelGroups.findIndex(g => g.userId === userId && (g._id === groupId || g.id === groupId));
+  if (idx !== -1) {
+    db.channelGroups[idx] = { ...db.channelGroups[idx], ...updateData, updatedAt: new Date().toISOString() };
+    writeLocalDB(db);
+    return db.channelGroups[idx];
+  }
+  return null;
+}
+
+async function deleteChannelGroup(userId, groupId) {
+  await ensureMongoConnected();
+  if (isConnectedToMongo()) {
+    return ChannelGroup.deleteOne({ userId, _id: groupId });
+  }
+  const db = readLocalDB();
+  if (!db.channelGroups) db.channelGroups = [];
+  db.channelGroups = db.channelGroups.filter(g => !(g.userId === userId && (g._id === groupId || g.id === groupId)));
+  writeLocalDB(db);
+  return true;
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -876,5 +946,9 @@ module.exports = {
   deleteContentProject,
   getContentPlans,
   saveContentPlan,
-  deleteContentPlan
+  deleteContentPlan,
+  getChannelGroups,
+  createChannelGroup,
+  updateChannelGroup,
+  deleteChannelGroup
 };

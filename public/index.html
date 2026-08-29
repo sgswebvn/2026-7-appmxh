@@ -180,6 +180,17 @@
                 </label>
               </div>
 
+              <!-- Thanh Lọc & Chọn Nhanh Theo Nhóm Chủ Đề -->
+              <div id="publish-group-selector-bar" style="margin-bottom:10px; padding:8px 10px; background:#0c101a; border-radius:4px; border:1px solid #1e293b;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-size:0.75rem; color:#94a3b8; font-weight:600;">Chọn Nhanh Theo Nhóm Chủ Đề:</span>
+                  <button type="button" class="btn btn-sm btn-outline" style="padding:2px 8px; font-size:0.72rem;" onclick="switchTab('channels-tab')">+ Quản lý nhóm</button>
+                </div>
+                <div id="publish-group-badges-list" style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-sm btn-outline" style="padding:3px 8px; font-size:0.75rem;" onclick="selectChannelsByGroup('all')">Tất Cả Kênh</button>
+                </div>
+              </div>
+
               <div id="channel-selection-list" class="channel-grid"></div>
 
               <div id="no-channels-prompt" style="display:none; text-align:center; padding:14px; color:var(--text-muted);">
@@ -551,6 +562,26 @@
 
     <!-- ==================== TAB 3: QUẢN LÝ KÊNH & MẠNG XÃ HỘI ==================== -->
     <section id="channels-tab" class="tab-pane">
+
+      <!-- KHỐI QUẢN LÝ NHÓM KÊNH & CHỦ ĐỀ -->
+      <div class="glass-panel" style="margin-bottom:16px; background:#0c101a; border:1px solid #1e293b;">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Phân Nhóm Kênh & Fanpage Theo Chủ Đề (Groups & Topics)</h3>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+              Tạo nhóm kênh theo chủ đề (Hài Hước, Tin Tức, Công Nghệ...) để quản lý tập trung và 1-click chọn hàng loạt khi đăng bài.
+            </p>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="openCreateChannelGroupModal()">
+            + Tạo Nhóm Mới
+          </button>
+        </div>
+
+        <div id="channel-groups-grid" class="grid-3" style="margin-top:10px;"></div>
+        <div id="empty-groups-state" style="display:none; text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">
+          Chưa có nhóm nào. Bấm <strong>"+ Tạo Nhóm Mới"</strong> để gom các kênh cùng chủ đề (Hài Hước, Thời Sự, Review...).
+        </div>
+      </div>
       
       <!-- Bộ Lọc Nền Tảng Trên Cùng -->
       <div class="platform-filter-tabs">
@@ -1023,6 +1054,76 @@
         <div style="margin-top: 16px; display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="btn btn-outline btn-sm" onclick="closeFbTokenModal()">Hủy</button>
           <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-fb-token">Liên Kết Fanpage Ngay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL TẠO / SỬA NHÓM KÊNH & FANPAGE -->
+  <div class="modal-backdrop" id="channel-group-modal">
+    <div class="modal-dialog" style="max-width: 560px;">
+      <div class="panel-header">
+        <div>
+          <h3 class="panel-title" id="channel-group-modal-title">Tạo Nhóm Kênh & Chủ Đề Mới</h3>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Gom các kênh cùng chủ đề để quản lý và 1-click chọn khi đăng video</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeChannelGroupModal()">✕</button>
+      </div>
+
+      <form id="channel-group-form" onsubmit="handleSaveChannelGroup(event)" style="margin-top: 12px;">
+        <input type="hidden" id="channel-group-id-hidden">
+
+        <div class="form-row">
+          <div class="form-group" style="flex:2;">
+            <label class="form-label" for="group-name-input">Tên Nhóm Kênh *</label>
+            <input type="text" id="group-name-input" class="form-input" placeholder="Ví dụ: Team Hài Hước & Giải Trí" required>
+          </div>
+
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" for="group-topic-select">Chủ Đề Nhóm</label>
+            <select id="group-topic-select" class="form-select">
+              <option value="Hài Hước & Giải Trí">Hài Hước & Giải Trí</option>
+              <option value="Tin Tức & Thời Sự">Tin Tức & Thời Sự</option>
+              <option value="Công Nghệ & AI">Công Nghệ & AI</option>
+              <option value="Review & Đời Sống">Review & Đời Sống</option>
+              <option value="Tài Chính & MMO">Tài Chính & MMO</option>
+              <option value="Ẩm Thực & Du Lịch">Ẩm Thực & Du Lịch</option>
+              <option value="Chung">Chủ Đề Khác</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:2;">
+            <label class="form-label" for="group-desc-input">Mô Tả Ghi Chú</label>
+            <input type="text" id="group-desc-input" class="form-input" placeholder="Ví dụ: Các page vệ tinh chuyên reup shorts hài...">
+          </div>
+
+          <div class="form-group" style="flex:1;">
+            <label class="form-label" for="group-color-input">Màu Nhận Diện</label>
+            <select id="group-color-input" class="form-select">
+              <option value="#38bdf8">Xanh Dương (Sky)</option>
+              <option value="#e11d48">Đỏ Hồng (Rose)</option>
+              <option value="#10b981">Xanh Lá (Emerald)</option>
+              <option value="#f59e0b">Vàng Cam (Amber)</option>
+              <option value="#8b5cf6">Tím (Purple)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Chọn Các Kênh / Fanpage Thuộc Nhóm Này:</span>
+            <span style="font-size:0.72rem; color:var(--text-muted);" id="group-modal-selected-count">0 kênh</span>
+          </label>
+          <div id="group-modal-channels-checklist" style="max-height:180px; overflow-y:auto; background:#080b12; border:1px solid var(--border-subtle); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:6px;">
+            <!-- Render danh sách checkbox kênh -->
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="closeChannelGroupModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-save-channel-group">Lưu Nhóm Kênh</button>
         </div>
       </form>
     </div>

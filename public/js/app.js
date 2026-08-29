@@ -314,6 +314,7 @@ async function loadChannels() {
       document.getElementById('channel-count-badge').textContent = channelsState.length;
       renderChannelSelection();
       renderChannelsManager();
+      loadChannelGroups();
     }
   } catch (err) {
     console.error('Lỗi tải danh sách kênh:', err);
@@ -659,6 +660,292 @@ async function deleteChannel(id, title) {
     }
   } catch (err) {
     showToast('Lỗi kết nối', 'error');
+  }
+}
+
+// ==================== QUẢN LÝ NHÓM KÊNH & CHỦ ĐỀ (CHANNEL GROUPS & TOPICS) ====================
+let channelGroupsState = [];
+let activePublishGroupId = 'all';
+
+async function loadChannelGroups() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/channels/groups', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success) {
+      channelGroupsState = data.groups || [];
+      renderChannelGroupsUI();
+      renderPublishGroupSelector();
+    }
+  } catch (err) {
+    console.error('Lỗi tải nhóm kênh:', err);
+  }
+}
+
+function renderChannelGroupsUI() {
+  const grid = document.getElementById('channel-groups-grid');
+  const emptyState = document.getElementById('empty-groups-state');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (channelGroupsState.length === 0) {
+    if (emptyState) emptyState.style.display = 'block';
+    return;
+  }
+  if (emptyState) emptyState.style.display = 'none';
+
+  channelGroupsState.forEach(group => {
+    const card = document.createElement('div');
+    card.className = 'glass-panel';
+    card.style.background = '#0d131f';
+    card.style.border = `1px solid ${group.color || '#38bdf8'}40`;
+    card.style.padding = '12px 14px';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.justifyContent = 'space-between';
+
+    const channelCount = (group.channelIds || []).length;
+
+    card.innerHTML = `
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+          <h4 style="font-size:0.9rem; font-weight:600; color:#fff;">${group.name}</h4>
+          <span style="font-size:0.7rem; font-weight:600; padding:2px 8px; border-radius:12px; background:${group.color || '#38bdf8'}25; color:${group.color || '#38bdf8'}; border:1px solid ${group.color || '#38bdf8'}50;">
+            ${group.topic || 'Chung'}
+          </span>
+        </div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+          ${group.description || 'Chưa có mô tả'}
+        </p>
+        <div style="font-size:0.75rem; color:#38bdf8; font-weight:500; margin-bottom:10px;">
+          📊 Bao gồm: <strong>${channelCount}</strong> kênh / fanpage
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:8px;">
+        <button type="button" class="btn btn-sm btn-outline" style="padding:3px 10px; font-size:0.72rem;" onclick="openCreateChannelGroupModal('${group._id || group.id}')">
+          Sửa Nhóm
+        </button>
+        <button type="button" class="btn btn-sm btn-danger-outline" style="padding:3px 10px; font-size:0.72rem;" onclick="deleteChannelGroup('${group._id || group.id}', '${group.name.replace(/'/g, "\\'")}')">
+          Xóa
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderPublishGroupSelector() {
+  const container = document.getElementById('publish-group-badges-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Nút Tất Cả
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.className = `btn btn-sm ${activePublishGroupId === 'all' ? 'btn-primary' : 'btn-outline'}`;
+  allBtn.style.padding = '3px 9px';
+  allBtn.style.fontSize = '0.74rem';
+  allBtn.textContent = 'Tất Cả Kênh';
+  allBtn.onclick = () => selectChannelsByGroup('all');
+  container.appendChild(allBtn);
+
+  // Từng Nhóm Chủ Đề
+  channelGroupsState.forEach(group => {
+    const isAct = activePublishGroupId === (group._id || group.id);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `btn btn-sm ${isAct ? 'btn-primary' : 'btn-outline'}`;
+    btn.style.padding = '3px 9px';
+    btn.style.fontSize = '0.74rem';
+    btn.style.borderColor = group.color || '#38bdf8';
+    btn.style.color = isAct ? '#fff' : (group.color || '#38bdf8');
+    btn.innerHTML = `🏷️ ${group.name} <span style="font-size:0.68rem; opacity:0.8;">(${(group.channelIds || []).length})</span>`;
+    btn.onclick = () => selectChannelsByGroup(group._id || group.id);
+    container.appendChild(btn);
+  });
+}
+
+function selectChannelsByGroup(groupId) {
+  activePublishGroupId = groupId;
+  renderPublishGroupSelector();
+
+  const cards = document.querySelectorAll('.channel-card-select');
+
+  if (groupId === 'all') {
+    cards.forEach(card => {
+      const id = card.dataset.id;
+      const checkbox = card.querySelector('input');
+      if (checkbox) checkbox.checked = true;
+      selectedChannelIds.add(id);
+      card.classList.add('selected');
+    });
+    showToast('Đã chọn toàn bộ các kênh');
+  } else {
+    const group = channelGroupsState.find(g => (g._id || g.id) === groupId);
+    if (!group) return;
+    const allowedIds = new Set(group.channelIds || []);
+
+    cards.forEach(card => {
+      const id = card.dataset.id;
+      const checkbox = card.querySelector('input');
+      const isMatch = allowedIds.has(id);
+
+      if (checkbox) checkbox.checked = isMatch;
+      if (isMatch) {
+        selectedChannelIds.add(id);
+        card.classList.add('selected');
+      } else {
+        selectedChannelIds.delete(id);
+        card.classList.remove('selected');
+      }
+    });
+    showToast(`Đã chọn nhanh ${allowedIds.size} kênh trong nhóm "${group.name}"!`, 'success');
+  }
+
+  updateSelectAllStatus();
+  renderChannelOverrides();
+}
+
+function openCreateChannelGroupModal(groupId = null) {
+  const modal = document.getElementById('channel-group-modal');
+  const title = document.getElementById('channel-group-modal-title');
+  const idInput = document.getElementById('channel-group-id-hidden');
+  const nameInput = document.getElementById('group-name-input');
+  const topicSelect = document.getElementById('group-topic-select');
+  const descInput = document.getElementById('group-desc-input');
+  const colorSelect = document.getElementById('group-color-input');
+  const checklist = document.getElementById('group-modal-channels-checklist');
+
+  idInput.value = '';
+  nameInput.value = '';
+  descInput.value = '';
+
+  let currentSelectedChannelIds = new Set();
+
+  if (groupId) {
+    const group = channelGroupsState.find(g => (g._id || g.id) === groupId);
+    if (group) {
+      title.textContent = `Chỉnh Sửa Nhóm: ${group.name}`;
+      idInput.value = group._id || group.id;
+      nameInput.value = group.name || '';
+      topicSelect.value = group.topic || 'Chung';
+      descInput.value = group.description || '';
+      colorSelect.value = group.color || '#38bdf8';
+      currentSelectedChannelIds = new Set(group.channelIds || []);
+    }
+  } else {
+    title.textContent = 'Tạo Nhóm Kênh & Chủ Đề Mới';
+  }
+
+  // Render checklist các kênh
+  checklist.innerHTML = '';
+  if (channelsState.length === 0) {
+    checklist.innerHTML = '<div style="color:var(--text-muted); font-size:0.75rem; text-align:center;">Chưa có kênh nào được liên kết trong hệ thống.</div>';
+  } else {
+    channelsState.forEach(ch => {
+      const plat = getChannelPlatform(ch);
+      const isChecked = currentSelectedChannelIds.has(ch.id);
+      const row = document.createElement('label');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '8px';
+      row.style.padding = '4px 6px';
+      row.style.background = '#111624';
+      row.style.borderRadius = '4px';
+      row.style.cursor = 'pointer';
+      row.style.fontSize = '0.78rem';
+
+      row.innerHTML = `
+        <input type="checkbox" class="group-channel-cb" value="${ch.id}" ${isChecked ? 'checked' : ''} style="accent-color:var(--accent-red); cursor:pointer;">
+        <span style="font-size:0.68rem; font-weight:600; padding:1px 5px; border-radius:3px; background:#1e293b; color:#94a3b8;">${plat}</span>
+        <span style="color:#fff; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${ch.title}</span>
+      `;
+      checklist.appendChild(row);
+    });
+  }
+
+  updateGroupModalCount();
+  checklist.querySelectorAll('.group-channel-cb').forEach(cb => {
+    cb.addEventListener('change', updateGroupModalCount);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function updateGroupModalCount() {
+  const checked = document.querySelectorAll('.group-channel-cb:checked');
+  const countEl = document.getElementById('group-modal-selected-count');
+  if (countEl) countEl.textContent = `Đã chọn: ${checked.length} kênh`;
+}
+
+function closeChannelGroupModal() {
+  const modal = document.getElementById('channel-group-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleSaveChannelGroup(e) {
+  e.preventDefault();
+  const id = document.getElementById('channel-group-id-hidden').value;
+  const name = document.getElementById('group-name-input').value.trim();
+  const topic = document.getElementById('group-topic-select').value;
+  const description = document.getElementById('group-desc-input').value.trim();
+  const color = document.getElementById('group-color-input').value;
+
+  const selectedCbs = Array.from(document.querySelectorAll('.group-channel-cb:checked')).map(cb => cb.value);
+
+  const btn = document.getElementById('btn-save-channel-group');
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu...';
+
+  try {
+    const url = id ? `/api/channels/groups/${id}` : '/api/channels/groups';
+    const method = id ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        name,
+        topic,
+        description,
+        color,
+        channelIds: selectedCbs
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Đã lưu nhóm kênh thành công!', 'success');
+      closeChannelGroupModal();
+      loadChannelGroups();
+    } else {
+      showToast(data.message || 'Lỗi khi lưu nhóm kênh', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi yêu cầu: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lưu Nhóm Kênh';
+  }
+}
+
+async function deleteChannelGroup(id, name) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa nhóm kênh "${name}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/channels/groups/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã xóa nhóm kênh thành công.');
+      loadChannelGroups();
+    } else {
+      showToast(data.message || 'Lỗi xóa nhóm', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
   }
 }
 

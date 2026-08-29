@@ -76,4 +76,65 @@ router.post('/sync', authenticateToken, syncChannelLimiter, async (req, res) => 
   }
 });
 
+// ==================== QUẢN LÝ NHÓM KÊNH & PHÂN LOẠI CHỦ ĐỀ ====================
+
+// 4. Lấy danh sách tất cả các nhóm kênh
+router.get('/groups', authenticateToken, async (req, res) => {
+  try {
+    const groups = await dbService.getChannelGroups(req.user.id);
+    res.json({ success: true, groups });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 5. Tạo nhóm kênh mới (ví dụ: Hài Hước, Tin Tức, Công Nghệ...)
+router.post('/groups', authenticateToken, async (req, res) => {
+  try {
+    const { name, topic, color, description, channelIds } = req.body;
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập tên nhóm kênh.' });
+    }
+
+    const newGroup = await dbService.createChannelGroup(req.user.id, {
+      name: name.trim(),
+      topic: topic || 'Chung',
+      color: color || '#38bdf8',
+      description: description || '',
+      channelIds: Array.isArray(channelIds) ? channelIds : []
+    });
+
+    res.json({ success: true, message: 'Đã tạo nhóm kênh thành công!', group: newGroup });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 6. Cập nhật nhóm kênh
+router.put('/groups/:id', authenticateToken, async (req, res) => {
+  try {
+    const { name, topic, color, description, channelIds } = req.body;
+    const updated = await dbService.updateChannelGroup(req.user.id, req.params.id, {
+      name,
+      topic,
+      color,
+      description,
+      channelIds
+    });
+    res.json({ success: true, message: 'Đã cập nhật nhóm kênh!', group: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 7. Xóa nhóm kênh
+router.delete('/groups/:id', authenticateToken, async (req, res) => {
+  try {
+    await dbService.deleteChannelGroup(req.user.id, req.params.id);
+    res.json({ success: true, message: 'Đã xóa nhóm kênh thành công!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
