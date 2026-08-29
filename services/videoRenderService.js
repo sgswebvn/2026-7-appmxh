@@ -14,7 +14,7 @@ const { exec, spawn } = require('child_process');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
-const VIDEOS_DIR = process.env.VERCEL ? path.join(os.tmpdir(), 'rendered_videos') : path.join(__dirname, '..', 'uploads', 'videos');
+const VIDEOS_DIR = process.env.VERCEL ? path.join(os.tmpdir(), 'uploads', 'videos') : path.join(__dirname, '..', 'uploads', 'videos');
 try {
   if (!fs.existsSync(VIDEOS_DIR)) {
     fs.mkdirSync(VIDEOS_DIR, { recursive: true });

@@ -100,7 +100,15 @@ const PUBLIC_DIR = fs.existsSync(path.join(process.cwd(), 'public'))
   ? path.join(process.cwd(), 'public')
   : path.join(__dirname, 'public');
 
+try {
+  const audioDir = path.join(UPLOADS_DIR, 'audio');
+  if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+  const videoDir = path.join(UPLOADS_DIR, 'videos');
+  if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
+} catch (e) {}
+
 app.use(express.static(PUBLIC_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ==================== ĐỊNH TUYẾN MÔ-ĐUN (MODULAR ROUTES) ====================
 
