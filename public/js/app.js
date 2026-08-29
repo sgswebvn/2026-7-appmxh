@@ -1733,11 +1733,17 @@ function renderContentProjectsGrid(projects) {
     card.style.flexDirection = 'column';
     card.style.justifyContent = 'space-between';
 
-    const statusBadge = p.status === 'READY'
+    const statusBadge = (p.status === 'READY' || p.status === 'MEDIA_READY')
       ? '<span class="status-badge status-success" style="font-size:0.7rem;">Sẵn sàng đăng</span>'
       : '<span class="status-badge status-pending" style="font-size:0.7rem;">Đã có kịch bản</span>';
 
     const hook = p.scriptData?.hook || p.topic || 'Ý tưởng video';
+    let bodyText = '';
+    if (p.scriptData?.bodySections && Array.isArray(p.scriptData.bodySections)) {
+      bodyText = p.scriptData.bodySections.map(s => s.content || s.heading || '').join(' ');
+    } else if (typeof p.scriptData?.body === 'string') {
+      bodyText = p.scriptData.body;
+    }
 
     card.innerHTML = `
       <div>
@@ -1745,21 +1751,183 @@ function renderContentProjectsGrid(projects) {
           <h4 style="font-size:0.88rem; font-weight:600; color:#fff; flex:1; margin-right:6px;">${p.title}</h4>
           ${statusBadge}
         </div>
-        <p style="font-size:0.75rem; color:var(--text-muted); line-height:1.4; margin-bottom:10px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
-          <strong>Hook:</strong> "${hook}"
+        <p style="font-size:0.75rem; color:var(--text-muted); line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+          <strong style="color:#fbbf24;">⚡ Hook:</strong> "${hook}"
         </p>
+        ${bodyText ? `
+        <p style="font-size:0.72rem; color:var(--text-secondary); line-height:1.35; margin-bottom:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+          <strong>📝 Thân bài:</strong> ${bodyText}
+        </p>` : ''}
       </div>
-      <div style="border-top:1px solid #1e293b; padding-top:10px; display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-sm btn-outline" onclick="editContentProjectInAiStudio('${p._id || p.id}')" style="border-color:#38bdf8; color:#38bdf8; font-size:0.74rem; padding:3px 8px;">
-          ✏️ Chỉnh Sửa Trong AI Studio
-        </button>
-        <button type="button" class="btn btn-sm btn-primary" onclick="pushVaultProjectToPublisher('${p._id || p.id}')" style="font-size:0.74rem; padding:3px 8px;">
-          🚀 Phân Phối Ngay
-        </button>
+      <div style="border-top:1px solid #1e293b; padding-top:10px; display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; justify-content:space-between; gap:6px;">
+          <button type="button" class="btn btn-sm btn-primary" onclick="openEditScriptModal('${p._id || p.id}')" style="font-size:0.74rem; padding:4px 8px; flex:1;">
+            ✏️ Sửa Kịch Bản
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="editContentProjectInAiStudio('${p._id || p.id}')" style="border-color:#38bdf8; color:#38bdf8; font-size:0.74rem; padding:4px 8px; flex:1;">
+            🤖 Sửa Bằng AI
+          </button>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:6px;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="pushVaultProjectToPublisher('${p._id || p.id}')" style="font-size:0.74rem; padding:3px 8px; flex:1;">
+            🚀 Phân Phối
+          </button>
+          <button type="button" class="btn btn-sm btn-danger-outline" onclick="deleteContentProjectById('${p._id || p.id}', '${p.title.replace(/'/g, "\\'")}')" style="font-size:0.74rem; padding:3px 8px;">
+            🗑️ Xóa
+          </button>
+        </div>
       </div>
     `;
     grid.appendChild(card);
   });
+}
+
+// ==================== MODAL CHỈNH SỬA KỊCH BẢN TRỰC TIẾP ====================
+function openEditScriptModal(projectId) {
+  const project = contentProjectsState.find(p => (p._id || p.id) === projectId);
+  if (!project) return;
+
+  const modal = document.getElementById('edit-script-modal');
+  const idInput = document.getElementById('edit-script-id');
+  const titleInput = document.getElementById('edit-script-title');
+  const hookInput = document.getElementById('edit-script-hook');
+  const bodyInput = document.getElementById('edit-script-body');
+  const ctaInput = document.getElementById('edit-script-cta');
+  const descInput = document.getElementById('edit-script-desc');
+  const tagsInput = document.getElementById('edit-script-tags');
+
+  if (idInput) idInput.value = project._id || project.id;
+  if (titleInput) titleInput.value = project.title || '';
+  if (hookInput) hookInput.value = project.scriptData?.hook || '';
+
+  let bodyContent = '';
+  if (project.scriptData?.bodySections && Array.isArray(project.scriptData.bodySections)) {
+    bodyContent = project.scriptData.bodySections.map(s => s.content || s.heading || '').join('\n\n');
+  } else if (typeof project.scriptData?.body === 'string') {
+    bodyContent = project.scriptData.body;
+  }
+  if (bodyInput) bodyInput.value = bodyContent;
+
+  if (ctaInput) ctaInput.value = project.scriptData?.callToAction || project.scriptData?.cta || '';
+  if (descInput) descInput.value = project.seoMetadata?.description || '';
+  if (tagsInput) tagsInput.value = (project.seoMetadata?.tags || []).join(', ');
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEditScriptModal() {
+  const modal = document.getElementById('edit-script-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleSaveEditedScript(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-script-id').value;
+  const title = document.getElementById('edit-script-title').value.trim();
+  const hook = document.getElementById('edit-script-hook').value.trim();
+  const body = document.getElementById('edit-script-body').value.trim();
+  const cta = document.getElementById('edit-script-cta').value.trim();
+  const desc = document.getElementById('edit-script-desc').value.trim();
+  const tagsStr = document.getElementById('edit-script-tags').value.trim();
+  const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  const bodySections = body.split('\n\n').filter(Boolean).map((sec, idx) => ({
+    time: `00:${(idx + 1) * 10}`,
+    heading: `Ý ${idx + 1}`,
+    content: sec
+  }));
+
+  try {
+    const res = await fetch(`/api/content/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title,
+        status: 'SCRIPT_GENERATED',
+        scriptData: {
+          hook,
+          bodySections: bodySections.length > 0 ? bodySections : [{ time: '00:10', heading: 'Nội dung', content: body }],
+          callToAction: cta
+        },
+        seoMetadata: {
+          description: desc,
+          tags
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã lưu kịch bản cập nhật vào MongoDB Atlas thành công!', 'success');
+      closeEditScriptModal();
+      loadContentProjects();
+    } else {
+      showToast(data.message || 'Lỗi cập nhật kịch bản', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
+}
+
+function transferEditedScriptToAiStudio() {
+  const title = document.getElementById('edit-script-title').value.trim();
+  const hook = document.getElementById('edit-script-hook').value.trim();
+  const body = document.getElementById('edit-script-body').value.trim();
+  const cta = document.getElementById('edit-script-cta').value.trim();
+  const desc = document.getElementById('edit-script-desc').value.trim();
+  const tagsStr = document.getElementById('edit-script-tags').value.trim();
+  const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  const bodySections = body.split('\n\n').filter(Boolean).map((sec, idx) => ({
+    time: `00:${(idx + 1) * 10}`,
+    heading: `Ý ${idx + 1}`,
+    content: sec
+  }));
+
+  const topicInput = document.getElementById('ai-topic');
+  if (topicInput) topicInput.value = title;
+
+  lastAiResult = {
+    script: {
+      hook,
+      bodySections: bodySections.length > 0 ? bodySections : [{ time: '00:10', heading: 'Nội dung', content: body }],
+      callToAction: cta
+    },
+    viralTitles: [{ title, clickScore: 98 }],
+    seoDescription: desc,
+    tags
+  };
+
+  aiGeneratedData = {
+    titles: [title],
+    description: desc,
+    tags
+  };
+
+  closeEditScriptModal();
+  renderAiResults(lastAiResult, true, 'Kịch bản nạp từ Kho Nội Dung để AI viết lại');
+  switchTab('gemini-tab');
+  showToast('Đã chuyển kịch bản sang AI Script Studio để AI viết lại!', 'success');
+}
+
+async function deleteContentProjectById(projectId, projectTitle) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa kịch bản "${projectTitle}" khỏi MongoDB Atlas?`)) return;
+
+  try {
+    const res = await fetch(`/api/content/${projectId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Đã xóa kịch bản khỏi Kho Lưu Trữ!', 'success');
+      loadContentProjects();
+    } else {
+      showToast(data.message || 'Lỗi xóa kịch bản', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
 }
 
 function editContentProjectInAiStudio(projectId) {

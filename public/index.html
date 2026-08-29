@@ -1335,6 +1335,63 @@
     </div>
   </div>
 
+  <!-- ==================== MODAL: CHỈNH SỬA KỊCH BẢN KHO NỘI DUNG (SCRIPT EDITOR MODAL) ==================== -->
+  <div id="edit-script-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center;">
+    <div class="glass-panel" style="background:#090d16; border:1px solid #38bdf8; max-width:680px; width:92%; max-height:90vh; overflow-y:auto; padding:22px; border-radius:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
+        <h3 style="color:#38bdf8; font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+          <span>✏️</span> Chỉnh Sửa Kịch Bản & Nội Dung Video
+        </h3>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeEditScriptModal()" style="padding:2px 8px; font-size:0.8rem;">✕</button>
+      </div>
+
+      <form id="edit-script-form" onsubmit="handleSaveEditedScript(event)">
+        <input type="hidden" id="edit-script-id">
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" for="edit-script-title">Tiêu Đề Video / Bài Viết *</label>
+          <input type="text" id="edit-script-title" class="form-input" required placeholder="Nhập tiêu đề video...">
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" for="edit-script-hook" style="color:#fbbf24;">⚡ Hook Mở Đầu (3 Giây Đầu Tiên):</label>
+          <textarea id="edit-script-hook" class="form-textarea" style="min-height:70px; border-color:rgba(251,191,36,0.3);" placeholder="Câu giật gân giữ chân người xem..."></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" for="edit-script-body">📝 Thân Bài / Nội Dung Chính (Body Content):</label>
+          <textarea id="edit-script-body" class="form-textarea" style="min-height:140px;" placeholder="Nội dung chi tiết, các ý chính..."></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" for="edit-script-cta" style="color:#34d399;">📢 Kêu Gọi Hành Động (CTA - Call To Action):</label>
+          <input type="text" id="edit-script-cta" class="form-input" style="border-color:rgba(52,211,153,0.3);" placeholder="Hãy theo dõi kênh để không bỏ lỡ...">
+        </div>
+
+        <div class="grid-2" style="margin-bottom:14px;">
+          <div>
+            <label class="form-label" for="edit-script-desc">Mô Tả SEO YouTube / TikTok:</label>
+            <textarea id="edit-script-desc" class="form-textarea" style="min-height:75px; font-size:0.8rem;" placeholder="Mô tả SEO..."></textarea>
+          </div>
+          <div>
+            <label class="form-label" for="edit-script-tags">Thẻ Tags (cách nhau bằng dấu phẩy):</label>
+            <textarea id="edit-script-tags" class="form-textarea" style="min-height:75px; font-size:0.8rem;" placeholder="tag1, tag2, tag3..."></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:14px; margin-top:10px;">
+          <button type="button" class="btn btn-sm btn-outline" id="btn-edit-transfer-ai" onclick="transferEditedScriptToAiStudio()" style="border-color:#38bdf8; color:#38bdf8;">
+            🤖 Chuyển Sang AI Studio Để AI Viết Lại
+          </button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="closeEditScriptModal()">Hủy</button>
+            <button type="submit" class="btn btn-sm btn-primary" id="btn-save-edit-script">💾 Lưu Thay Đổi</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Thư viện Chart.js cho Analytics Dashboard -->
