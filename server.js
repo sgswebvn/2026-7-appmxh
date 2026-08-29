@@ -34,6 +34,8 @@ const voiceRoutes = require('./routes/voice');
 const videoRoutes = require('./routes/video');
 const telegramRoutes = require('./routes/telegram');
 const browserRoutes = require('./routes/browser');
+const clipperRoutes = require('./routes/clipper');
+const capcutRoutes = require('./routes/capcut');
 const generalRoutes = require('./routes/general');
 
 const app = express();
@@ -114,6 +116,8 @@ app.use('/api/voice', voiceRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/browser', browserRoutes);
+app.use('/api/clipper', clipperRoutes);
+app.use('/api/capcut', capcutRoutes);
 app.use('/api', generalRoutes);
 
 // Trang giao diện chính

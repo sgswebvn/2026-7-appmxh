@@ -48,6 +48,10 @@
       <button class="nav-tab" data-tab="planner-tab">
         <span>Lịch Ma Trận</span>
       </button>
+      <button class="nav-tab" data-tab="clipper-tab">
+        <span>Cắt Video Dài ➔ Shorts</span>
+        <span class="tab-badge" style="background:#831843; color:#f472b6;">Opus AI</span>
+      </button>
       <button class="nav-tab" data-tab="brands-tab">
         <span>Quản Lý Brand</span>
         <span class="tab-badge" id="brand-count-badge">0</span>
@@ -457,9 +461,16 @@
                   <div id="render-progress-bar" style="width:0%; height:100%; background:#38bdf8; transition:width 0.3s ease;"></div>
                 </div>
               </div>
-              <div id="render-result-box" style="display:none; margin-top:10px; padding:8px 12px; background:#10131c; border-radius:4px; align-items:center; justify-content:space-between;">
+              <div id="render-result-box" style="display:none; margin-top:10px; padding:8px 12px; background:#10131c; border-radius:4px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
                 <span style="color:#34d399; font-size:0.78rem; font-weight:500;">Đã tạo thành công video MP4!</span>
-                <button type="button" class="btn btn-sm btn-outline" onclick="pushRenderedVideoToPublisher()">Chuyển Sang Phân Phối Video ➔</button>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn btn-sm btn-outline" onclick="handleExportCapCutDraft()" style="border-color:#ec4899; color:#f472b6; font-size:0.74rem;">
+                    🎬 Xuất Dự Án CapCut (PC)
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="pushRenderedVideoToPublisher()" style="font-size:0.74rem;">
+                    Chuyển Sang Phân Phối Video ➔
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -582,6 +593,58 @@
 
         <!-- Matrix Week View -->
         <div class="planner-matrix-grid" id="planner-matrix-container"></div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB: CẮT VIDEO DÀI THÀNH SHORTS (LONG-TO-SHORTS CLIPPER) ==================== -->
+    <section id="clipper-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">AI Video Clipper (Cắt Video Dài Thành Shorts / Reels / TikTok)</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Lấy cảm hứng từ <strong>Opus Clip</strong> & <strong>AI-Shorts-Generator</strong>: Tự động trích xuất các đoạn cao trào triệu view kèm điểm Viral Score.
+            </p>
+          </div>
+          <span class="status-badge" style="background:#831843; color:#f472b6; border:1px solid #be185d;">Opus AI Engine</span>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div class="form-group">
+              <label class="form-label" for="clipper-video-url">Link YouTube Video Dài hoặc Podcast URL *</label>
+              <input type="url" id="clipper-video-url" class="form-input" placeholder="Ví dụ: https://www.youtube.com/watch?v=xyz123...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="clipper-video-title">Tiêu Đề / Chủ Đề Video Dài (Tùy chọn)</label>
+              <input type="text" id="clipper-video-title" class="form-input" placeholder="Ví dụ: Buổi trò chuyện về bí quyết tự do tài chính 2026...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="clipper-transcript-text">Nội Dung Văn Bản / Transcript (Tùy chọn)</label>
+              <textarea id="clipper-transcript-text" class="form-textarea" placeholder="Dán nội dung transcript nếu có để AI phân tích siêu tốc..." style="min-height:80px;"></textarea>
+            </div>
+
+            <button type="button" class="btn btn-primary" id="btn-run-clipper" onclick="handleAnalyzeVideoClipper()" style="width:100%; padding:10px; background:#ec4899; border-color:#db2777; font-weight:600;">
+              ⚡ Bắt Đầu Quét & Trích Xuất Shorts Viral
+            </button>
+          </div>
+
+          <!-- Kết quả danh sách Clips -->
+          <div id="clipper-results-wrapper">
+            <div id="clipper-loading-state" style="display:none; text-align:center; padding:30px; color:#38bdf8;">
+              <div style="font-size:1.5rem; margin-bottom:8px;">⏳</div>
+              <div style="font-weight:600; font-size:0.88rem;">AI đang quét kịch bản và tìm điểm bùng nổ tương tác...</div>
+            </div>
+
+            <div id="clipper-empty-state" style="text-align:center; padding:40px 16px; color:var(--text-muted); font-size:0.82rem; background:#090d16; border-radius:6px; border:1px solid #1e293b;">
+              Nhập link hoặc tiêu đề video dài bên trái và bấm <strong>"Bắt Đầu Quét"</strong> để AI tạo danh sách 3-5 đoạn Shorts hay nhất.
+            </div>
+
+            <div id="clipper-clips-list" style="display:none; flex-direction:column; gap:10px;"></div>
+          </div>
+        </div>
       </div>
     </section>
 

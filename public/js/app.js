@@ -3476,6 +3476,145 @@ async function scanLiveTrends(platform = 'TIKTOK') {
   }
 }
 
+// ==================== LONG-TO-SHORTS VIDEO CLIPPER (OPUS CLIP AI) ====================
+let currentClippedData = null;
+
+async function handleAnalyzeVideoClipper() {
+  const url = document.getElementById('clipper-video-url')?.value.trim();
+  const title = document.getElementById('clipper-video-title')?.value.trim();
+  const transcript = document.getElementById('clipper-transcript-text')?.value.trim();
+
+  if (!url && !title && !transcript) {
+    showToast('Vui lòng nhập Link video, Tiêu đề hoặc Transcript.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-run-clipper');
+  const loading = document.getElementById('clipper-loading-state');
+  const empty = document.getElementById('clipper-empty-state');
+  const list = document.getElementById('clipper-clips-list');
+
+  btn.disabled = true;
+  loading.style.display = 'block';
+  empty.style.display = 'none';
+  list.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/clipper/analyze', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ videoUrl: url, videoTitle: title, transcriptText: transcript })
+    });
+
+    const data = await res.json();
+    if (data.success && data.clips) {
+      currentClippedData = data;
+      renderClipperResults(data.clips);
+      list.style.display = 'flex';
+      showToast(`Đã tìm thấy ${data.clips.length} đoạn Shorts tiềm năng triệu view!`, 'success');
+    } else {
+      empty.style.display = 'block';
+      showToast(data.message || 'Không thể phân tích video', 'error');
+    }
+  } catch (err) {
+    empty.style.display = 'block';
+    showToast('Lỗi kết nối Clipper: ' + err.message, 'error');
+  } finally {
+    loading.style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+function renderClipperResults(clips) {
+  const list = document.getElementById('clipper-clips-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  clips.forEach((clip, idx) => {
+    const card = document.createElement('div');
+    card.className = 'glass-panel';
+    card.style.background = '#0d131f';
+    card.style.border = '1px solid rgba(236, 72, 153, 0.4)';
+    card.style.padding = '12px 14px';
+
+    const scoreColor = clip.viralScore >= 90 ? '#34d399' : '#fbbf24';
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+        <h4 style="font-size:0.88rem; font-weight:600; color:#fff;">${clip.clipTitle}</h4>
+        <span style="font-size:0.72rem; font-weight:700; color:${scoreColor}; background:${scoreColor}20; padding:2px 8px; border-radius:10px; border:1px solid ${scoreColor}50;">
+          Viral: ${clip.viralScore}/100
+        </span>
+      </div>
+      <div style="font-size:0.75rem; color:#f472b6; font-weight:500; margin-bottom:6px;">
+        ⏱️ Thời lượng: ${clip.durationSec}s (Từ ${clip.startSec}s ➔ ${clip.endSec}s)
+      </div>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+        <strong>Hook 3s:</strong> "${clip.hookText}"<br>
+        <span style="color:#94a3b8; font-size:0.72rem;">💡 ${clip.viralityReason}</span>
+      </p>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:8px;">
+        <span style="font-size:0.7rem; color:#64748b;">${(clip.suggestedTags || []).join(' ')}</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="applyClipToPublisher('${clip.clipTitle.replace(/'/g, "\\'")}', '${clip.hookText.replace(/'/g, "\\'")}', '${(clip.suggestedTags || []).join(', ')}')" style="padding:3px 10px; font-size:0.74rem; background:#db2777; border-color:#ec4899;">
+          🚀 Đăng Clip Này Ngay
+        </button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function applyClipToPublisher(title, hook, tags) {
+  const titleInput = document.getElementById('video-title');
+  const descInput = document.getElementById('video-description');
+  const tagsInput = document.getElementById('video-tags');
+
+  if (titleInput) titleInput.value = title;
+  if (descInput) descInput.value = `${hook}\n\nĐăng ký kênh để theo dõi thêm video hay mỗi ngày!`;
+  if (tagsInput) tagsInput.value = tags;
+
+  showToast(`Đã chuyển Clip "${title}" sang Bảng Phân Phối Video!`, 'success');
+  switchTab('publish-tab');
+}
+
+// ==================== 1-CLICK CAPCUT DRAFT EXPORTER ====================
+async function handleExportCapCutDraft() {
+  const scriptText = document.getElementById('ai-script-preview')?.value.trim() || 'Kịch bản tự động';
+  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Social Content Factory Project';
+
+  try {
+    const res = await fetch('/api/capcut/export', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title,
+        scriptText,
+        audioUrl: currentGeneratedAudioUrl || '',
+        durationSec: 30,
+        aspectRatio: '9:16'
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.draftContent) {
+      // Tự động tạo file download draft_content.json
+      const blob = new Blob([JSON.stringify(data.draftContent, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `capcut_draft_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast('Đã tải xuống file dự án CapCut Draft JSON thành công! Bạn có thể import trực tiếp vào CapCut.', 'success');
+    } else {
+      showToast(data.message || 'Lỗi xuất CapCut Draft', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi xuất CapCut: ' + err.message, 'error');
+  }
+}
+
 
 
 
