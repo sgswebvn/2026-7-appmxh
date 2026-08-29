@@ -36,9 +36,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Thư mục uploads tạm
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const UPLOADS_DIR = process.env.VERCEL ? path.join(os.tmpdir(), 'uploads') : path.join(__dirname, 'uploads');
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch (e) {
+  // Bỏ qua lỗi read-only filesystem trên serverless
 }
 
 // ==================== MIDDLEWARE & LỚP BẢO MẬT ====================

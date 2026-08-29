@@ -11,10 +11,15 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
+const os = require('os');
 
-const AUDIO_DIR = path.join(__dirname, '..', 'uploads', 'audio');
-if (!fs.existsSync(AUDIO_DIR)) {
-  fs.mkdirSync(AUDIO_DIR, { recursive: true });
+const AUDIO_DIR = process.env.VERCEL ? path.join(os.tmpdir(), 'audio') : path.join(__dirname, '..', 'uploads', 'audio');
+try {
+  if (!fs.existsSync(AUDIO_DIR)) {
+    fs.mkdirSync(AUDIO_DIR, { recursive: true });
+  }
+} catch (e) {
+  // Bỏ qua lỗi read-only filesystem trên serverless
 }
 
 class VoiceService {
