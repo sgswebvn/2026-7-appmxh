@@ -61,6 +61,7 @@ class VoiceService {
         fileName,
         filePath,
         url: `/uploads/audio/${fileName}`,
+        audioUrl: `/uploads/audio/${fileName}`,
         textLength: cleanText.length,
         voice: voiceName
       };
@@ -73,6 +74,7 @@ class VoiceService {
         fileName,
         filePath,
         url: `/uploads/audio/${fileName}`,
+        audioUrl: `/uploads/audio/${fileName}`,
         textLength: cleanText.length,
         voice: voiceName
       };

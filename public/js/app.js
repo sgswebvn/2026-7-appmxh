@@ -1261,42 +1261,364 @@ function selectAiTitle(title) {
   showToast('Đã áp dụng tiêu đề vào form.');
 }
 
-function copyAiDescription() {
-  const desc = document.getElementById('ai-generated-desc').value;
-  navigator.clipboard.writeText(desc);
-  showToast('Đã sao chép mô tả vào bộ nhớ tạm.');
+// ==================== AI SCRIPT STUDIO, VOICEOVER TTS & VIDEO RENDERER ====================
+let currentGeneratedAudioUrl = null;
+let currentRenderedVideoUrl = null;
+let aiGeneratedData = null;
+
+function initGeminiStudio() {
+  const form = document.getElementById('gemini-ai-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const topic = document.getElementById('ai-topic').value.trim();
+    if (!topic) {
+      showToast('Vui lòng nhập chủ đề video!', 'warning');
+      return;
+    }
+
+    const targetAudience = document.getElementById('ai-audience').value.trim();
+    const tone = document.getElementById('ai-tone').value;
+    const customKey = document.getElementById('ai-key-input').value.trim();
+
+    const selectedBrand = brandsState.find(b => (b._id || b.id) === activeBrandId);
+    const brandName = selectedBrand ? selectedBrand.name : '';
+
+    const btn = document.getElementById('btn-generate-ai');
+    const loadingText = document.getElementById('ai-loading-text');
+
+    btn.disabled = true;
+    loadingText.style.display = 'inline-block';
+
+    try {
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          topic,
+          targetAudience,
+          tone,
+          brandName,
+          apiKey: customKey
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.data) {
+        lastAiResult = data.data;
+        aiGeneratedData = {
+          titles: (data.data.viralTitles || []).map(t => typeof t === 'string' ? t : t.title),
+          description: data.data.seoDescription || '',
+          tags: (data.data.tags || []).map(t => t.replace(/^#/, ''))
+        };
+        renderAiResults(data.data, data.isAiGenerated, data.provider);
+        showToast('Multi-AI Pool đã hoàn tất sinh kịch bản!', 'success');
+      } else {
+        showToast(data.message || 'Lỗi phân tích nội dung', 'error');
+      }
+    } catch (err) {
+      showToast('Lỗi gửi yêu cầu: ' + err.message, 'error');
+    } finally {
+      loadingText.style.display = 'none';
+      btn.disabled = false;
+    }
+  });
 }
 
-function applyAllAiToPublisher() {
-  if (!lastAiResult) return;
-
-  if (lastAiResult.viralTitles && lastAiResult.viralTitles.length > 0) {
-    document.getElementById('video-title').value = lastAiResult.viralTitles[0].title;
+function getFullScriptText() {
+  if (!lastAiResult || !lastAiResult.script) {
+    const topic = document.getElementById('ai-topic')?.value.trim();
+    return topic || 'Kịch bản video tự động hóa 2026.';
   }
-
-  if (lastAiResult.seoDescription) {
-    document.getElementById('video-description').value = lastAiResult.seoDescription;
-  }
-
-  if (lastAiResult.tags) {
-    document.getElementById('video-tags').value = lastAiResult.tags.join(', ');
-  }
-
-  if (lastAiResult.channelVariants && lastAiResult.channelVariants.length > 0) {
-    const accordion = document.getElementById('custom-channel-accordion');
-    accordion.classList.add('open');
-    document.getElementById('accordion-arrow').textContent = '▲';
-
-    lastAiResult.channelVariants.forEach(v => {
-      const titleInput = document.querySelector(`.override-title[data-channel-id="${v.channelId}"]`);
-      const descInput = document.querySelector(`.override-desc[data-channel-id="${v.channelId}"]`);
-      if (titleInput && v.customTitle) titleInput.value = v.customTitle;
-      if (descInput && v.customDescription) descInput.value = v.customDescription;
+  const s = lastAiResult.script;
+  let text = `${s.hook || ''}. `;
+  if (s.bodySections && Array.isArray(s.bodySections)) {
+    s.bodySections.forEach(b => {
+      text += `${b.content || ''}. `;
     });
+  } else if (s.body) {
+    text += `${s.body}. `;
+  }
+  text += `${s.cta || s.callToAction || ''}`;
+  return text.trim();
+}
+
+async function generateVoiceFromScript() {
+  const scriptText = getFullScriptText();
+  if (!scriptText || scriptText.length < 5) {
+    showToast('Vui lòng tạo kịch bản AI trước khi tạo giọng đọc!', 'warning');
+    return;
   }
 
-  switchTab('publish-tab');
-  showToast('Đã chuyển toàn bộ dữ liệu vào Bảng Phân Phối!');
+  const voiceSelect = document.getElementById('tts-voice-select');
+  const voice = voiceSelect ? voiceSelect.value : 'vi-female';
+  const btn = document.getElementById('btn-generate-voice');
+  const playerContainer = document.getElementById('tts-player-container');
+  const audioPlayer = document.getElementById('tts-audio-player');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang tổng hợp giọng đọc...';
+
+  try {
+    const res = await fetch('/api/voice/generate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        text: scriptText,
+        voice,
+        rate: 0,
+        pitch: 0
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.audioUrl) {
+      currentGeneratedAudioUrl = data.audioUrl;
+      if (audioPlayer) {
+        audioPlayer.src = data.audioUrl;
+        audioPlayer.load();
+        audioPlayer.play().catch(() => {});
+      }
+      if (playerContainer) playerContainer.style.display = 'block';
+      showToast(`Đã tạo âm thanh thành công (${data.provider || 'Edge Neural TTS'})! Đang phát thử...`, 'success');
+    } else {
+      showToast(data.message || 'Lỗi tạo giọng đọc AI', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối TTS: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Tạo File Âm Thanh MP3';
+  }
+}
+
+async function renderVideoFromAiStudio() {
+  const scriptText = getFullScriptText();
+  if (!scriptText || scriptText.length < 5) {
+    showToast('Vui lòng nhập chủ đề và sinh kịch bản AI trước khi ghép video!', 'warning');
+    return;
+  }
+
+  const aspectSelect = document.getElementById('video-aspect-select');
+  const aspectRatio = aspectSelect ? aspectSelect.value : '9:16';
+  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video Shorts Tự Động';
+
+  const btn = document.getElementById('btn-render-video');
+  const progressBox = document.getElementById('render-progress-box');
+  const statusText = document.getElementById('render-status-text');
+  const percentText = document.getElementById('render-percent-text');
+  const progressBar = document.getElementById('render-progress-bar');
+  const resultBox = document.getElementById('render-result-box');
+
+  btn.disabled = true;
+  progressBox.style.display = 'block';
+  resultBox.style.display = 'none';
+  statusText.textContent = 'Khởi tạo render video MP4 kèm phụ đề Karaoke...';
+  percentText.textContent = '15%';
+  progressBar.style.width = '15%';
+
+  // Nếu chưa tạo audio thì tự động gọi TTS luôn (Không bắt user phải bấm 2 lần!)
+  let audioUrl = currentGeneratedAudioUrl;
+  if (!audioUrl) {
+    statusText.textContent = 'Đang tự động thu âm giọng đọc AI...';
+    try {
+      const voiceRes = await fetch('/api/voice/generate', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ text: scriptText, voice: 'vi-female' })
+      });
+      const voiceData = await voiceRes.json();
+      if (voiceData.success && voiceData.audioUrl) {
+        audioUrl = voiceData.audioUrl;
+        currentGeneratedAudioUrl = audioUrl;
+      }
+    } catch (e) {}
+  }
+
+  percentText.textContent = '40%';
+  progressBar.style.width = '40%';
+  statusText.textContent = 'Đang biên tập B-Roll & Phụ đề Karaoke Hormozi...';
+
+  try {
+    const res = await fetch('/api/video/render', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title,
+        scriptText,
+        audioUrl: audioUrl || '',
+        aspectRatio,
+        karaokeStyle: 'hormozi-yellow'
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.jobId) {
+      pollRenderJobProgress(data.jobId);
+    } else {
+      progressBox.style.display = 'none';
+      btn.disabled = false;
+      showToast(data.message || 'Lỗi render video', 'error');
+    }
+  } catch (err) {
+    progressBox.style.display = 'none';
+    btn.disabled = false;
+    showToast('Lỗi kết nối render: ' + err.message, 'error');
+  }
+}
+
+function pollRenderJobProgress(jobId) {
+  const statusText = document.getElementById('render-status-text');
+  const percentText = document.getElementById('render-percent-text');
+  const progressBar = document.getElementById('render-progress-bar');
+  const resultBox = document.getElementById('render-result-box');
+  const btn = document.getElementById('btn-render-video');
+
+  const pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/video/status/${jobId}`, { headers: getAuthHeaders() });
+      const data = await res.json();
+
+      if (data.success && data.status) {
+        const percent = data.status.progress || 50;
+        progressBar.style.width = `${percent}%`;
+        percentText.textContent = `${percent}%`;
+
+        if (data.status.status === 'SUCCESS' || percent >= 100) {
+          clearInterval(pollInterval);
+          btn.disabled = false;
+          statusText.textContent = 'Hoàn tất render video MP4!';
+          currentRenderedVideoUrl = data.status.videoUrl;
+          resultBox.style.display = 'flex';
+          showToast('Đã tạo thành công video MP4 kèm phụ đề Karaoke!', 'success');
+        } else if (data.status.status === 'FAILED') {
+          clearInterval(pollInterval);
+          btn.disabled = false;
+          statusText.textContent = 'Render thất bại: ' + (data.status.error || 'Lỗi không xác định');
+          showToast('Render video thất bại', 'error');
+        }
+      }
+    } catch (err) {
+      clearInterval(pollInterval);
+      btn.disabled = false;
+    }
+  }, 1000);
+}
+
+function pushRenderedVideoToPublisher() {
+  applyAllAiToPublisher();
+  showToast('Đã chuyển Video & Tiêu đề sang Bảng Phân Phối Sẵn Sàng Đăng!', 'success');
+}
+
+// ==================== HỆ THỐNG HƯỚNG DẪN SỬ DỤNG (GUIDE MODAL LOGIC) ====================
+const guideTopicsData = {
+  'publish-tab': {
+    title: '📖 Hướng Dẫn Phân Phối Video Đa Kênh',
+    html: `
+      <p><strong>Bước 1:</strong> Chọn video MP4/MOV từ máy tính hoặc dùng video vừa tạo từ AI Studio.</p>
+      <p><strong>Bước 2:</strong> Chọn danh sách các Kênh YouTube, Fanpage Facebook, hoặc Kênh TikTok bạn muốn đăng.</p>
+      <p><strong>Bước 3:</strong> Nhập Tiêu đề, Mô tả, Tags (hoặc bấm <em>"Tùy biến riêng từng kênh"</em> để cá nhân hóa nội dung).</p>
+      <p><strong>Bước 4:</strong> Bấm <strong>"Bắt Đầu Đăng Video"</strong>. Hệ thống chạy nền tự động tải lên và lưu lịch sử.</p>
+    `
+  },
+  'gemini-tab': {
+    title: '🤖 Hướng Dẫn AI Script Studio & Video Generator',
+    html: `
+      <p><strong>1. Sinh Kịch Bản:</strong> Nhập chủ đề ➔ Bấm <em>"Sinh Kịch Bản Nhanh"</em> hoặc <em>"⚡ AI Săn Trend & Tranh Luận"</em>.</p>
+      <p><strong>2. Tạo Giọng Đọc AI (TTS):</strong> Chọn giọng Hoài My / Nam Minh ➔ Bấm <em>"Tạo File Âm Thanh MP3"</em> để nghe thử tức thì.</p>
+      <p><strong>3. Ghép Video & Karaoke:</strong> Chọn tỉ lệ (9:16 Dọc) ➔ Bấm <em>"Ghép & Tạo Video Tự Động"</em>. Video sẽ tự động ghép B-Roll chuyển động và phụ đề chạy chữ vàng Hormozi.</p>
+      <p><strong>4. Xuất Bản Hoặc Edit:</strong> Bấm <em>"🎬 Xuất Dự Án CapCut (PC)"</em> để mở trong CapCut, hoặc bấm <em>"Chuyển Sang Phân Phối"</em> để đăng ngay.</p>
+    `
+  },
+  'clipper-tab': {
+    title: '✂️ Hướng Dẫn Cắt Video Dài Thành Shorts (Opus AI)',
+    html: `
+      <p><strong>Bước 1:</strong> Dán link YouTube video dài (Podcast, Review, Talkshow) vào ô nhập.</p>
+      <p><strong>Bước 2:</strong> Bấm <strong>"⚡ Bắt Đầu Quét & Trích Xuất Shorts Viral"</strong>.</p>
+      <p><strong>Bước 3:</strong> AI sẽ quét toàn bộ video và trả về 3-5 đoạn cao trào kèm <strong>Điểm Viral Score (/100)</strong> và câu Hook 3s.</p>
+      <p><strong>Bước 4:</strong> Bấm <strong>"🚀 Đăng Clip Này Ngay"</strong> để chuyển clip sang xuất bản đa kênh.</p>
+    `
+  },
+  'planner-tab': {
+    title: '📅 Hướng Dẫn Lịch Ma Trận & Auto-Pilot 5 Bước',
+    html: `
+      <p><strong>Ma Trận Đăng Bài:</strong> Xem lịch phát sóng 7 ngày trong tuần cho từng kênh.</p>
+      <p><strong>🚀 Zero-Touch Auto-Pilot:</strong> Chọn nhóm kênh ➔ Bấm <em>"⚡ Chạy 1 Chu Kỳ Auto-Pilot Ngay"</em>. Hệ thống sẽ tự động thực hiện 5 bước khép kín:</p>
+      <ul>
+        <li>1. Quét từ khóa hot trend</li>
+        <li>2. Viết kịch bản chuẩn viral</li>
+        <li>3. Thu âm giọng đọc Edge TTS</li>
+        <li>4. Render Video kèm phụ đề Karaoke</li>
+        <li>5. Xuất bản đồng loạt lên tất cả các kênh trong nhóm!</li>
+      </ul>
+    `
+  },
+  'brands-tab': {
+    title: '🏷️ Hướng Dẫn Quản Lý Brand & Nhóm Kênh',
+    html: `
+      <p><strong>Quản lý Multi-Brand:</strong> Tạo không gian riêng cho từng khách hàng hoặc từng dự án (Mỗi Brand có kịch bản và tone giọng riêng).</p>
+      <p><strong>Tạo Nhóm Kênh:</strong> Vào tab Mạng Xã Hội ➔ Bấm <em>"➕ Tạo Nhóm Kênh"</em> để gom các page/kênh cùng chủ đề (Hài hước, Tin tức, Review) giúp quản lý và đăng bài 1-click.</p>
+    `
+  },
+  'channels-tab': {
+    title: '🔗 Hướng Dẫn Kết Nối Mạng Xã Hội',
+    html: `
+      <p><strong>YouTube:</strong> Bấm nút <em>"Kết Nối Kênh YouTube"</em> và đăng nhập tài khoản Google.</p>
+      <p><strong>Facebook Fanpage & TikTok:</strong> Chọn Brand và kết nối tài khoản tương ứng.</p>
+      <p><strong>Quản lý trạng thái:</strong> Theo dõi Token hết hạn và kiểm tra tình trạng kênh trực tiếp.</p>
+    `
+  },
+  'analytics-tab': {
+    title: '📈 Hướng Dẫn Cố Vấn Tăng Trưởng AI (Growth Advisor)',
+    html: `
+      <p><strong>Điểm Tăng Trưởng:</strong> Đánh giá hiệu quả tổng thể đa kênh từ 0-100 điểm.</p>
+      <p><strong>Khung Giờ Vàng:</strong> Xem thời điểm khán giả tương tác cao nhất trong ngày để lên lịch đăng.</p>
+      <p><strong>Chủ đề gợi ý:</strong> Nhận các công thức và chủ đề được AI dự báo sẽ bùng nổ tiếp theo.</p>
+    `
+  },
+  'admin-tab': {
+    title: '👑 Hướng Dẫn Quản Trị Hệ Thống (Admin Hub)',
+    html: `
+      <p><strong>Cấp Tài Khoản Dùng Thử:</strong> Tạo tài khoản test 10 phút cho khách hàng trải nghiệm.</p>
+      <p><strong>Quản lý Quota & Giám sát:</strong> Theo dõi toàn bộ lịch sử phân phối và chặn người dùng lạm dụng.</p>
+    `
+  }
+};
+
+function openGuideModal() {
+  const modal = document.getElementById('guide-modal');
+  if (!modal) return;
+
+  // Tự động nhận diện tab đang mở để chọn hướng dẫn phù hợp
+  const activeTab = document.querySelector('.nav-tab.active')?.getAttribute('data-tab') || 'publish-tab';
+  switchGuideTopic(activeTab);
+  modal.classList.add('open');
+}
+
+function closeGuideModal() {
+  const modal = document.getElementById('guide-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function switchGuideTopic(topicId) {
+  const contentEl = document.getElementById('guide-modal-content');
+  const titleEl = document.getElementById('guide-modal-title');
+  const topic = guideTopicsData[topicId] || guideTopicsData['publish-tab'];
+
+  if (titleEl) titleEl.textContent = topic.title;
+  if (contentEl) contentEl.innerHTML = topic.html;
+
+  document.querySelectorAll('#guide-modal button[onclick^="switchGuideTopic"]').forEach(btn => {
+    const fnStr = btn.getAttribute('onclick') || '';
+    if (fnStr.includes(topicId)) {
+      btn.style.borderColor = '#38bdf8';
+      btn.style.color = '#38bdf8';
+    } else {
+      btn.style.borderColor = 'var(--border-subtle)';
+      btn.style.color = 'var(--text-secondary)';
+    }
+  });
 }
 
 // ==================== DROPZONES & PREVIEWS ====================
@@ -2705,159 +3027,7 @@ async function connectTikTok() {
   }
 }
 
-async function generateVoiceFromScript() {
-  const scriptText = document.getElementById('ai-script-preview')?.value.trim();
-  if (!scriptText) {
-    showToast('Vui lòng tạo kịch bản trước khi tạo giọng đọc voiceover.', 'warning');
-    return;
-  }
-
-  const voiceSelect = document.getElementById('tts-voice-select');
-  const voiceId = voiceSelect ? voiceSelect.value : 'vi-female';
-  const btn = document.getElementById('btn-generate-voice');
-
-  btn.disabled = true;
-  btn.textContent = 'Đang chuyển đổi giọng đọc...';
-
-  try {
-    const res = await fetch('/api/voice/generate', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ text: scriptText, voice: voiceId })
-    });
-    const data = await res.json();
-    if (data.success && data.audioUrl) {
-      currentGeneratedAudioUrl = data.audioUrl;
-      const playerContainer = document.getElementById('tts-player-container');
-      const audioPlayer = document.getElementById('tts-audio-player');
-      audioPlayer.src = data.audioUrl;
-      playerContainer.style.display = 'block';
-      audioPlayer.play().catch(() => {});
-      showToast('Đã tạo file âm thanh MP3 thành công!', 'success');
-    } else {
-      showToast(data.message || 'Lỗi khi tạo giọng đọc', 'error');
-    }
-  } catch (err) {
-    showToast('Lỗi kết nối TTS: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Tạo File Âm Thanh MP3';
-  }
-}
-
-let currentGeneratedAudioUrl = '';
-let currentRenderedVideoData = null;
-
-async function renderVideoFromAiStudio() {
-  const scriptText = document.getElementById('ai-script-preview')?.value.trim();
-  if (!scriptText) {
-    showToast('Vui lòng tạo kịch bản trước khi ghép video.', 'warning');
-    return;
-  }
-
-  const aspectSelect = document.getElementById('video-aspect-select');
-  const aspectRatio = aspectSelect ? aspectSelect.value : '9:16';
-  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video Tự Động Phân Phối';
-
-  const btn = document.getElementById('btn-render-video');
-  const progressBox = document.getElementById('render-progress-box');
-  const resultBox = document.getElementById('render-result-box');
-  const progressBar = document.getElementById('render-progress-bar');
-  const percentText = document.getElementById('render-percent-text');
-  const statusText = document.getElementById('render-status-text');
-
-  btn.disabled = true;
-  progressBox.style.display = 'block';
-  resultBox.style.display = 'none';
-  progressBar.style.width = '20%';
-  percentText.textContent = '20%';
-  statusText.textContent = 'Đang chuẩn bị media assets và phụ đề...';
-
-  try {
-    const res = await fetch('/api/video/render', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        title,
-        script: scriptText,
-        audioPath: currentGeneratedAudioUrl,
-        aspectRatio
-      })
-    });
-
-    const data = await res.json();
-    if (data.success && data.jobId) {
-      progressBar.style.width = '60%';
-      percentText.textContent = '60%';
-      statusText.textContent = 'Đang ghép video và chuẩn hóa chuẩn nén H.264...';
-
-      // Poll kiểm tra tiến độ
-      let pollCount = 0;
-      const pollInterval = setInterval(async () => {
-        pollCount++;
-        try {
-          const statusRes = await fetch(`/api/video/status/${data.jobId}`, { headers: getAuthHeaders() });
-          const statusData = await statusRes.json();
-          if (statusData.success && statusData.job) {
-            const job = statusData.job;
-            progressBar.style.width = `${job.progress}%`;
-            percentText.textContent = `${job.progress}%`;
-
-            if (job.status === 'SUCCESS') {
-              clearInterval(pollInterval);
-              currentRenderedVideoData = job;
-              statusText.textContent = 'Hoàn thành render video!';
-              resultBox.style.display = 'flex';
-              btn.disabled = false;
-              showToast('Đã tạo thành công video MP4 sẵn sàng xuất bản!', 'success');
-            } else if (job.status === 'FAILED') {
-              clearInterval(pollInterval);
-              btn.disabled = false;
-              showToast(job.error || 'Lỗi khi render video', 'error');
-            }
-          }
-        } catch (e) {}
-
-        if (pollCount > 30) {
-          clearInterval(pollInterval);
-          btn.disabled = false;
-        }
-      }, 1000);
-    } else {
-      btn.disabled = false;
-      showToast(data.message || 'Lỗi khởi chạy render', 'error');
-    }
-  } catch (err) {
-    btn.disabled = false;
-    showToast('Lỗi render video: ' + err.message, 'error');
-  }
-}
-
-function pushRenderedVideoToPublisher() {
-  if (!currentRenderedVideoData) {
-    showToast('Chưa có video render nào hoàn thành', 'warning');
-    return;
-  }
-
-  // Tự động điền dữ liệu AI vào Form Phân Phối Video
-  if (aiGeneratedData?.titles && aiGeneratedData.titles.length > 0) {
-    const titleInput = document.getElementById('video-title');
-    if (titleInput) titleInput.value = aiGeneratedData.titles[0];
-  }
-
-  const descInput = document.getElementById('video-description');
-  if (descInput && aiGeneratedData?.description) {
-    descInput.value = aiGeneratedData.description;
-  }
-
-  const tagsInput = document.getElementById('video-tags');
-  if (tagsInput && aiGeneratedData?.tags) {
-    tagsInput.value = aiGeneratedData.tags.join(', ');
-  }
-
-  showToast('Đã chuyển toàn bộ Kịch bản, Tiêu đề và Mô tả sang Bảng Phân Phối Video!', 'success');
-  switchTab('publish-tab');
-}
+// ==================== END AI VIDEO HELPERS ====================
 
 // ==================== HƯỚNG DẪN SỬ DỤNG TƯƠNG TÁC (INTERACTIVE GUIDE SYSTEM) ====================
 const GUIDE_TOPICS = {

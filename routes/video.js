@@ -20,16 +20,18 @@ router.get('/templates', authenticateToken, (req, res) => {
 // 2. Khởi tạo Render Video
 router.post('/render', authenticateToken, async (req, res) => {
   try {
-    const { title, script, audioPath, aspectRatio, theme } = req.body;
+    const { title, script, scriptText, audioPath, audioUrl, aspectRatio, theme } = req.body;
+    const finalScript = script || scriptText || 'Nội dung video tự động';
+    const rawAudio = audioUrl || audioPath;
 
-    let fullAudioPath = audioPath;
-    if (audioPath && audioPath.startsWith('/uploads/')) {
-      fullAudioPath = path.join(__dirname, '..', audioPath);
+    let fullAudioPath = rawAudio;
+    if (rawAudio && rawAudio.startsWith('/uploads/')) {
+      fullAudioPath = path.join(__dirname, '..', rawAudio);
     }
 
     const result = await videoRenderService.startRenderJob({
-      title,
-      script,
+      title: title || 'Video Tự Động',
+      script: finalScript,
       audioPath: fullAudioPath,
       aspectRatio: aspectRatio || '9:16',
       theme: theme || 'dark_modern'
@@ -47,7 +49,7 @@ router.get('/status/:jobId', authenticateToken, (req, res) => {
   if (!job) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy tiến trình render này.' });
   }
-  res.json({ success: true, job });
+  res.json({ success: true, status: job, job });
 });
 
 module.exports = router;
