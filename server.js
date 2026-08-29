@@ -135,6 +135,15 @@ app.get('/terms', (req, res) => {
   });
 });
 
+app.get('/:filename.txt', (req, res) => {
+  const filePath = path.join(PUBLIC_DIR, `${req.params.filename}.txt`);
+  if (fs.existsSync(filePath)) {
+    res.type('text/plain').sendFile(filePath);
+  } else {
+    res.status(404).send('File not found');
+  }
+});
+
 app.get('/register', (req, res) => {
   res.redirect('/login');
 });
