@@ -46,4 +46,23 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+const autoPilotService = require('../services/autoPilotService');
+
+// 4. Kích hoạt Chu trình Zero-Touch Auto-Pilot 1-Click (Tìm Trend ➔ Viết Script ➔ TTS ➔ Render ➔ Đăng bài)
+router.post('/run-cycle', authenticateToken, async (req, res) => {
+  try {
+    const { topic, groupId, voice } = req.body;
+    const result = await autoPilotService.runAutonomousCycle({
+      userId: req.user.id,
+      topic: topic || 'Xu hướng Công Nghệ & AI 2026',
+      groupId: groupId || 'all',
+      voice: voice || 'vi-female'
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('AutoPilot Run Error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi chạy chu trình Auto-Pilot: ' + err.message });
+  }
+});
+
 module.exports = router;

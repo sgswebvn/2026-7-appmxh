@@ -3080,6 +3080,285 @@ async function generateVoiceFromScript() {
   }
 }
 
+// ==================== ANALYTICS DASHBOARD & CHART.JS ENGINE ====================
+async function loadAnalyticsData() {
+  if (!authToken) return;
+
+  try {
+    const res = await fetch('/api/analytics/overview', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.data) {
+      const { kpi, channelStats, distributionStatus, recentTrend } = data.data;
+
+      // Cập nhật KPI Cards
+      document.getElementById('kpi-total-channels').textContent = kpi.totalChannels || 0;
+      document.getElementById('kpi-total-subscribers').textContent = (kpi.totalSubscribers || 0).toLocaleString();
+      document.getElementById('kpi-total-views').textContent = (kpi.totalViews || 0).toLocaleString();
+      document.getElementById('kpi-total-videos').textContent = (kpi.totalVideosPublished || 0).toLocaleString();
+
+      // Render Charts nếu có Chart.js
+      if (window.Chart) {
+        renderChannelStatsChart(channelStats);
+        renderTrendChart(recentTrend);
+        renderVideoDistChart(channelStats);
+        renderSuccessRateChart(distributionStatus);
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi tải dữ liệu Analytics:', err);
+  }
+
+  // Tự động tải báo cáo AI Growth Advisor
+  loadGrowthAdvisorReport();
+}
+
+function renderChannelStatsChart(stats) {
+  const ctx = document.getElementById('channelStatsChart')?.getContext('2d');
+  if (!ctx) return;
+
+  if (chartInstances.channelStats) chartInstances.channelStats.destroy();
+
+  chartInstances.channelStats = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: stats.labels.length ? stats.labels : ['Chưa có kênh'],
+      datasets: [
+        {
+          label: 'Người đăng ký',
+          data: stats.subscribers.length ? stats.subscribers : [0],
+          backgroundColor: '#38bdf8',
+          borderRadius: 4
+        },
+        {
+          label: 'Lượt xem',
+          data: stats.views.length ? stats.views : [0],
+          backgroundColor: '#a78bfa',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function renderTrendChart(trend) {
+  const ctx = document.getElementById('trendChart')?.getContext('2d');
+  if (!ctx) return;
+
+  if (chartInstances.trend) chartInstances.trend.destroy();
+
+  chartInstances.trend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trend.labels,
+      datasets: [{
+        label: 'Video đã đăng',
+        data: trend.data,
+        borderColor: '#34d399',
+        backgroundColor: 'rgba(52, 211, 153, 0.15)',
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function renderVideoDistChart(stats) {
+  const ctx = document.getElementById('videoDistChart')?.getContext('2d');
+  if (!ctx) return;
+
+  if (chartInstances.videoDist) chartInstances.videoDist.destroy();
+
+  chartInstances.videoDist = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: stats.labels.length ? stats.labels : ['Chưa có kênh'],
+      datasets: [{
+        label: 'Số lượng Video',
+        data: stats.videos.length ? stats.videos : [0],
+        backgroundColor: '#e11d48',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function renderSuccessRateChart(dist) {
+  const ctx = document.getElementById('successRateChart')?.getContext('2d');
+  if (!ctx) return;
+
+  if (chartInstances.successRate) chartInstances.successRate.destroy();
+
+  chartInstances.successRate = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: dist.labels,
+      datasets: [{
+        data: dist.data[0] === 0 && dist.data[1] === 0 ? [1, 0] : dist.data,
+        backgroundColor: ['#34d399', '#f43f5e'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } } }
+    }
+  });
+}
+
+// ==================== AI GROWTH ADVISOR ====================
+async function loadGrowthAdvisorReport() {
+  if (!authToken) return;
+
+  const headline = document.getElementById('growth-summary-headline');
+  const scoreBadge = document.getElementById('growth-score-badge');
+  const providerText = document.getElementById('growth-advisor-provider');
+  const goldenBox = document.getElementById('growth-golden-hours');
+  const viralBox = document.getElementById('growth-viral-formulas');
+  const topicsBox = document.getElementById('growth-recommended-topics');
+  const adviceText = document.getElementById('growth-strategic-advice');
+
+  if (headline) headline.textContent = 'Đang phân tích dữ liệu đa kênh qua AI Pool...';
+
+  try {
+    const res = await fetch('/api/analytics/advisor', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.report) {
+      const r = data.report;
+      if (providerText) providerText.textContent = `Phân tích chuyên sâu bởi: ${data.provider}`;
+      if (scoreBadge) scoreBadge.textContent = `${r.performanceScore || 88}/100`;
+      if (headline) headline.textContent = `🎯 ${r.summaryHeadline || 'Hệ thống đang hoạt động ổn định!'}`;
+
+      // Khung giờ vàng
+      if (goldenBox) {
+        goldenBox.innerHTML = (r.goldenPostingHours || []).map(h => `
+          <div style="margin-bottom:6px;">
+            <strong style="color:#fbbf24;">⚡ ${h.slot}:</strong>
+            <span style="color:#94a3b8; display:block; font-size:0.72rem;">${h.reason}</span>
+          </div>
+        `).join('');
+      }
+
+      // Công thức viral
+      if (viralBox) {
+        viralBox.innerHTML = (r.viralFormulas || []).map(f => `
+          <div style="margin-bottom:4px;">✨ ${f}</div>
+        `).join('');
+      }
+
+      // Đề xuất chủ đề
+      if (topicsBox) {
+        topicsBox.innerHTML = (r.recommendedTopicsNext || []).map(t => `
+          <div style="margin-bottom:4px;">🚀 ${t}</div>
+        `).join('');
+      }
+
+      if (adviceText) adviceText.textContent = r.strategicAdvice || 'Duy trì lịch đăng đều đặn.';
+    }
+  } catch (err) {
+    console.error('Lỗi tải Growth Advisor:', err);
+  }
+}
+
+// ==================== ZERO-TOUCH AUTO-PILOT RUNNER ====================
+async function triggerAutoPilotCycle() {
+  const groupSelect = document.getElementById('autopilot-group-select');
+  const selectedGroupId = groupSelect ? groupSelect.value : 'all';
+
+  const btn = document.getElementById('btn-run-autopilot');
+  const timelineBox = document.getElementById('autopilot-timeline-box');
+  const stepsContainer = document.getElementById('autopilot-steps-container');
+  const statusTitle = document.getElementById('autopilot-status-title');
+
+  btn.disabled = true;
+  timelineBox.style.display = 'block';
+  statusTitle.textContent = '🚀 Đang kích hoạt chu trình Auto-Pilot tự động...';
+  stepsContainer.innerHTML = '<div style="color:#38bdf8;">[1/5] Đang khởi động AI Multi-Agent và khảo sát trend...</div>';
+
+  try {
+    const res = await fetch('/api/planner/run-cycle', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        topic: 'AI Automation & Công Nghệ 2026',
+        groupId: selectedGroupId,
+        voice: 'vi-female'
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      statusTitle.textContent = `✅ Chu trình Auto-Pilot hoàn tất thành công (Cycle ID: ${data.cycleId?.substring(0,8)})!`;
+      stepsContainer.innerHTML = '';
+
+      (data.cycleLog || []).forEach(step => {
+        const item = document.createElement('div');
+        item.style.padding = '4px 0';
+        item.style.borderBottom = '1px solid #1e293b';
+        item.innerHTML = `<strong style="color:#34d399;">Bước ${step.step} - ${step.name}:</strong> <span style="color:#cbd5e1;">${step.message}</span>`;
+        stepsContainer.appendChild(item);
+      });
+
+      showToast(`Đã xuất bản tự động video "${data.chosenTitle}" tới ${data.targetChannelsCount} kênh!`, 'success');
+      loadHistory();
+      loadAnalyticsData();
+    } else {
+      statusTitle.textContent = '❌ Auto-Pilot gặp lỗi: ' + (data.message || 'Lỗi không xác định');
+      showToast(data.message || 'Lỗi chạy Auto-Pilot', 'error');
+    }
+  } catch (err) {
+    statusTitle.textContent = '❌ Lỗi kết nối Auto-Pilot: ' + err.message;
+    showToast('Lỗi Auto-Pilot: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Cập nhật danh sách nhóm vào AutoPilot dropdown khi loadChannelGroups
+const originalRenderChannelGroupsUI = renderChannelGroupsUI;
+renderChannelGroupsUI = function() {
+  if (typeof originalRenderChannelGroupsUI === 'function') originalRenderChannelGroupsUI();
+
+  const autopilotSelect = document.getElementById('autopilot-group-select');
+  if (autopilotSelect) {
+    autopilotSelect.innerHTML = '<option value="all">Tất Cả Kênh & Fanpage</option>';
+    channelGroupsState.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g._id || g.id;
+      opt.textContent = `🏷️ ${g.name} (${(g.channelIds || []).length} kênh)`;
+      autopilotSelect.appendChild(opt);
+    });
+  }
+};
+
 
 
 

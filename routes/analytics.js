@@ -87,4 +87,17 @@ router.get('/overview', authenticateToken, async (req, res) => {
   }
 });
 
+const growthAdvisorService = require('../services/growthAdvisorService');
+
+// 2. Báo cáo Tăng Trưởng & Đề Xuất Chiến Lược AI (AI Growth Advisor)
+router.get('/advisor', authenticateToken, async (req, res) => {
+  try {
+    const report = await growthAdvisorService.generateGrowthReport(req.user.id);
+    res.json(report);
+  } catch (err) {
+    console.error('Growth Advisor Error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi sinh báo cáo tăng trưởng AI: ' + err.message });
+  }
+});
+
 module.exports = router;

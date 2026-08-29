@@ -79,6 +79,17 @@ class VoiceService {
     }
   }
 
+  // Alias tương thích
+  async generateVoiceAudio(text, voiceKey = 'vi-female', speed = '+0%') {
+    const res = await this.synthesizeSpeech(text, voiceKey, speed);
+    return {
+      success: true,
+      audioUrl: res.url,
+      filePath: res.filePath,
+      durationSec: Math.max(15, Math.ceil(text.length / 15))
+    };
+  }
+
   // Google Text-To-Speech Stream
   generateGoogleTtsAudio(text, outputPath, lang = 'vi') {
     return new Promise((resolve, reject) => {
