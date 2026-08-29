@@ -112,12 +112,15 @@
         <span id="topbar-page-title">Phân Phối Video Đa Kênh</span>
       </div>
 
-      <div style="display:flex; align-items:center; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="switchTab('gemini-tab'); triggerMasterAutoPipeline();" style="background:linear-gradient(135deg, #e11d48, #9333ea); border:none; display:flex; align-items:center; gap:5px; font-size:0.78rem; padding:5px 12px; font-weight:700; box-shadow:0 0 12px rgba(225,29,72,0.3);">
+          <span>⚡</span> Tạo Video 1-Click
+        </button>
         <button type="button" class="btn btn-sm btn-outline" onclick="openTelegramModal()" style="border-color:#38bdf8; color:#38bdf8; display:flex; align-items:center; gap:5px; font-size:0.78rem; padding:4px 10px;">
           <span>🤖</span> Telegram Bot
         </button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="openGuideModal()">
-          Hướng Dẫn Sử Dụng
+        <button type="button" class="btn btn-sm btn-outline" onclick="openGuideModal()" style="font-size:0.78rem; padding:4px 10px;">
+          <span>📖</span> Hướng Dẫn
         </button>
       </div>
     </header>
@@ -669,6 +672,14 @@
 
             <div id="clipper-empty-state" style="text-align:center; padding:40px 16px; color:var(--text-muted); font-size:0.82rem; background:#090d16; border-radius:6px; border:1px solid #1e293b;">
               Nhập link hoặc tiêu đề video dài bên trái và bấm <strong>"Bắt Đầu Quét"</strong> để AI tạo danh sách 3-5 đoạn Shorts hay nhất.
+            </div>
+
+            <!-- Thanh Hành Động Hàng Loạt (Batch Schedule Cho Cả Tuần) -->
+            <div id="clipper-batch-action-bar" style="display:none; justify-content:space-between; align-items:center; background:#0f172a; padding:10px 14px; border-radius:6px; border:1px solid #ec4899; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <span style="color:#f472b6; font-size:0.82rem; font-weight:600;">✨ Đã trích xuất danh sách Shorts Viral!</span>
+              <button type="button" class="btn btn-sm btn-primary" onclick="batchScheduleAllClipsForWeek()" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); border:none; font-size:0.78rem; font-weight:600; padding:6px 12px;">
+                📅 Tự Động Phân Bổ Lịch Đăng Cả Tuần (Batch Schedule)
+              </button>
             </div>
 
             <div id="clipper-clips-list" style="display:none; flex-direction:column; gap:10px;"></div>

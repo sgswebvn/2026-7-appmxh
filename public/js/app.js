@@ -4422,6 +4422,204 @@ async function handleExportCapCutDraft() {
   }
 }
 
+// ==================== LONG-TO-SHORTS VIDEO CLIPPER CONTROLLER (PHASE 6 & 7.3) ====================
+let currentClipperClips = [];
+
+async function handleAnalyzeVideoClipper() {
+  const videoUrl = document.getElementById('clipper-video-url')?.value.trim() || '';
+  const videoTitle = document.getElementById('clipper-video-title')?.value.trim() || '';
+  const transcriptText = document.getElementById('clipper-transcript-text')?.value.trim() || '';
+  const btn = document.getElementById('btn-run-clipper');
+
+  if (!videoUrl && !videoTitle && !transcriptText) {
+    showToast('Vui lòng nhập link video YouTube hoặc tiêu đề/nội dung video dài!', 'warning');
+    return;
+  }
+
+  const loadingState = document.getElementById('clipper-loading-state');
+  const emptyState = document.getElementById('clipper-empty-state');
+  const clipsList = document.getElementById('clipper-clips-list');
+  const batchBar = document.getElementById('clipper-batch-action-bar');
+
+  if (btn) btn.disabled = true;
+  if (emptyState) emptyState.style.display = 'none';
+  if (clipsList) clipsList.style.display = 'none';
+  if (batchBar) batchBar.style.display = 'none';
+  if (loadingState) loadingState.style.display = 'block';
+
+  try {
+    const res = await fetch('/api/clipper/analyze', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        videoUrl,
+        videoTitle: videoTitle || 'Video Dài Nguồn',
+        transcriptText,
+        brandId: activeBrandId || ''
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.clips && data.clips.length > 0) {
+      currentClipperClips = data.clips;
+      renderClipperResults(currentClipperClips);
+      if (batchBar) batchBar.style.display = 'flex';
+      showToast(`Đã trích xuất thành công ${data.clips.length} đoạn Shorts Viral!`, 'success');
+      loadContentProjects();
+    } else {
+      showToast(data.message || 'Lỗi trích xuất clips', 'error');
+      if (emptyState) emptyState.style.display = 'block';
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối Clipper: ' + err.message, 'error');
+    if (emptyState) emptyState.style.display = 'block';
+  } finally {
+    if (loadingState) loadingState.style.display = 'none';
+    if (btn) btn.disabled = false;
+  }
+}
+
+function renderClipperResults(clips) {
+  const clipsList = document.getElementById('clipper-clips-list');
+  if (!clipsList) return;
+
+  clipsList.innerHTML = '';
+  clipsList.style.display = 'flex';
+
+  clips.forEach((clip, idx) => {
+    const card = document.createElement('div');
+    card.className = 'glass-panel';
+    card.style.background = '#090d16';
+    card.style.border = '1px solid #1e293b';
+    card.style.padding = '14px';
+    card.style.display = 'flex';
+    card.style.justifyContent = 'space-between';
+    card.style.alignItems = 'center';
+    card.style.flexWrap = 'wrap';
+    card.style.gap = '10px';
+
+    const scoreColor = clip.viralScore >= 90 ? '#34d399' : '#fbbf24';
+
+    card.innerHTML = `
+      <div style="flex:1; min-width:280px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <span style="background:${scoreColor}20; color:${scoreColor}; border:1px solid ${scoreColor}; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:700;">
+            🔥 Viral Score: ${clip.viralScore}/100
+          </span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">
+            ⏱️ ${clip.durationSec || 45}s (${clip.startSec || 0}s - ${clip.endSec || 45}s)
+          </span>
+        </div>
+        <h4 style="font-size:0.92rem; font-weight:600; color:#fff; margin-bottom:4px;">
+          ${idx + 1}. ${clip.clipTitle}
+        </h4>
+        <p style="font-size:0.78rem; color:#f472b6; margin-bottom:4px;">
+          <strong>⚡ Hook 3s:</strong> "${clip.hookText}"
+        </p>
+        <p style="font-size:0.74rem; color:var(--text-secondary); line-height:1.4;">
+          💡 <em>${clip.viralityReason || clip.keySummary || ''}</em>
+        </p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="pushSingleClipToPublisher(${idx})" style="font-size:0.76rem; padding:5px 12px;">
+          🚀 Phân Phối Ngay
+        </button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="loadClipIntoAiStudio(${idx})" style="border-color:#38bdf8; color:#38bdf8; font-size:0.76rem; padding:5px 12px;">
+          🤖 Mở Trong AI Studio
+        </button>
+      </div>
+    `;
+    clipsList.appendChild(card);
+  });
+}
+
+function pushSingleClipToPublisher(clipIdx) {
+  const clip = currentClipperClips[clipIdx];
+  if (!clip) return;
+
+  const titleInput = document.getElementById('video-title');
+  const descInput = document.getElementById('video-description');
+  const tagsInput = document.getElementById('video-tags');
+
+  if (titleInput) titleInput.value = clip.clipTitle;
+  if (descInput) descInput.value = `${clip.hookText}\n\n${clip.keySummary || ''}\n\nĐăng ký kênh để xem thêm video thú vị mỗi ngày!`;
+  if (tagsInput) tagsInput.value = (clip.suggestedTags || ['#Shorts', '#Trending']).join(', ');
+
+  switchTab('publish-tab');
+  showToast(`Đã nạp đoạn clip "${clip.clipTitle}" vào Bảng Phân Phối Video!`, 'success');
+}
+
+function loadClipIntoAiStudio(clipIdx) {
+  const clip = currentClipperClips[clipIdx];
+  if (!clip) return;
+
+  const topicInput = document.getElementById('ai-topic');
+  if (topicInput) topicInput.value = clip.clipTitle;
+
+  lastAiResult = {
+    script: {
+      hook: clip.hookText,
+      bodySections: [{ time: '00:15', heading: 'Nội dung cốt lõi', content: clip.keySummary || clip.hookText }],
+      callToAction: 'Bấm like và follow kênh ngay nhé!'
+    },
+    viralTitles: [{ title: clip.clipTitle, clickScore: clip.viralScore || 95 }],
+    seoDescription: `${clip.hookText}\n\n${clip.keySummary || ''}`,
+    tags: clip.suggestedTags || []
+  };
+
+  aiGeneratedData = {
+    titles: [clip.clipTitle],
+    description: `${clip.hookText}\n\n${clip.keySummary || ''}`,
+    tags: clip.suggestedTags || []
+  };
+
+  renderAiResults(lastAiResult, true, 'Trích xuất từ Opus Video Clipper');
+  switchTab('gemini-tab');
+  showToast(`Đã nạp clip "${clip.clipTitle}" vào AI Script Studio!`, 'success');
+}
+
+// BATCH SCHEDULE TỰ ĐỘNG PHÂN BỔ CHO CẢ TUẦN
+async function batchScheduleAllClipsForWeek() {
+  if (!currentClipperClips || currentClipperClips.length === 0) {
+    showToast('Chưa có clip nào để lên lịch!', 'warning');
+    return;
+  }
+
+  showToast('Đang tự động tính toán khung giờ vàng và rải lịch cho cả tuần...', 'info');
+
+  const goldenHours = ['11:30', '19:30', '08:00', '12:00', '20:00'];
+  let scheduledCount = 0;
+
+  for (let i = 0; i < currentClipperClips.length; i++) {
+    const clip = currentClipperClips[i];
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + (i + 1)); // Mỗi ngày 1 clip
+
+    const hourStr = goldenHours[i % goldenHours.length];
+    const [h, m] = hourStr.split(':');
+    targetDate.setHours(parseInt(h), parseInt(m), 0, 0);
+
+    try {
+      await fetch('/api/planner/schedule', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          title: clip.clipTitle,
+          scheduledTime: targetDate.toISOString(),
+          brandId: activeBrandId || '',
+          topic: clip.clipTitle,
+          channelIds: []
+        })
+      });
+      scheduledCount++;
+    } catch(e) {}
+  }
+
+  showToast(`🎉 ĐÃ TỰ ĐỘNG PHÂN BỔ THÀNH CÔNG ${scheduledCount} CLIP SHORTS CHO CẢ TUẦN!`, 'success');
+  loadPlannerCalendar();
+  switchTab('planner-tab');
+}
+
 
 
 

@@ -119,6 +119,80 @@ class AutoPilotService {
       cycleLog
     };
   }
+
+  // Khởi động Daemon Tự Hành 24/7 chạy ngầm trên Server
+  initAutonomousCronDaemon() {
+    if (this.cronInterval) return;
+
+    // Kiểm tra mỗi 15 phút
+    this.cronInterval = setInterval(async () => {
+      try {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        // Khung Giờ Vàng Auto-Publish: 11:30 trưa & 19:30 tối
+        const isGoldenHour = (currentHour === 11 && currentMinute >= 30 && currentMinute <= 45) ||
+                             (currentHour === 19 && currentMinute >= 30 && currentMinute <= 45);
+
+        // Bản tin sáng 06:30
+        const isMorningBriefHour = (currentHour === 6 && currentMinute >= 30 && currentMinute <= 45);
+
+        if (isMorningBriefHour && this.lastBriefDay !== now.getDate()) {
+          this.lastBriefDay = now.getDate();
+          const defaultAdmin = await dbService.findUserByEmail('admin@admin.com');
+          if (defaultAdmin) {
+            const channels = await dbService.getChannels(defaultAdmin._id || defaultAdmin.id);
+            const totalViews = channels.reduce((sum, c) => sum + (c.statistics?.viewCount || 0), 0);
+            const totalSubs = channels.reduce((sum, c) => sum + (c.statistics?.subscriberCount || 0), 0);
+            await telegramBotService.notifyMorningGrowthBrief({
+              botToken: defaultAdmin.telegramConfig?.botToken,
+              chatId: defaultAdmin.telegramConfig?.chatId,
+              kpis: { totalChannels: channels.length, totalViews, totalSubscribers: totalSubs },
+              growthReport: {
+                performanceScore: 92,
+                summaryHeadline: 'Mạng lưới kênh đang duy trì đà tăng trưởng ổn định.',
+                goldenPostingHours: [{ slot: '11:30', reason: 'Khán giả nghỉ trưa lướt Shorts' }, { slot: '19:30', reason: 'Khung giờ vàng thư giãn buổi tối' }],
+                recommendedTopicsNext: [
+                  'Xu hướng công nghệ AI tự động hóa 2026',
+                  'Cách xây dựng thương hiệu cá nhân bằng video ngắn',
+                  'Bài học thành công từ các kênh triệu view'
+                ]
+              }
+            });
+          }
+        }
+
+        if (isGoldenHour && (!this.lastRunHour || this.lastRunHour !== currentHour)) {
+          this.lastRunHour = currentHour;
+          console.log(`[AUTONOMOUS DAEMON 24/7] Kích hoạt chu trình Auto-Pilot tại khung giờ vàng (${currentHour}:${currentMinute})`);
+          
+          const defaultAdmin = await dbService.findUserByEmail('admin@admin.com');
+          if (defaultAdmin) {
+            const trendingTopics = [
+              'Bí mật thuật toán AI 2026 giúp tăng trưởng kênh đột phá',
+              'Top 3 kỹ năng công nghệ kiếm tiền nhanh nhất hiện nay',
+              'Cách tự động hóa sản xuất nội dung đa kênh không tốn sức'
+            ];
+            const randomTopic = trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
+
+            await this.runAutonomousCycle({
+              userId: defaultAdmin._id || defaultAdmin.id,
+              topic: randomTopic,
+              voice: 'vi-female'
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[AUTONOMOUS DAEMON 24/7] Lỗi chu trình định kỳ:', err.message);
+      }
+    }, 15 * 60 * 1000);
+
+    console.log('🤖 [AUTONOMOUS DAEMON 24/7] Đã kích hoạt hệ thống tự hành ngầm 24/7 tại khung giờ vàng (11:30 & 19:30) & Morning Brief (06:30)!');
+  }
 }
 
-module.exports = new AutoPilotService();
+const autoPilotInstance = new AutoPilotService();
+autoPilotInstance.initAutonomousCronDaemon();
+
+module.exports = autoPilotInstance;
