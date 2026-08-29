@@ -783,17 +783,100 @@ function initGeminiStudio() {
   });
 }
 
+async function triggerAiDeepResearch() {
+  const topic = document.getElementById('ai-topic').value.trim();
+  if (!topic) {
+    showToast('Vui lòng nhập từ khóa hoặc chủ đề gốc để AI tự động nghiên cứu!', 'warning');
+    return;
+  }
+
+  const targetAudience = document.getElementById('ai-audience').value.trim();
+  const tone = document.getElementById('ai-tone').value;
+
+  const selectedBrand = brandsState.find(b => (b._id || b.id) === activeBrandId);
+  const brandName = selectedBrand ? selectedBrand.name : '';
+
+  const btn = document.getElementById('btn-ai-deep-research');
+  const loadingText = document.getElementById('ai-loading-text');
+
+  btn.disabled = true;
+  loadingText.textContent = '⚡ Multi-Agent đang khảo sát trend & tự động tranh luận...';
+  loadingText.style.display = 'inline-block';
+
+  try {
+    const res = await fetch('/api/ai/deep-research', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        topic,
+        targetAudience,
+        tone,
+        brandName
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      lastAiResult = data.data;
+      aiGeneratedData = {
+        titles: (data.data.viralTitles || []).map(t => typeof t === 'string' ? t : t.title),
+        description: data.data.seoDescription || '',
+        tags: (data.data.tags || []).map(t => t.replace(/^#/, ''))
+      };
+      renderAiResults(data.data, true, `${data.provider} (${data.model || 'Multi-Agent'})`);
+      showToast('Hội đồng Multi-Agent đã nghiên cứu và chốt kịch bản viral!', 'success');
+    } else {
+      showToast(data.message || 'Lỗi nghiên cứu AI', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối Multi-Agent: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    loadingText.style.display = 'none';
+  }
+}
+
 function renderAiResults(data, isAiGenerated, providerName) {
   const wrapper = document.getElementById('ai-results-wrapper');
   wrapper.style.display = 'block';
 
   document.getElementById('ai-engine-source').textContent = providerName ? `Xử lý bởi: ${providerName}` : 'Xử lý bởi Multi-AI Failover Pool';
 
+  // Render Multi-Agent Debate & Trend Insights nếu có
+  const debateBox = document.getElementById('ai-agent-debate-box');
+  const insightsContainer = document.getElementById('ai-trend-insights-container');
+  const debateContainer = document.getElementById('ai-debate-transcript-container');
+
+  if (data.trendInsights || data.debateTranscript) {
+    if (debateBox) debateBox.style.display = 'block';
+    
+    if (insightsContainer && data.trendInsights) {
+      const angles = (data.trendInsights.trendingAngles || []).map(a => `<li style="margin-bottom:4px;">🎯 ${a}</li>`).join('');
+      insightsContainer.innerHTML = `
+        <div style="margin-bottom:6px;"><strong>Insight Nỗi Đau Khán Giả:</strong> <span style="color:#93c5fd;">${data.trendInsights.targetAudiencePainPoint || 'Đang bóc tách'}</span></div>
+        <div style="margin-top:6px;"><strong>3 Góc Tiếp Cận Viral Được Khai Thác:</strong></div>
+        <ul style="padding-left:18px; margin-top:4px; color:#e2e8f0;">${angles}</ul>
+      `;
+    }
+
+    if (debateContainer && data.debateTranscript) {
+      debateContainer.innerHTML = '<strong style="color:#38bdf8; display:block; margin-bottom:6px;">Trích đoạn tranh luận nội bộ giữa các AI Agent:</strong>';
+      data.debateTranscript.forEach(t => {
+        const item = document.createElement('div');
+        item.style.marginBottom = '6px';
+        item.innerHTML = `<span style="color:#f43f5e; font-weight:600;">[${t.agent}]:</span> <span style="color:#cbd5e1;">${t.thought || t.decision || ''}</span>`;
+        debateContainer.appendChild(item);
+      });
+    }
+  } else {
+    if (debateBox) debateBox.style.display = 'none';
+  }
+
   // Render Script (Hook, Body, CTA)
   if (data.script) {
     document.getElementById('ai-script-panel').style.display = 'block';
     document.getElementById('ai-hook-text').textContent = data.script.hook || 'Chưa có hook';
-    document.getElementById('ai-cta-text').textContent = data.script.callToAction || 'Chưa có CTA';
+    document.getElementById('ai-cta-text').textContent = data.script.cta || data.script.callToAction || 'Chưa có CTA';
     
     const bodyContainer = document.getElementById('ai-script-body-container');
     bodyContainer.innerHTML = '';
@@ -804,6 +887,8 @@ function renderAiResults(data, isAiGenerated, providerName) {
         p.innerHTML = `<strong style="color:#f8fafc;">[${sec.time || '00:00'}] ${sec.heading || ''}:</strong> ${sec.content || ''}`;
         bodyContainer.appendChild(p);
       });
+    } else if (data.script.body) {
+      bodyContainer.innerHTML = `<p style="color:#e2e8f0; line-height:1.6;">${data.script.body}</p>`;
     }
   }
 
@@ -811,16 +896,20 @@ function renderAiResults(data, isAiGenerated, providerName) {
   const titlesList = document.getElementById('ai-titles-list');
   titlesList.innerHTML = '';
   (data.viralTitles || []).forEach((item) => {
+    const titleText = typeof item === 'string' ? item : item.title;
+    const hookType = typeof item === 'object' ? (item.hookType || 'Viral') : 'Viral High-CTR';
+    const clickScore = typeof item === 'object' ? (item.clickScore || 95) : 95;
+
     const card = document.createElement('div');
     card.className = 'title-option-card';
     card.innerHTML = `
       <div style="flex:1;">
-        <span style="font-weight:500; font-size:0.88rem;">${item.title}</span>
-        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Loại Hook: ${item.hookType || 'Viral'}</div>
+        <span style="font-weight:500; font-size:0.88rem;">${titleText}</span>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Loại Hook: ${hookType}</div>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
-        <span class="title-score-badge">CTR: ${item.clickScore || 90}/100</span>
-        <button type="button" class="btn btn-sm btn-outline" onclick="selectAiTitle('${item.title.replace(/'/g, "\\'")}')">
+        <span class="title-score-badge">CTR: ${clickScore}/100</span>
+        <button type="button" class="btn btn-sm btn-outline" onclick="selectAiTitle('${titleText.replace(/'/g, "\\'")}')">
           Chọn tiêu đề này
         </button>
       </div>
@@ -837,7 +926,7 @@ function renderAiResults(data, isAiGenerated, providerName) {
   (data.tags || []).forEach(tag => {
     const span = document.createElement('span');
     span.className = 'tag-pill';
-    span.textContent = `#${tag}`;
+    span.textContent = tag.startsWith('#') ? tag : `#${tag}`;
     tagsContainer.appendChild(span);
   });
 
@@ -858,7 +947,7 @@ function renderAiResults(data, isAiGenerated, providerName) {
       variantsContainer.appendChild(vCard);
     });
   } else {
-    variantsContainer.innerHTML = '<em>Không có biến thể riêng từng kênh.</em>';
+    variantsContainer.innerHTML = '<em>Đã tối ưu hóa tiêu đề và mô tả sẵn sàng phân phối đa kênh.</em>';
   }
 }
 

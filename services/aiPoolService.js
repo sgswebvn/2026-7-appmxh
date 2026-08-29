@@ -180,6 +180,33 @@ class AIPoolEngine {
     throw lastErr;
   }
 
+  // ==================== QUERY RAW PROMPT THÔNG QUA FAILOVER POOL ====================
+  async queryActivePool(prompt, customApiKey = null) {
+    const providersQueue = [
+      { id: 'groq', fn: () => this.callGroq(prompt, customApiKey) },
+      { id: 'gemini', fn: () => this.callGemini(prompt, customApiKey) },
+      { id: 'openrouter', fn: () => this.callOpenRouter(prompt, customApiKey) }
+    ];
+
+    let lastError = null;
+    for (const provider of providersQueue) {
+      if (!this.isProviderAvailable(provider.id)) continue;
+      try {
+        const result = await provider.fn();
+        if (result && result.content) {
+          return {
+            content: result.content,
+            provider: result.provider
+          };
+        }
+      } catch (err) {
+        lastError = err;
+        this.recordProviderFailure(provider.id, err.message);
+      }
+    }
+    throw lastError || new Error('Tất cả Provider AI trong Pool đều không phản hồi.');
+  }
+
   // ==================== MAIN DISPATCHER: TỰ ĐỘNG CHUYỂN ĐỔI MODEL ====================
   async generateContentWithFailover({
     topic,

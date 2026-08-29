@@ -47,7 +47,52 @@ router.post('/analyze', authenticateToken, aiSpamLimiter, async (req, res) => {
   }
 });
 
-// 2. Lấy danh sách các bản nháp AI đã tạo
+const aiTrendAgentService = require('../services/aiTrendAgentService');
+
+// 2. Nghiên cứu Trend Tự Động & Multi-Agent Debate Loop (Chỉ cần 1 từ khóa gốc)
+router.post('/deep-research', authenticateToken, aiSpamLimiter, async (req, res) => {
+  try {
+    const { topic, targetAudience, tone, brandName } = req.body;
+    if (!topic || topic.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập từ khóa hoặc chủ đề gốc.' });
+    }
+
+    const channels = await dbService.getChannels(req.user.id);
+    const result = await aiTrendAgentService.executeAutonomousTrendPipeline({
+      topic: topic.trim(),
+      targetAudience,
+      tone,
+      brandName,
+      channels
+    });
+
+    // Lưu vào bản nháp
+    if (result.data) {
+      const formattedTitles = (result.data.viralTitles || []).map(t => {
+        if (typeof t === 'string') {
+          return { title: t, hookType: 'Viral High-CTR', clickScore: 95 };
+        }
+        return { title: t.title || '', hookType: t.hookType || 'Viral', clickScore: t.clickScore || 90 };
+      });
+
+      await dbService.saveGeminiDraft(req.user.id, {
+        topic: `[Auto-Research] ${topic}`,
+        targetAudience,
+        generatedTitles: formattedTitles,
+        generatedDescription: result.data.seoDescription,
+        generatedTags: result.data.tags,
+        scriptData: result.data.script
+      });
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('AI Deep Research Error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi nghiên cứu AI: ' + err.message });
+  }
+});
+
+// 3. Lấy danh sách các bản nháp AI đã tạo
 router.get('/drafts', authenticateToken, async (req, res) => {
   try {
     const drafts = await dbService.getGeminiDrafts(req.user.id);
