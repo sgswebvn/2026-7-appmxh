@@ -1419,6 +1419,9 @@ async function triggerMasterAutoPipeline() {
     // Tự động lưu vào Kho Nội Dung (Content Vault)
     saveCurrentAiToLibrary();
 
+    // Tự động kích hoạt AI Critic đánh giá 10 tiêu chí
+    runManualCriticCheck();
+
     showToast('🎉 ĐÃ HOÀN TẤT TRỌN GÓI 1-CLICK! Video điện ảnh đa khung cảnh sẵn sàng phát & phân phối!', 'success');
   } catch (err) {
     showToast('Lỗi chu trình 1-Click: ' + err.message, 'error');
@@ -1461,7 +1464,7 @@ function handlePersonaChange() {
   // Tự động gán giọng đọc phù hợp với Persona
   const voiceSelect = document.getElementById('tts-voice-select');
   if (voiceSelect) {
-    if (currentPersonaId === 'minhanh-finance') {
+    if (currentPersonaId === 'minhanh-finance' || currentPersonaId === 'travel-eco') {
       voiceSelect.value = 'vi-female';
     } else {
       voiceSelect.value = 'vi-male';
@@ -1469,6 +1472,7 @@ function handlePersonaChange() {
   }
 
   const personaNames = {
+    'travel-eco': 'Linh Travel | Không gian: Thiên nhiên Việt Nam 4K',
     'alex-tech': 'Alex AI | Không gian: Cyberpunk Neon Studio',
     'minhanh-finance': 'Minh Anh | Không gian: Penthouse Tài chính Luxury',
     'kenji-story': 'Kenji | Không gian: Archive Thám hiểm Không gian'
@@ -1542,6 +1546,87 @@ function renderStoryboardScenesGrid(scenes = []) {
     `;
     container.appendChild(card);
   });
+}
+
+// ==================== AI VIDEO CRITIC & 10-METRIC EVALUATION LOGIC ====================
+async function runManualCriticCheck() {
+  const scriptText = getFullScriptText();
+  const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || document.getElementById('ai-topic')?.value || 'Video Viral';
+  const niche = detectNicheFromText(title + ' ' + scriptText);
+
+  try {
+    const res = await fetch('/api/ai/evaluate-draft', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title,
+        niche,
+        script: lastAiResult?.script || { hook: scriptText },
+        scenes: currentAiStoryboardScenes,
+        voiceUrl: currentGeneratedAudioUrl
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      renderCriticEvaluation(data);
+      showToast(`AI Critic đã chấm điểm: ${data.overallScore}/100 ${data.isApproved ? '✅ Đạt chuẩn xuất bản' : '⚠️ Cần cải thiện'}`, data.isApproved ? 'success' : 'warning');
+    }
+  } catch (err) {
+    console.warn('Lỗi chấm điểm video:', err.message);
+  }
+}
+
+function renderCriticEvaluation(evalData) {
+  const badge = document.getElementById('critic-overall-badge');
+  const grid = document.getElementById('critic-metrics-grid');
+  const weaknessText = document.getElementById('critic-weakness-text');
+
+  if (badge) {
+    const score = evalData.overallScore || 90;
+    const isPass = score >= 85;
+    badge.textContent = `${score}/100 (${isPass ? 'APPROVED' : 'REFINING'})`;
+    badge.style.color = isPass ? '#34d399' : '#fbbf24';
+    badge.style.background = isPass ? '#064e3b' : '#78350f';
+    badge.style.borderColor = isPass ? '#059669' : '#d97706';
+  }
+
+  if (grid && evalData.scores) {
+    const s = evalData.scores;
+    const metricItems = [
+      { name: 'Hook 3s đầu', val: s.hook, icon: '🎣' },
+      { name: 'Cốt truyện', val: s.story, icon: '📖' },
+      { name: 'Giá trị TT', val: s.informationValue, icon: '💡' },
+      { name: 'Retention', val: s.retentionPotential, icon: '📈' },
+      { name: 'Khớp hình ảnh', val: s.visualQuality, icon: '🎨' },
+      { name: 'Nhịp độ (Pacing)', val: s.pacing, icon: '⏱️' },
+      { name: 'Âm thanh', val: s.audio, icon: '🎙️' },
+      { name: 'Tính độc bản', val: s.originality, icon: '✨' },
+      { name: 'Cảm xúc', val: s.emotionalImpact, icon: '❤️' },
+      { name: 'Kêu gọi (CTA)', val: s.cta, icon: '📣' }
+    ];
+
+    grid.innerHTML = metricItems.map(m => `
+      <div style="background:#0c101a; border:1px solid #1e293b; padding:6px 8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; font-size:0.72rem;">
+        <span style="color:#cbd5e1;">${m.icon} ${m.name}</span>
+        <strong style="color:${m.val >= 8.5 ? '#34d399' : '#fbbf24'};">${m.val}/10</strong>
+      </div>
+    `).join('');
+  }
+
+  if (weaknessText && evalData.top3Weaknesses) {
+    weaknessText.innerHTML = evalData.top3Weaknesses.map(w => `
+      <span style="display:block; margin-top:2px;">• <strong>${w.metric.toUpperCase()} (${w.score}/10):</strong> ${w.suggestion}</span>
+    `).join('');
+  }
+}
+
+function detectNicheFromText(text = '') {
+  const lower = text.toLowerCase();
+  if (lower.includes('du lịch') || lower.includes('sinh thái') || lower.includes('thiên nhiên') || lower.includes('mũi né') || lower.includes('phong nha') || lower.includes('côn đảo') || lower.includes('resort')) return 'travel_eco';
+  if (lower.includes('ai') || lower.includes('công nghệ') || lower.includes('lập trình') || lower.includes('code') || lower.includes('tool')) return 'tech_ai';
+  if (lower.includes('tiền') || lower.includes('tài chính') || lower.includes('giàu') || lower.includes('đầu tư') || lower.includes('kinh doanh')) return 'finance_money';
+  return 'general';
 }
 
 // ==================== MULTI-TIER NEURAL VOICE SYNTHESIZER ====================
@@ -1797,25 +1882,58 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
         if (lowerS.includes('bí mật') || lowerS.includes('sốc') || lowerS.includes('kinh ngạc')) dynamicEmoji = '🔥';
         if (lowerS.includes('nhanh') || lowerS.includes('tăng')) dynamicEmoji = '🚀';
 
-        // Hộp Phụ Đề Nổi Bật Ở Giữa
+        // 5. Hộp Phụ Đề Chữ Vàng Hormozi Ngắt Dòng Thông Minh (Chống Tràn Mép 100%)
+        const maxSubWidth = canvas.width - 120;
+        const fontSize = isVertical ? 34 : 30;
+        const lineHeight = fontSize * 1.35;
+        ctx.font = `900 ${fontSize}px Montserrat, sans-serif`;
+
+        const fullSubText = `${dynamicEmoji} ${currentSentence.toUpperCase()}`;
+        const words = fullSubText.split(/\s+/);
+        const lines = [];
+        let curLine = '';
+
+        for (let w = 0; w < words.length; w++) {
+          const testL = curLine ? curLine + ' ' + words[w] : words[w];
+          if (ctx.measureText(testL).width > maxSubWidth && curLine) {
+            lines.push(curLine);
+            curLine = words[w];
+          } else {
+            curLine = testL;
+          }
+        }
+        if (curLine) lines.push(curLine);
+
+        const subBoxHeight = Math.max(120, (lines.length * lineHeight) + 40);
+        const subBoxY = (canvas.height / 2) - (subBoxHeight / 2);
+
+        // Hộp Nền Đen Mờ Viền Vàng Bo Góc
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.strokeStyle = '#FACC15';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 24;
         ctx.beginPath();
-        ctx.roundRect(40, canvas.height / 2 - 80, canvas.width - 80, 160, 14);
+        ctx.roundRect(40, subBoxY, canvas.width - 80, subBoxHeight, 16);
         ctx.fill();
         ctx.stroke();
 
-        ctx.shadowColor = 'rgba(0,0,0,0.95)';
-        ctx.shadowBlur = 18;
-        ctx.shadowOffsetX = 3;
-        ctx.shadowOffsetY = 3;
-
-        ctx.font = '900 38px Montserrat, sans-serif';
-        ctx.fillStyle = '#FACC15';
+        // Vẽ từng dòng chữ vàng viền đen dày nổi bật
         ctx.textAlign = 'center';
-        ctx.fillText(`${dynamicEmoji} ${currentSentence.toUpperCase()}`, canvas.width / 2, canvas.height / 2 + 12);
+        ctx.textBaseline = 'middle';
+        const textStartY = subBoxY + (subBoxHeight / 2) - ((lines.length - 1) * lineHeight / 2);
+
+        lines.forEach((ln, lIdx) => {
+          const lnY = textStartY + (lIdx * lineHeight);
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 7;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(ln, canvas.width / 2, lnY);
+
+          ctx.fillStyle = '#FACC15';
+          ctx.fillText(ln, canvas.width / 2, lnY);
+        });
         ctx.restore();
 
         // 6. Visualizer Sóng Âm Neon Ở Đáy

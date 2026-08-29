@@ -126,4 +126,57 @@ router.post('/scenes-generate', authenticateToken, (req, res) => {
   }
 });
 
+const videoCriticService = require('../services/videoCriticService');
+const videoResearchAgent = require('../services/videoResearchAgent');
+
+// 6. Tự động chấm điểm 10 tiêu chí cho Video Draft (Quality Critic)
+router.post('/evaluate-draft', authenticateToken, (req, res) => {
+  try {
+    const result = videoCriticService.evaluateVideoDraft(req.body);
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi đánh giá chất lượng video: ' + err.message });
+  }
+});
+
+// 7. Chạy Vòng Lặp Tự Cải Tiến Video (Generate -> Critique -> Improve -> Score Loop)
+router.post('/self-improve-loop', authenticateToken, async (req, res) => {
+  try {
+    const result = await videoCriticService.runSelfImprovementLoop(req.body, 2);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi chạy vòng lặp tự cải tiến: ' + err.message });
+  }
+});
+
+// 8. Lấy Knowledge Base và Failure Memory tóm tắt
+router.get('/knowledge', authenticateToken, async (req, res) => {
+  try {
+    const summary = await videoResearchAgent.getKnowledgeSummary();
+    res.json({
+      success: true,
+      data: summary
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải cơ sở tri thức: ' + err.message });
+  }
+});
+
+// 9. Ghi nhận Failure Memory và sinh quy tắc mới
+router.post('/failure-memory', authenticateToken, async (req, res) => {
+  try {
+    const record = await videoResearchAgent.logFailure(req.body);
+    res.json({
+      success: true,
+      message: 'Đã lưu bài học thất bại và cập nhật quy tắc sản xuất mới!',
+      record
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi ghi nhận Failure Memory: ' + err.message });
+  }
+});
+
 module.exports = router;

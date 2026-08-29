@@ -28,6 +28,15 @@ class BrandPersonaService {
         avatarPrompt: 'Portrait of beautiful 27-year-old Vietnamese businesswoman wearing elegant beige blazer, warm confident expression, luxury modern high-rise office glass window, photorealistic, 8k',
         avatarUrl: 'https://image.pollinations.ai/prompt/Portrait%20of%20beautiful%2027-year-old%20Vietnamese%20businesswoman%20wearing%20elegant%20beige%20blazer%20luxury%20modern%20high-rise%20office%20glass%20window%20photorealistic%208k?width=400&height=400&seed=20262&nologo=true&model=flux'
       },
+      'travel-eco': {
+        id: 'travel-eco',
+        name: 'Linh Travel (Đại Sứ Du Lịch Sinh Thái & Trải Nghiệm)',
+        gender: 'female',
+        voiceKey: 'vi-female',
+        theme: 'Breathtaking Vietnam Eco Landscape, Lush Emerald Rainforest, Pristine White Sand Dunes in Mui Ne, Ha Long Bay Karst Waters, Phong Nha Cave, National Geographic cinematic drone shot, 8k photorealistic',
+        avatarPrompt: 'Portrait of joyful 25-year-old Vietnamese female travel explorer wearing stylish outdoor trekking jacket and straw hat, stunning emerald mountain valley background in Vietnam, warm natural sunlight, photorealistic, 8k',
+        avatarUrl: 'https://image.pollinations.ai/prompt/Portrait%20of%20joyful%2025-year-old%20Vietnamese%20female%20travel%20explorer%20outdoor%20jacket%20stunning%20emerald%20mountain%20valley%20Vietnam%20sunlight%20photorealistic%208k?width=400&height=400&seed=20264&nologo=true&model=flux'
+      },
       'kenji-story': {
         id: 'kenji-story',
         name: 'Kenji (Kể Chuyện & Thám Hiểm Bí Ẩn)',
@@ -123,6 +132,14 @@ class BrandPersonaService {
     // Trích xuất các từ khóa ngữ cảnh chính sang tiếng Anh để AI vẽ chính xác
     const lower = vietnameseText.toLowerCase();
     const keywords = [];
+
+    if (lower.includes('mũi né') || lower.includes('cồn cát') || lower.includes('đồi cát')) keywords.push('golden sand dunes in Mui Ne Vietnam at sunrise with soft shadows');
+    if (lower.includes('phong nha') || lower.includes('hang động') || lower.includes('sơn đoòng')) keywords.push('Phong Nha cave subterranean river glowing sunlight through cave ceiling');
+    if (lower.includes('côn đảo') || lower.includes('phú quốc') || lower.includes('biển')) keywords.push('crystal turquoise ocean beach with palm trees and limestone islands in Vietnam');
+    if (lower.includes('rừng tràm') || lower.includes('sinh thái') || lower.includes('trà sư')) keywords.push('Tra Su cajuput forest emerald green duckweed waterway with traditional wooden boat');
+    if (lower.includes('hạ long') || lower.includes('cát bà')) keywords.push('Ha Long Bay emerald green water with towering limestone karsts in golden hour');
+    if (lower.includes('sa pa') || lower.includes('hà giang') || lower.includes('ruộng bậc thang')) keywords.push('magnificent terraced rice fields in Mu Cang Chai Vietnam with misty mountain peaks');
+    if (lower.includes('du lịch xanh') || lower.includes('môi trường') || lower.includes('sinh thái')) keywords.push('sustainable eco tourism Vietnam pristine green nature preservation');
 
     if (lower.includes('ai') || lower.includes('trí tuệ nhân tạo') || lower.includes('công nghệ')) keywords.push('artificial intelligence glowing neural network data matrix');
     if (lower.includes('tiền') || lower.includes('doanh thu') || lower.includes('tài chính') || lower.includes('giàu')) keywords.push('exponential financial growth digital gold currency graph');

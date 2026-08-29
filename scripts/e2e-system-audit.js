@@ -278,6 +278,64 @@ async function runFullSystemAudit() {
   }
 
   // -------------------------------------------------------------
+  // TEST SUITE 5.0B: AI VIDEO RESEARCH & SELF-IMPROVEMENT ENGINE
+  // -------------------------------------------------------------
+  console.log('\n--- 5.0B. KIỂM THỬ AI VIDEO CRITIC, KNOWLEDGE BASE & FAILURE MEMORY ---');
+
+  const knowledgeRes = await request('/api/ai/knowledge');
+  if (knowledgeRes.ok && knowledgeRes.body?.success && knowledgeRes.body.data?.totalPatternsLearned >= 1) {
+    logTest('KNOWLEDGE_BASE', 'Truy vấn Cơ Sở Tri Thức Pattern Viral', 'PASS', `Tích lũy ${knowledgeRes.body.data.totalPatternsLearned} Patterns & ${knowledgeRes.body.data.totalFailureRulesEnforced} Failure Rules`);
+  } else {
+    logTest('KNOWLEDGE_BASE', 'Truy vấn Cơ Sở Tri Thức Pattern Viral', 'FAIL', 'Lỗi truy vấn Knowledge Base');
+  }
+
+  const evalRes = await request('/api/ai/evaluate-draft', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: 'Khám phá 5 điểm du lịch xanh ở Việt Nam mà bạn chưa biết',
+      niche: 'travel_eco',
+      script: {
+        hook: 'Bạn có biết 90% người đi du lịch đang bỏ lỡ điểm đến bí mật này không?',
+        bodySections: [
+          { heading: 'Cồn Cát Mũi Né', content: 'Chiêm ngưỡng vẻ đẹp hoang sơ tựa sa mạc Sahara.' },
+          { heading: 'Hang Sơn Đoòng', content: 'Khám phá kỳ quan hang động lớn nhất hành tinh tại Phong Nha.' }
+        ],
+        callToAction: 'Đăng ký kênh để khám phá thêm nhiều vùng đất tuyệt mỹ!'
+      },
+      scenes: [
+        { prompt: 'Lush Vietnam eco tourism nature green mountain 8k' },
+        { prompt: 'Mui Ne golden sand dunes sunrise Vietnam 8k' }
+      ]
+    })
+  });
+
+  if (evalRes.ok && evalRes.body?.success && evalRes.body.overallScore >= 80 && evalRes.body.scores) {
+    logTest('AI_CRITIC_10', 'AI Video Critic Tự Chấm Điểm 10 Tiêu Chuẩn Viral', 'PASS', `Điểm tổng: ${evalRes.body.overallScore}/100 | Hook: ${evalRes.body.scores.hook} | Pacing: ${evalRes.body.scores.pacing} | Visual: ${evalRes.body.scores.visualQuality}`);
+  } else {
+    logTest('AI_CRITIC_10', 'AI Video Critic Tự Chấm Điểm 10 Tiêu Chuẩn Viral', 'FAIL', evalRes.body?.message || 'Lỗi chấm điểm video');
+  }
+
+  const failureLogRes = await request('/api/ai/failure-memory', {
+    method: 'POST',
+    body: JSON.stringify({
+      videoTitle: 'Video Du Lịch Xanh Lỗi Cũ',
+      niche: 'travel_eco',
+      whatHappened: 'Chữ phụ đề dài bị tràn mép màn hình và bối cảnh bị nhầm sang tech neon',
+      expected: 'Phụ đề ngắt dòng gọn gàng, bối cảnh thiên nhiên Việt Nam sắc nét 4K',
+      actual: 'Text overflow mép màn hình, bối cảnh phòng lab',
+      probableCause: 'Chưa có thuật toán Word Wrap và chưa liên kết Niche với Persona phong cảnh',
+      lesson: 'Phải dùng responsive multi-line subtitle wrapping và liên kết Niche với Persona Linh Travel',
+      newRule: 'Tất cả video phải tự động ngắt dòng chữ tối đa 4-6 từ và khóa ngữ cảnh theo chủ đề'
+    })
+  });
+
+  if (failureLogRes.ok && failureLogRes.body?.success) {
+    logTest('FAILURE_MEMORY', 'Cơ chế Failure Memory & Tự Động Sinh Quy Tắc Mới', 'PASS', 'Đã ghi nhận bài học và đưa vào thực thi sản xuất');
+  } else {
+    logTest('FAILURE_MEMORY', 'Cơ chế Failure Memory & Tự Động Sinh Quy Tắc Mới', 'FAIL', 'Lỗi lưu Failure Memory');
+  }
+
+  // -------------------------------------------------------------
   // TEST SUITE 5.1: AUTO B-ROLL FOOTAGE MATCHER & DOWNLOADER
   // -------------------------------------------------------------
   console.log('\n--- 5.1. KIỂM THỬ AUTO B-ROLL FOOTAGE MATCHER (PHASE 7.1) ---');

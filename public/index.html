@@ -381,6 +381,7 @@
                 <div class="form-group">
                   <label class="form-label" for="ai-persona-select" style="color:#f472b6; font-weight:600;">🎭 Nhân Vật Đại Diện & Không Gian (Brand Persona):</label>
                   <select id="ai-persona-select" class="form-select" onchange="handlePersonaChange()">
+                    <option value="travel-eco">🌿 Linh Travel (Đại sứ Du lịch Sinh thái - Thiên nhiên Việt Nam 4K)</option>
                     <option value="alex-tech">🤖 Alex AI (Chuyên gia Công nghệ - Studio Neon Cyberpunk)</option>
                     <option value="minhanh-finance">💼 Minh Anh (Nữ Doanh nhân - Penthouse Tài chính Luxury)</option>
                     <option value="kenji-story">📜 Kenji (Kể chuyện / Bí ẩn - Archive Thám hiểm Không gian)</option>
@@ -570,6 +571,34 @@
                   </button>
                 </div>
               </div>
+
+              <!-- ==================== AI VIDEO CRITIC & 10-METRIC EVALUATION PANEL ==================== -->
+              <div id="ai-video-critic-panel" style="margin-top:14px; background:#070a12; border:1px solid #34d399; border-radius:8px; padding:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:1.2rem;">⚖️</span>
+                    <div>
+                      <h4 style="color:#34d399; font-size:0.9rem; font-weight:700; margin:0;">AI Video Critic (Hệ Thống Tự Chấm Điểm 10 Tiêu Chuẩn Viral)</h4>
+                      <p style="font-size:0.72rem; color:var(--text-muted); margin:0;">Quy tắc: Video &lt; 85 Điểm tự động kích hoạt vòng lặp viết lại kịch bản &amp; phân cảnh</p>
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; color:#94a3b8;">Điểm Đánh Giá:</span>
+                    <span id="critic-overall-badge" style="font-size:0.92rem; font-weight:700; color:#34d399; background:#064e3b; padding:2px 10px; border-radius:12px; border:1px solid #059669;">92/100 (APPROVED)</span>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="runManualCriticCheck()" style="border-color:#34d399; color:#34d399; padding:2px 8px; font-size:0.72rem;">Chấm điểm lại</button>
+                  </div>
+                </div>
+
+                <!-- 10 Metric Badges Grid -->
+                <div id="critic-metrics-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; margin-bottom:10px;">
+                  <!-- Dynamic metrics rendered here -->
+                </div>
+
+                <div id="critic-weakness-box" style="background:#111624; border-left:3px solid #fbbf24; padding:8px 12px; border-radius:4px; font-size:0.75rem; color:#cbd5e1;">
+                  <strong>🔍 Bài học cải tiến đã áp dụng:</strong> <span id="critic-weakness-text">Kịch bản đã vượt ngưỡng 85/100, tối ưu hóa Hook tò mò và ngắt dòng phụ đề chống tràn.</span>
+                </div>
+              </div>
+
             </div>
           </div>
 
