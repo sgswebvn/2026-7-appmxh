@@ -3821,16 +3821,26 @@ renderChannelGroupsUI = function() {
   }
 };
 
-// ==================== TELEGRAM NOTIFICATION BOT ====================
-function openTelegramModal() {
+// ==================== TELEGRAM NOTIFICATION BOT (MONGODB ATLAS INTEGRATED) ====================
+async function openTelegramModal() {
   const modal = document.getElementById('telegram-modal');
   const tokenInput = document.getElementById('tele-bot-token');
   const chatIdInput = document.getElementById('tele-chat-id');
 
-  if (tokenInput) tokenInput.value = localStorage.getItem('tele_bot_token') || '';
-  if (chatIdInput) chatIdInput.value = localStorage.getItem('tele_chat_id') || '';
-
   if (modal) modal.style.display = 'flex';
+
+  // Lấy dữ liệu trực tiếp từ MongoDB Atlas của User
+  try {
+    const res = await fetch('/api/telegram/config', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.config) {
+      if (tokenInput && data.config.botToken) tokenInput.value = data.config.botToken;
+      if (chatIdInput && data.config.chatId) chatIdInput.value = data.config.chatId;
+    }
+  } catch (e) {
+    if (tokenInput) tokenInput.value = localStorage.getItem('tele_bot_token') || '';
+    if (chatIdInput) chatIdInput.value = localStorage.getItem('tele_chat_id') || '';
+  }
 }
 
 function closeTelegramModal() {
@@ -3838,16 +3848,33 @@ function closeTelegramModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function handleSaveTelegramConfig(e) {
+async function handleSaveTelegramConfig(e) {
   e.preventDefault();
   const token = document.getElementById('tele-bot-token').value.trim();
   const chatId = document.getElementById('tele-chat-id').value.trim();
 
-  localStorage.setItem('tele_bot_token', token);
-  localStorage.setItem('tele_chat_id', chatId);
-
-  showToast('Đã lưu cấu hình Telegram Bot thành công!', 'success');
-  closeTelegramModal();
+  // Lưu trực tiếp lên MongoDB Atlas
+  try {
+    const res = await fetch('/api/telegram/config', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ botToken: token, chatId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      localStorage.setItem('tele_bot_token', token);
+      localStorage.setItem('tele_chat_id', chatId);
+      showToast('Đã lưu cấu hình Telegram Bot lên MongoDB Atlas thành công!', 'success');
+      closeTelegramModal();
+    } else {
+      showToast(data.message || 'Lỗi lưu cấu hình', 'error');
+    }
+  } catch (err) {
+    localStorage.setItem('tele_bot_token', token);
+    localStorage.setItem('tele_chat_id', chatId);
+    showToast('Đã lưu cấu hình cục bộ!', 'success');
+    closeTelegramModal();
+  }
 }
 
 async function handleTestTelegram() {

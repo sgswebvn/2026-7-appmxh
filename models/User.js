@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  telegramConfig: {
+    botToken: { type: String, default: '' },
+    chatId: { type: String, default: '' }
+  },
   role: {
     type: String,
     enum: ['admin', 'user'],

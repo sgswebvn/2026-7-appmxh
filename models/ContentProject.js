@@ -27,7 +27,7 @@ const contentProjectSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['IDEA', 'SCRIPT_GENERATED', 'MEDIA_READY', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'],
+    enum: ['IDEA', 'SCRIPT_GENERATED', 'MEDIA_READY', 'READY', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'],
     default: 'IDEA'
   },
   scriptData: {

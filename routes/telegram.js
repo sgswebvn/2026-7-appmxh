@@ -4,7 +4,28 @@ const telegramBotService = require('../services/telegramBotService');
 const { authenticateToken } = require('../middleware/auth');
 const dbService = require('../services/dbService');
 
-// 1. Kiểm tra gửi tin nhắn thử nghiệm Telegram Bot
+// 1. Lấy cấu hình Telegram Bot đã lưu từ MongoDB
+router.get('/config', authenticateToken, async (req, res) => {
+  try {
+    const config = await dbService.getUserTelegramConfig(req.user.id);
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi lấy cấu hình: ' + err.message });
+  }
+});
+
+// 2. Lưu cấu hình Telegram Bot vào MongoDB
+router.post('/config', authenticateToken, async (req, res) => {
+  try {
+    const { botToken, chatId } = req.body;
+    await dbService.updateUserTelegramConfig(req.user.id, { botToken, chatId });
+    res.json({ success: true, message: 'Đã lưu cấu hình Telegram Bot vào MongoDB Atlas thành công!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi lưu cấu hình: ' + err.message });
+  }
+});
+
+// 3. Kiểm tra gửi tin nhắn thử nghiệm Telegram Bot
 router.post('/test', authenticateToken, async (req, res) => {
   try {
     const { botToken, chatId } = req.body;
