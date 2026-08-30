@@ -315,5 +315,133 @@ router.get('/story-plan/:storyId/visual-assets', authenticateToken, (req, res) =
   }
 });
 
+// ============================================================================
+// PHASE 3C: MULTI-SPEAKER VOICE & AUDIO TIMELINE ENGINE ROUTES
+// ============================================================================
+const { multiSpeakerAudioComposer } = require('../services/multiSpeakerAudioComposer');
+const { defaultVoiceRegistry } = require('../services/voiceProviders/voiceProviderRegistry');
+const { audioAssetStore } = require('../services/audioAssetStore');
+
+// 1. Danh sách Voice Providers & Voices
+router.get('/voice-providers', authenticateToken, async (req, res) => {
+  try {
+    const list = await defaultVoiceRegistry.list();
+    res.json({
+      success: true,
+      defaultProvider: defaultVoiceRegistry.getDefaultProviderId(),
+      data: list
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi lấy danh sách voice providers: ' + err.message });
+  }
+});
+
+// 2. Sinh Audio Multi-Speaker toàn bộ StoryPlan
+router.post('/story-plan/:storyId/audio/generate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const { preferredProvider, pauseDurationMs, forceRegenerate } = req.body;
+
+    const result = await multiSpeakerAudioComposer.composeStoryAudio({
+      storyId,
+      preferredProvider,
+      pauseDurationMs: pauseDurationMs ? parseInt(pauseDurationMs) : 350,
+      forceRegenerate: forceRegenerate === true
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã sinh Audio và Timeline đa nhân vật thành công',
+      data: result
+    });
+  } catch (err) {
+    const statusCode = err.code === 'STORY_NOT_FOUND' ? 404 : (err.code === 'VOICE_GENERATION_UNAVAILABLE' ? 503 : 400);
+    res.status(statusCode).json({
+      success: false,
+      code: err.code || 'AUDIO_COMPOSITION_FAILED',
+      message: err.message
+    });
+  }
+});
+
+// 3. Lấy thông tin Audio Timeline và Master Track
+router.get('/story-plan/:storyId/audio', authenticateToken, (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const { storyPlanStore } = require('../services/storyPlanStore');
+    const plan = storyPlanStore.get(storyId);
+
+    if (!plan) {
+      return res.status(404).json({ success: false, code: 'STORY_NOT_FOUND', message: 'Không tìm thấy StoryPlan' });
+    }
+
+    const assets = audioAssetStore.getStoryAudioAssets(storyId);
+    res.json({
+      success: true,
+      data: {
+        storyId,
+        audioTimeline: plan.audioTimeline || [],
+        masterAudio: plan.masterAudio || null,
+        assets
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải audio timeline: ' + err.message });
+  }
+});
+
+// 4. Preview giọng thoại đơn lẻ
+router.post('/story-plan/:storyId/audio/preview', authenticateToken, async (req, res) => {
+  try {
+    const { text, voiceId, gender, age, emotion } = req.body;
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Thiếu nội dung text để preview' });
+    }
+
+    const result = await defaultVoiceRegistry.synthesizeWithFallback({
+      text,
+      voiceId: voiceId || 'vi-male',
+      gender,
+      age,
+      emotion
+    });
+
+    if (!result.success || !result.audioBuffer) {
+      return res.status(500).json({
+        success: false,
+        code: result.error?.code || 'PREVIEW_FAILED',
+        message: result.error?.message || 'Không thể tạo preview giọng đọc'
+      });
+    }
+
+    res.set('Content-Type', 'audio/mpeg');
+    res.send(result.audioBuffer);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi preview audio: ' + err.message });
+  }
+});
+
+// 5. Sinh lại âm thanh cho 1 câu thoại cụ thể
+router.post('/story-plan/:storyId/dialogue/:dialogueId/audio/regenerate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId, dialogueId } = req.params;
+    const { preferredProvider } = req.body;
+
+    const result = await multiSpeakerAudioComposer.regenerateSingleDialogue(storyId, dialogueId, { preferredProvider });
+    res.json({
+      success: true,
+      message: 'Đã sinh lại giọng thoại và cập nhật Master Track thành công',
+      data: result
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      code: err.code || 'REGENERATE_FAILED',
+      message: err.message
+    });
+  }
+});
+
 module.exports = router;
+
 

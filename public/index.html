@@ -773,9 +773,50 @@
         </div>
 
         <!-- 4. Luồng Đối Thoại & Phân Cảnh Chi Tiết -->
-        <div style="background:#070a12; border:1px solid #34d399; padding:14px; border-radius:8px;">
+        <div style="background:#070a12; border:1px solid #34d399; padding:14px; border-radius:8px; margin-bottom:14px;">
           <h4 style="color:#34d399; font-size:0.88rem; font-weight:700; margin-bottom:10px;">💬 KỊCH BẢN ĐỐI THOẠI & PHÂN CẢNH (DIALOGUE & SHOT BREAKDOWN):</h4>
           <div id="director-dialogues-stream" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+
+        <!-- 5. Voice Timeline & Multi-Track Dialogue Player (Phase 3C) -->
+        <div style="background:#090d16; border:1px solid #c084fc; padding:14px; border-radius:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div>
+              <h4 style="color:#c084fc; font-size:0.92rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+                <span>🎙️</span> VOICE TIMELINE & AUDIO MULTI-SPEAKER ENGINE
+              </h4>
+              <span style="font-size:0.75rem; color:var(--text-muted);">
+                Ghép nối đa giọng đọc (Multi-Speaker Neural TTS) theo timeline đối thoại chân thực
+              </span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" id="btn-director-play-master" class="btn btn-sm btn-outline" onclick="playMasterAudioFromUI()" style="border-color:#34d399; color:#34d399; display:none;">
+                ▶️ Nghe Toàn Bộ Hội Thoại
+              </button>
+              <button type="button" id="btn-director-generate-all-audio" class="btn btn-sm btn-primary" onclick="generateStoryAudioFromUI()">
+                🎙️ Lồng Tiếng Toàn Bộ Kịch Bản
+              </button>
+            </div>
+          </div>
+
+          <!-- Master Audio Player Bar -->
+          <div id="director-master-audio-bar" style="display:none; background:#111624; border:1px solid #34d399; padding:10px 14px; border-radius:6px; margin-bottom:12px; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.1rem;">🎧</span>
+              <div>
+                <strong style="color:#34d399; font-size:0.82rem;">Master Dialogue Track (Toàn bộ đoạn đối thoại)</strong>
+                <div id="director-master-audio-info" style="font-size:0.72rem; color:#94a3b8;">Thời lượng: 0s</div>
+              </div>
+            </div>
+            <audio id="director-master-audio-element" controls style="height:34px; max-width:320px;"></audio>
+          </div>
+
+          <!-- Timeline Container -->
+          <div id="director-voice-timeline-container" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:12px 0;">
+              Chưa tạo âm thanh hội thoại. Bấm <strong>"🎙️ Lồng Tiếng Toàn Bộ Kịch Bản"</strong> để kích hoạt.
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -5823,7 +5823,11 @@ function renderDirectorWorkspace(planData) {
       });
     }
   }
+
+  // 6. Voice Timeline & Multi-Track Audio (Phase 3C)
+  renderVoiceTimeline(planData);
 }
+
 
 // Visual Generation UI Handlers
 async function generateCharacterReferenceFromUI(charId, forceRegenerate = false) {
@@ -5957,6 +5961,176 @@ async function generateShotVisualFromUI(shotId) {
     showToast('Lỗi gửi lệnh sinh ảnh shot: ' + err.message, 'error');
   }
 }
+
+// ============================================================================
+// PHASE 3C: VOICE TIMELINE & MULTI-SPEAKER AUDIO UI HANDLERS
+// ============================================================================
+
+function renderVoiceTimeline(planData) {
+  const container = document.getElementById('director-voice-timeline-container');
+  const masterBar = document.getElementById('director-master-audio-bar');
+  const masterPlayBtn = document.getElementById('btn-director-play-master');
+  const masterAudioElem = document.getElementById('director-master-audio-element');
+  const masterInfoElem = document.getElementById('director-master-audio-info');
+
+  if (!container) return;
+
+  const timeline = planData?.audioTimeline || [];
+  const masterAudio = planData?.masterAudio;
+
+  if (masterAudio && masterAudio.audioUrl) {
+    if (masterBar) masterBar.style.display = 'flex';
+    if (masterPlayBtn) masterPlayBtn.style.display = 'inline-block';
+    if (masterAudioElem) masterAudioElem.src = masterAudio.audioUrl;
+    if (masterInfoElem) {
+      masterInfoElem.textContent = `Thời lượng: ${masterAudio.durationSec || 0}s | Gồm ${timeline.length} lượt thoại`;
+    }
+  } else {
+    if (masterBar) masterBar.style.display = 'none';
+    if (masterPlayBtn) masterPlayBtn.style.display = 'none';
+  }
+
+  if (!timeline || timeline.length === 0) {
+    container.innerHTML = `
+      <div style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:12px 0;">
+        Chưa tạo âm thanh hội thoại. Bấm <strong>"🎙️ Lồng Tiếng Toàn Bộ Kịch Bản"</strong> để kích hoạt.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  timeline.forEach((item, idx) => {
+    const char = (planData?.characters || []).find(c => c.id === item.speakerId);
+    const startFmt = (item.startMs / 1000).toFixed(2);
+    const endFmt = (item.endMs / 1000).toFixed(2);
+    const avatarImg = char?.avatarUrl;
+
+    const row = document.createElement('div');
+    row.style.background = '#111624';
+    row.style.border = '1px solid #1e293b';
+    row.style.borderRadius = '8px';
+    row.style.padding = '10px 14px';
+    row.style.display = 'flex';
+    row.style.gap = '12px';
+    row.style.alignItems = 'center';
+    row.style.flexWrap = 'wrap';
+
+    row.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; min-width:180px;">
+        <div style="width:38px; height:38px; border-radius:50%; background:#1e293b; display:flex; align-items:center; justify-content:center; font-size:1.1rem; border:2px solid #a855f7; overflow:hidden; flex-shrink:0;">
+          ${avatarImg
+            ? `<img src="${avatarImg}" alt="${item.speakerName}" style="width:100%; height:100%; object-fit:cover;">`
+            : (char?.gender === 'female' ? '👩' : '👨')
+          }
+        </div>
+        <div>
+          <strong style="color:#f43f5e; font-size:0.85rem; display:block;">${item.speakerName}</strong>
+          <span style="color:#a855f7; font-size:0.72rem; font-weight:600;">⏱️ ${startFmt}s ➔ ${endFmt}s (${item.durationSec}s)</span>
+        </div>
+      </div>
+
+      <div style="flex:1; min-width:220px;">
+        <div style="color:#fff; font-size:0.82rem; font-weight:500; margin-bottom:4px;">"${item.text}"</div>
+        <div style="display:flex; gap:6px; font-size:0.68rem;">
+          <span style="background:rgba(251,191,36,0.15); color:#fbbf24; padding:2px 6px; border-radius:3px;">🎭 ${item.emotion}</span>
+          ${item.action ? `<span style="background:rgba(52,211,153,0.15); color:#34d399; padding:2px 6px; border-radius:3px;">🎬 ${item.action}</span>` : ''}
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${item.audioUrl
+          ? `<audio controls src="${item.audioUrl}" style="height:32px; max-width:220px;"></audio>`
+          : `<span style="color:#ef4444; font-size:0.75rem;">Chưa có audio</span>`
+        }
+        <button type="button" class="btn btn-xs btn-outline" onclick="regenerateDialogueAudioFromUI('${item.dialogueId}')" style="border-color:#c084fc; color:#c084fc; font-size:0.72rem;">
+          🔄 Lồng Lại
+        </button>
+      </div>
+    `;
+
+    container.appendChild(row);
+  });
+}
+
+async function generateStoryAudioFromUI() {
+  if (!currentStoryPlan || !(currentStoryPlan.dialogues || []).length) {
+    showToast('Chưa có danh sách kịch bản hội thoại để lồng tiếng!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-director-generate-all-audio');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '⏳ Đang lồng tiếng đa nhân vật...';
+    btn.disabled = true;
+  }
+
+  try {
+    showToast(`🎙️ Đang tổng hợp giọng nói đa nhân vật & tính toán Timeline...`, 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/audio/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ pauseDurationMs: 350, forceRegenerate: false })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const planRes = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}`, { headers: getAuthHeaders() });
+      const planData = await planRes.json();
+      if (planData.success && planData.data) {
+        currentStoryPlan = planData.data;
+        renderDirectorWorkspace(currentStoryPlan);
+      }
+      showToast(`🎉 Đã tạo thành công Audio Timeline (${data.data.dialogueCount} câu thoại, tổng ${data.data.totalDurationSec}s)!`, 'success');
+    } else {
+      showToast(`❌ ${data.code || 'AUDIO_FAILED'}: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh lồng tiếng: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function regenerateDialogueAudioFromUI(dialogueId) {
+  if (!currentStoryPlan) return;
+
+  try {
+    showToast(`🎙️ Đang lồng tiếng lại câu thoại ${dialogueId}...`, 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/dialogue/${dialogueId}/audio/regenerate`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const planRes = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}`, { headers: getAuthHeaders() });
+      const planData = await planRes.json();
+      if (planData.success && planData.data) {
+        currentStoryPlan = planData.data;
+        renderDirectorWorkspace(currentStoryPlan);
+      }
+      showToast('🎉 Đã lồng tiếng lại và cập nhật Master Track thành công!', 'success');
+    } else {
+      showToast(`❌ Lỗi: ${data.message || data.code}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh lồng lại thoại: ' + err.message, 'error');
+  }
+}
+
+function playMasterAudioFromUI() {
+  const masterAudioElem = document.getElementById('director-master-audio-element');
+  if (masterAudioElem) {
+    masterAudioElem.play();
+  }
+}
+
 
 
 function openEditCharacterModal(charId) {
