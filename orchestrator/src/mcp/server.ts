@@ -5,7 +5,7 @@ import { getBaseUrl, getConfig } from '../config.js';
 import { readFindings, saveFindings, type Finding } from '../memory/findings.js';
 import { readTasks, saveTasks, type Task } from '../memory/tasks.js';
 import { status } from '../cycle-manager.js';
-import { runChecks } from '../agents/codex-agent.js';
+import { runChecks } from '../agents/native-agent.js';
 import { saveScore, type Score } from '../scoring/score-engine.js';
 
 type Rpc = { id?: string | number; method: string; params?: any };
@@ -27,7 +27,7 @@ async function call(name: string, args: Record<string, unknown>) {
   if (name === 'findings_create') { const findings = await readFindings(); const finding = { ...(args as Partial<Finding>), id: String(args.id || nextId('F', findings)), status: args.status || 'open' } as Finding; await saveFindings([...findings, finding]); return finding; }
   if (name === 'findings_update') { const findings = await readFindings(); const id = String(args.id); const updated = findings.map(item => item.id === id ? { ...item, ...args, id } : item); await saveFindings(updated); return updated.find(item => item.id === id) || null; }
   if (name === 'tasks_list') return readTasks();
-  if (name === 'tasks_create') { const tasks = await readTasks(); const task = { ...(args as Partial<Task>), id: String(args.id || nextId('TASK', tasks)), assigned_to: args.assigned_to || 'codex', status: args.status || 'queued', acceptance_criteria: args.acceptance_criteria || [] } as Task; await saveTasks([...tasks, task]); return task; }
+  if (name === 'tasks_create') { const tasks = await readTasks(); const task = { ...(args as Partial<Task>), id: String(args.id || nextId('TASK', tasks)), assigned_to: args.assigned_to || 'antigravity', status: args.status || 'queued', acceptance_criteria: args.acceptance_criteria || [] } as Task; await saveTasks([...tasks, task]); return task; }
   if (name === 'tasks_update') { const tasks = await readTasks(); const id = String(args.id); const updated = tasks.map(item => item.id === id ? { ...item, ...args, id } : item); await saveTasks(updated); return updated.find(item => item.id === id) || null; }
   if (name === 'cycle_get_status') return status();
   if (name === 'score_get') return JSON.parse(await readFile('.agent/scores/latest.json', 'utf8'));

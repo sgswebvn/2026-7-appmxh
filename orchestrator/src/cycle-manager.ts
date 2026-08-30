@@ -8,7 +8,7 @@ import { mergeFindings, prioritize } from './reviewers/reviewer.js';
 import { readFindings, saveFindings } from './memory/findings.js';
 import { readTasks, saveTasks, taskFromFinding } from './memory/tasks.js';
 import { saveCycle } from './memory/history.js';
-import { implement, runChecks } from './agents/codex-agent.js';
+import { implement, runChecks } from './agents/native-agent.js';
 import { saveScore, scoreSite } from './scoring/score-engine.js';
 import { getBaseUrl, getConfig } from './config.js';
 import { AntigravityAgent } from './agents/antigravity-agent.js';
@@ -61,7 +61,7 @@ export async function improve(): Promise<Record<string, unknown>> {
     const previousScore = JSON.parse(await readFile('.agent/scores/latest.json', 'utf8')).score || 0;
     await saveCycle(cycle, 'before.sha', await git(['rev-parse', 'HEAD']));
     await saveCycle(cycle, 'before.diff', await git(['diff', '--binary']));
-    machine.transition('CODEX_IMPLEMENT'); const changedFiles: string[] = []; const logs: string[] = [];
+    machine.transition('IMPLEMENT'); const changedFiles: string[] = []; const logs: string[] = [];
     for (const task of tasks) { task.status = 'working'; const result = await implement(task); logs.push(...result.logs); changedFiles.push(...result.changedFiles); task.status = result.success ? 'testing' : 'failed'; }
     await saveTasks(tasks);
     machine.transition('BUILD'); machine.transition('TEST'); const checks = await runChecks(); const smoke = await smokeTest(baseUrl);
@@ -81,5 +81,5 @@ export async function status() {
   const entries = (await readdir('.agent/scores/history')).sort().reverse();
   const history = await Promise.all(entries.slice(0, 2).map(async entry => JSON.parse(await readFile(`.agent/scores/history/${entry}`, 'utf8'))));
   const previousScore = history.length > 1 ? history[1].score : null;
-  return { current_cycle: (await nextCycle()) - 1, current_state: 'IDLE', current_task: tasks.find(task => task.status === 'working') || null, codex_status: tasks.some(task => task.status === 'working') ? 'working' : 'idle', playwright_status: 'ready', antigravity_status: config.antigravity.enabled ? 'configured' : 'manual_configuration_required', findings_count: findings.length, findings, tasks, current_score: score.score, previous_score: previousScore, improvement: previousScore === null ? null : score.score - previousScore, score, config };
+  return { current_cycle: (await nextCycle()) - 1, current_state: 'IDLE', current_task: tasks.find(task => task.status === 'working') || null, agent_status: tasks.some(task => task.status === 'working') ? 'working' : 'idle', playwright_status: 'ready', antigravity_status: config.antigravity.enabled ? 'configured' : 'manual_configuration_required', findings_count: findings.length, findings, tasks, current_score: score.score, previous_score: previousScore, improvement: previousScore === null ? null : score.score - previousScore, score, config };
 }

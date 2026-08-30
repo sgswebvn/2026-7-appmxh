@@ -314,7 +314,7 @@ test.describe('Visual Generation Engine & Media Provider Layer (Phase 3B)', () =
         characterId: 'char_001'
       });
       expect(true).toBe(false);
-    } catch (err) {
+    } catch (err: any) {
       expect(err.code).toBe('STORY_NOT_FOUND');
     }
   });

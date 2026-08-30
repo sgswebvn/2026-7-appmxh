@@ -34,7 +34,7 @@ test.describe('Real Browser Visual Generation & Character Identity UI Flow', () 
     });
 
     // 2. Inject StoryPlan with 2 characters
-    const storyPlan = {
+    const storyPlan: any = {
       storyId: 'story_ui_vis_001',
       topic: 'Một ông già 70 tuổi ăn mì cay cùng cô cháu gái 8 tuổi',
       title: 'Thử Thách Mì Cay Ông Cháu',

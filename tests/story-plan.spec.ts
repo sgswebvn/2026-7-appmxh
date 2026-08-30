@@ -149,7 +149,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
     const plan = getStory('story_test_001');
     if (!plan) return;
 
-    const charIds = plan.characters.map(c => c.id);
+    const charIds = plan.characters.map((c: any) => c.id);
     for (const rel of plan.relationships) {
       expect(charIds).toContain(rel.fromCharacterId);
       expect(charIds).toContain(rel.toCharacterId);
@@ -161,7 +161,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
     const plan = getStory('story_test_001');
     if (!plan) return;
 
-    const charIds = plan.characters.map(c => c.id);
+    const charIds = plan.characters.map((c: any) => c.id);
     for (const dlg of plan.dialogues) {
       expect(charIds).toContain(dlg.speakerId);
       expect(dlg.text.length).toBeGreaterThan(0);
@@ -174,7 +174,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
     if (!plan) return;
 
     for (const dlg of plan.dialogues) {
-      const speaker = plan.characters.find(c => c.id === dlg.speakerId);
+      const speaker = plan.characters.find((c: any) => c.id === dlg.speakerId);
       expect(dlg.voiceId).toBe(speaker.voice.voiceId);
     }
   });
@@ -184,7 +184,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
     const plan = getStory('story_test_001');
     if (!plan) return;
 
-    const charIds = plan.characters.map(c => c.id);
+    const charIds = plan.characters.map((c: any) => c.id);
     for (const sc of plan.scenes) {
       for (const cId of sc.characters) {
         expect(charIds).toContain(cId);
@@ -197,7 +197,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
     const plan = getStory('story_test_001');
     if (!plan) return;
 
-    const sceneIds = plan.scenes.map(s => s.id);
+    const sceneIds = plan.scenes.map((s: any) => s.id);
     for (const shot of plan.shots) {
       expect(sceneIds).toContain(shot.sceneId);
     }
@@ -236,7 +236,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
         apiKey: 'invalid_short_key'
       });
       expect(true).toBe(false); // should not reach here
-    } catch (err) {
+    } catch (err: any) {
       expect(err.code).toBeDefined();
       expect(['GENERATION_UNAVAILABLE', 'GENERATION_FAILED']).toContain(err.code);
     }
@@ -254,7 +254,7 @@ test.describe('StoryPlan Engine & Schema Verification (Phase 3A)', () => {
     });
 
     const updated = getStory('story_test_001');
-    const char = updated.characters.find(c => c.id === 'char_ba_tam');
+    const char = updated.characters.find((c: any) => c.id === 'char_ba_tam');
     expect(char.name).toBe('Bà Tám Sài Gòn');
     expect(char.age).toBe(66);
   });
