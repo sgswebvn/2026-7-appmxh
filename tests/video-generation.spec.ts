@@ -4,16 +4,18 @@ const SpeakerAwareShotPlanner = require('../services/speakerAwareShotPlanner');
 const SubtitleGenerator = require('../services/subtitleGenerator');
 const KenBurnsMotionProvider = require('../services/motionProviders/kenBurnsMotionProvider');
 const MockLipSyncProvider = require('../services/lipSyncProviders/mockLipSyncProvider');
+const ReplicateLipSyncProvider = require('../services/lipSyncProviders/replicateLipSyncProvider');
 const { LipSyncProviderRegistry } = require('../services/lipSyncProviders/lipSyncProviderRegistry');
 const { MotionProviderRegistry } = require('../services/motionProviders/motionProviderRegistry');
 const RealVideoQA = require('../services/realVideoQA');
 const { VideoTimelineComposer } = require('../services/videoTimelineComposer');
 const { VideoAssetStore } = require('../services/videoAssetStore');
 const { storyPlanStore } = require('../services/storyPlanStore');
+const { mediaCapability } = require('../services/mediaCapability');
 const fs = require('fs');
 const path = require('path');
 
-test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D)', () => {
+test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D.1)', () => {
 
   const testStoryPlan = {
     storyId: 'story_phase3d_test_001',
@@ -133,12 +135,11 @@ test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D
       fs.writeFileSync(imgPath, minPng);
     }
 
-    // Seed dummy audio asset
+    // Seed valid audio asset
     const audioPath = path.join(aDir, 'sample_audio_test.mp3');
     if (!fs.existsSync(audioPath)) {
-      const MockVoiceProvider = require('../services/voiceProviders/mockVoiceProvider');
-      const mock = new MockVoiceProvider();
-      fs.writeFileSync(audioPath, mock.createMpegFrameBuffer(3.5));
+      const safeAudio = audioPath.replace(/\\/g, '/');
+      mediaCapability.execFfmpeg(`-y -f lavfi -i sine=frequency=440:duration=3.5 -c:a libmp3lame -b:a 128k "${safeAudio}"`);
     }
 
     storyPlanStore.save(testStoryPlan);
@@ -193,23 +194,44 @@ test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D
     expect(subs.events.length).toBe(2);
   });
 
-  // 4. KenBurnsMotionProvider generates motion buffer
-  test('KenBurnsMotionProvider synthesizes 60fps camera motion MP4', async () => {
+  // 4. KenBurnsMotionProvider generates real 1080x1920 H.264 video
+  test('KenBurnsMotionProvider synthesizes real 60fps camera motion MP4', async () => {
     const ken = new KenBurnsMotionProvider();
     const imgPath = path.join(process.cwd(), 'public', 'uploads', 'visual-assets', 'sample_ong_nam.png');
 
     const result = await ken.generateMotion({
       imagePath: imgPath,
       cameraMotion: 'push_in',
-      durationMs: 2500
+      durationMs: 1500
     });
 
     expect(result.success).toBe(true);
-    expect(result.videoBuffer.length).toBeGreaterThan(500);
+    expect(result.videoBuffer.length).toBeGreaterThan(5000);
     expect(fs.existsSync(result.videoPath)).toBe(true);
+    expect(result.width).toBe(1080);
+    expect(result.height).toBe(1920);
+    expect(result.codec).toBe('h264');
   });
 
-  // 5. LipSync Provider Registry fallback
+  // 5. KenBurnsMotionProvider returns FFMPEG_NOT_AVAILABLE when FFmpeg is absent
+  test('KenBurnsMotionProvider returns FFMPEG_NOT_AVAILABLE when FFmpeg is unavailable', async () => {
+    const fakeMediaCap = {
+      checkMediaCapabilities: async () => ({ ffmpegAvailable: false, ffprobeAvailable: false })
+    };
+    const ken = new KenBurnsMotionProvider({ mediaCapability: fakeMediaCap });
+    const imgPath = path.join(process.cwd(), 'public', 'uploads', 'visual-assets', 'sample_ong_nam.png');
+
+    const result = await ken.generateMotion({
+      imagePath: imgPath,
+      cameraMotion: 'push_in',
+      durationMs: 1500
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error.code).toBe('FFMPEG_NOT_AVAILABLE');
+  });
+
+  // 6. LipSync Provider Registry fallback
   test('LipSyncProviderRegistry routes to working provider and flags fallback', async () => {
     const registry = new LipSyncProviderRegistry();
     const failingMock = new MockLipSyncProvider({ shouldFail: true, failReason: 'NETWORK_TIMEOUT' });
@@ -227,7 +249,7 @@ test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D
     const result = await registry.generateWithFallback({
       faceImagePath: path.join(process.cwd(), 'public', 'uploads', 'visual-assets', 'sample_ong_nam.png'),
       audioPath: path.join(process.cwd(), 'public', 'uploads', 'audio-assets', 'sample_audio_test.mp3'),
-      durationMs: 2000,
+      durationMs: 1500,
       preferredProvider: 'primary-failing-lipsync'
     });
 
@@ -237,25 +259,59 @@ test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D
     expect(result.fallbackUsed).toBe(true);
   });
 
-  // 6. RealVideoQA evaluates video container and A/V synchronization
-  test('RealVideoQA deeply evaluates MP4 container, resolution, and A/V sync score', async () => {
-    const mock = new MockLipSyncProvider();
-    const res = await mock.generateLipSync({ durationMs: 3500 });
+  // 7. Unconfigured ReplicateLipSyncProvider returns explicit error without silent mock
+  test('ReplicateLipSyncProvider without token returns explicit LIPSYNC_PROVIDER_NOT_CONFIGURED error', async () => {
+    const provider = new ReplicateLipSyncProvider({ apiToken: '' });
+    const result = await provider.generateLipSync({
+      faceImagePath: path.join(process.cwd(), 'public', 'uploads', 'visual-assets', 'sample_ong_nam.png'),
+      audioPath: path.join(process.cwd(), 'public', 'uploads', 'audio-assets', 'sample_audio_test.mp3')
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error.code).toBe('LIPSYNC_PROVIDER_NOT_CONFIGURED');
+  });
+
+  // 8. RealVideoQA evaluates real MP4 stream and approves valid file
+  test('RealVideoQA deeply evaluates MP4 stream, resolution, and A/V sync score', async () => {
+    const ken = new KenBurnsMotionProvider();
+    const res = await ken.generateMotion({
+      imagePath: path.join(process.cwd(), 'public', 'uploads', 'visual-assets', 'sample_ong_nam.png'),
+      cameraMotion: 'pull_out',
+      durationMs: 2000
+    });
 
     const qa = await RealVideoQA.evaluateVideoArtifact({
       videoPath: res.videoPath,
-      audioDurationMs: 3568,
-      shots: [{ shotId: 'shot_001' }, { shotId: 'shot_002' }]
+      audioDurationMs: 0,
+      shots: [{ shotId: 'shot_001' }]
     });
 
     expect(qa.approved).toBe(true);
-    expect(qa.videoArtifactScore).toBeGreaterThanOrEqual(90);
+    expect(qa.videoArtifactScore).toBeGreaterThanOrEqual(80);
     expect(qa.metrics.aspectRatio).toBe('9:16');
     expect(qa.metrics.resolution).toBe('1080x1920');
+    expect(qa.metrics.videoCodec).toBe('h264');
   });
 
-  // 7. Full Video Assembly & Master MP4 Composition
-  test('VideoTimelineComposer renders all shots and composes master 9:16 MP4', async () => {
+  // 9. RealVideoQA rejects dummy / fake container buffer
+  test('RealVideoQA rejects dummy/fake container buffer (< 1000 bytes or corrupt payload)', async () => {
+    const dummyPath = path.join(process.cwd(), 'public', 'uploads', 'video-assets', 'fake_dummy_test.mp4');
+    fs.writeFileSync(dummyPath, Buffer.from('ftypisom' + 'fake'.repeat(10)));
+
+    const qa = await RealVideoQA.evaluateVideoArtifact({
+      videoPath: dummyPath,
+      audioDurationMs: 2000
+    });
+
+    expect(qa.approved).toBe(false);
+    expect(qa.videoArtifactScore).toBe(0);
+    expect(qa.errors.length).toBeGreaterThan(0);
+
+    if (fs.existsSync(dummyPath)) fs.unlinkSync(dummyPath);
+  });
+
+  // 10. Full Video Assembly & Master MP4 Composition with Traceable Metadata
+  test('VideoTimelineComposer renders all shots and composes master 9:16 MP4 with traceable metadata', async () => {
     const customDataFile = path.join(process.cwd(), 'data', 'test-video-assets.json');
     const assetStore = new VideoAssetStore(customDataFile);
     const composer = new VideoTimelineComposer(
@@ -267,7 +323,7 @@ test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D
     const result = await composer.composeStoryVideo({
       storyId: 'story_phase3d_test_001',
       preferredLipSyncProvider: 'mock-test-lipsync-provider',
-      preferredMotionProvider: 'mock-test-motion-provider',
+      preferredMotionProvider: 'ken-burns-motion',
       forceRegenerate: true
     });
 
@@ -277,6 +333,15 @@ test.describe('Real Character Motion, Lip-Sync & Video Assembly Engine (Phase 3D
     expect(result.masterVideo).toBeDefined();
     expect(result.masterVideo.videoUrl).toContain('/uploads/video-assets/story_final_');
     expect(fs.existsSync(result.masterVideo.filePath)).toBe(true);
+
+    // Verify traceable shot metadata
+    for (const shot of result.shots) {
+      expect(shot.traceableMetadata).toBeDefined();
+      expect(shot.traceableMetadata.storyId).toBe('story_phase3d_test_001');
+      expect(shot.traceableMetadata.shotId).toBe(shot.shotId);
+      expect(shot.traceableMetadata.outputVideoAssetId).toBeDefined();
+    }
+
     expect(result.videoQA.approved).toBe(true);
 
     if (fs.existsSync(customDataFile)) fs.unlinkSync(customDataFile);

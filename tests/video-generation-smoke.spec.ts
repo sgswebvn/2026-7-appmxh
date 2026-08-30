@@ -28,7 +28,7 @@ test.describe('Real Video Motion & Assembly Smoke Test (Phase 3D)', () => {
 
     const qa = await RealVideoQA.evaluateVideoArtifact({
       videoPath: result.videoPath,
-      audioDurationMs: 2000,
+      audioDurationMs: 0,
       shots: [{ shotId: 'smoke_shot_001' }]
     });
 

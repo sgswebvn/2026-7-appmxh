@@ -32,6 +32,8 @@
   },
   "type": "commonjs",
   "devDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.4.0",
     "tsx": "^4.23.13",

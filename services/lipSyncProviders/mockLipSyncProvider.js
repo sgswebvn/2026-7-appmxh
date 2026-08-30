@@ -2,10 +2,10 @@ const BaseLipSyncProvider = require('./baseLipSyncProvider');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { mediaCapability } = require('../mediaCapability');
 
 /**
  * Deterministic Mock Lip-Sync Provider (Strictly for Unit/Integration Testing)
- * Produces valid MP4 container buffers with video & audio box headers
  */
 class MockLipSyncProvider extends BaseLipSyncProvider {
   constructor(config = {}) {
@@ -14,38 +14,7 @@ class MockLipSyncProvider extends BaseLipSyncProvider {
     this.name = 'Deterministic Mock Lip-Sync Provider (Test Only)';
     this.shouldFail = config.shouldFail || false;
     this.failReason = config.failReason || 'SIMULATED_LIPSYNC_ERROR';
-  }
-
-  /**
-   * Create synthetic MP4 binary buffer with valid ISO base media file format headers
-   */
-  createMp4ContainerBuffer(durationMs = 2000) {
-    const ftypBox = Buffer.from([
-      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70,
-      0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00,
-      0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32
-    ]);
-
-    const mdatHeader = Buffer.from([
-      0x00, 0x00, 0x10, 0x00, 0x6D, 0x64, 0x61, 0x74
-    ]);
-    const mdatPayload = Buffer.alloc(4088);
-    for (let i = 0; i < mdatPayload.length; i++) {
-      mdatPayload[i] = (i * 17 + 31) % 256;
-    }
-
-    const mvhdBox = Buffer.alloc(32);
-    mvhdBox.writeUInt32BE(32, 0);
-    mvhdBox.write('mvhd', 4, 4, 'ascii');
-    mvhdBox.writeUInt32BE(1000, 20);
-    mvhdBox.writeUInt32BE(durationMs, 24);
-
-    const moovBox = Buffer.alloc(40);
-    moovBox.writeUInt32BE(40, 0);
-    moovBox.write('moov', 4, 4, 'ascii');
-    mvhdBox.copy(moovBox, 8);
-
-    return Buffer.concat([ftypBox, mdatHeader, mdatPayload, moovBox]);
+    this.mediaCapability = config.mediaCapability || mediaCapability;
   }
 
   async generateLipSync(options = {}) {
@@ -59,13 +28,31 @@ class MockLipSyncProvider extends BaseLipSyncProvider {
     }
 
     const durationMs = options.durationMs || 3000;
-    const videoBuffer = this.createMp4ContainerBuffer(durationMs);
-
+    const durationSec = (durationMs / 1000).toFixed(2);
     const outFileName = `lipsync_mock_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`;
     const outDir = path.join(process.cwd(), 'public', 'uploads', 'video-assets');
     fs.mkdirSync(outDir, { recursive: true });
     const outFilePath = path.join(outDir, outFileName);
-    fs.writeFileSync(outFilePath, videoBuffer);
+
+    const caps = await this.mediaCapability.checkMediaCapabilities();
+    if (caps.ffmpegAvailable) {
+      const safeOut = outFilePath.replace(/\\/g, '/');
+      const safeImage = (options.faceImagePath && fs.existsSync(options.faceImagePath))
+        ? options.faceImagePath.replace(/\\/g, '/')
+        : null;
+
+      if (safeImage) {
+        await this.mediaCapability.execFfmpeg(`-y -loop 1 -i "${safeImage}" -vf "scale=1080:1920,format=yuv420p" -c:v libx264 -t ${durationSec} -r 30 -pix_fmt yuv420p "${safeOut}"`);
+      } else {
+        await this.mediaCapability.execFfmpeg(`-y -f lavfi -i color=c=darkgreen:s=1080x1920:d=${durationSec}:r=30 -vf "format=yuv420p" -c:v libx264 -pix_fmt yuv420p "${safeOut}"`);
+      }
+    } else {
+      const buf = Buffer.alloc(1024);
+      buf.write('ftypisom', 4, 'ascii');
+      fs.writeFileSync(outFilePath, buf);
+    }
+
+    const videoBuffer = fs.readFileSync(outFilePath);
 
     return {
       success: true,
@@ -73,6 +60,10 @@ class MockLipSyncProvider extends BaseLipSyncProvider {
       videoPath: outFilePath,
       videoUrl: `/uploads/video-assets/${outFileName}`,
       durationMs,
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      codec: 'h264',
       provider: this.id,
       isMock: true
     };

@@ -1,63 +1,37 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { exec } = require('child_process');
 const SpeakerAwareShotPlanner = require('./speakerAwareShotPlanner');
 const SubtitleGenerator = require('./subtitleGenerator');
 const RealVideoQA = require('./realVideoQA');
 const { lipSyncProviderRegistry } = require('./lipSyncProviders/lipSyncProviderRegistry');
 const { motionProviderRegistry } = require('./motionProviders/motionProviderRegistry');
 const { videoAssetStore, VIDEO_ASSETS_DIR } = require('./videoAssetStore');
+const { visualAssetStore } = require('./visualAssetStore');
+const { audioAssetStore } = require('./audioAssetStore');
 const { storyPlanStore } = require('./storyPlanStore');
+const { mediaCapability } = require('./mediaCapability');
 
 /**
- * VideoTimelineComposer (Phase 3D)
+ * VideoTimelineComposer (Phase 3D.1)
  * Main video assembly engine that renders individual shots and composes the final vertical 9:16 master MP4.
  */
 class VideoTimelineComposer {
   constructor(
     lipSyncRegistry = lipSyncProviderRegistry,
     motionRegistry = motionProviderRegistry,
-    assetStore = videoAssetStore
+    assetStore = videoAssetStore,
+    mediaCap = mediaCapability
   ) {
     this.lipSyncRegistry = lipSyncRegistry;
     this.motionRegistry = motionRegistry;
     this.assetStore = assetStore;
+    this.mediaCapability = mediaCap;
   }
 
-  checkFFmpeg() {
-    return new Promise((resolve) => {
-      exec('ffmpeg -version', (err) => resolve(!err));
-    });
-  }
-
-  createMp4MasterBuffer(durationMs = 5000) {
-    const ftypBox = Buffer.from([
-      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70,
-      0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00,
-      0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32
-    ]);
-
-    const mdatHeader = Buffer.from([
-      0x00, 0x00, 0x20, 0x00, 0x6D, 0x64, 0x61, 0x74
-    ]);
-    const mdatPayload = Buffer.alloc(8184);
-    for (let i = 0; i < mdatPayload.length; i++) {
-      mdatPayload[i] = (i * 31 + 89) % 256;
-    }
-
-    const mvhdBox = Buffer.alloc(32);
-    mvhdBox.writeUInt32BE(32, 0);
-    mvhdBox.write('mvhd', 4, 4, 'ascii');
-    mvhdBox.writeUInt32BE(1000, 20); // timescale
-    mvhdBox.writeUInt32BE(durationMs, 24); // duration
-
-    const moovBox = Buffer.alloc(40);
-    moovBox.writeUInt32BE(40, 0);
-    moovBox.write('moov', 4, 4, 'ascii');
-    mvhdBox.copy(moovBox, 8);
-
-    return Buffer.concat([ftypBox, mdatHeader, mdatPayload, moovBox]);
+  async checkFFmpeg() {
+    const caps = await this.mediaCapability.checkMediaCapabilities();
+    return caps.ffmpegAvailable;
   }
 
   /**
@@ -79,7 +53,15 @@ class VideoTimelineComposer {
       throw err;
     }
 
-    // 1. Plan cinematic shots
+    // 1. Check real FFmpeg capabilities
+    const hasFFmpeg = await this.checkFFmpeg();
+    if (!hasFFmpeg) {
+      const err = new Error('Hệ thống yêu cầu cài đặt binary FFmpeg để render video thực tế.');
+      err.code = 'FFMPEG_NOT_AVAILABLE';
+      throw err;
+    }
+
+    // 2. Plan cinematic shots
     const plannedShots = SpeakerAwareShotPlanner.planShots(storyPlan);
     if (plannedShots.length === 0) {
       const err = new Error('Không thể lập kế hoạch góc quay cho StoryPlan.');
@@ -91,7 +73,7 @@ class VideoTimelineComposer {
     const characters = storyPlan.characters || [];
     const characterReferences = storyPlan.characterReferences || [];
 
-    // 2. Render each shot artifact independently
+    // 3. Render each shot artifact independently
     for (let i = 0; i < plannedShots.length; i++) {
       const shot = plannedShots[i];
       let shotAsset = null;
@@ -101,8 +83,10 @@ class VideoTimelineComposer {
       }
 
       if (!shotAsset || !fs.existsSync(shotAsset.filePath)) {
-        // Resolve visual image for this shot
+        // Resolve source image for this shot
         let visualImagePath = null;
+        let sourceImageAssetId = null;
+
         if (shot.characterReferencePath && fs.existsSync(shot.characterReferencePath)) {
           visualImagePath = shot.characterReferencePath;
         } else if (shot.activeSpeakerId) {
@@ -110,10 +94,11 @@ class VideoTimelineComposer {
           const ref = characterReferences.find(r => r.characterId === speaker?.id);
           if (ref?.imagePath && fs.existsSync(ref.imagePath)) {
             visualImagePath = ref.imagePath;
+            sourceImageAssetId = ref.assetId || null;
           }
         }
 
-        // Fallback to dummy sample image if needed in test environment
+        // Fallback to sample image if needed in development
         if (!visualImagePath) {
           const sampleDir = path.join(process.cwd(), 'public', 'uploads', 'visual-assets');
           fs.mkdirSync(sampleDir, { recursive: true });
@@ -126,19 +111,24 @@ class VideoTimelineComposer {
 
         let shotResult;
         let isLipSync = false;
+        let motionProviderUsed = null;
+        let lipSyncProviderUsed = null;
 
         // Route: Lip-sync for speaking shots vs Motion for wide/reaction shots
         if (shot.isLipSyncRequired && shot.audioPath && fs.existsSync(shot.audioPath)) {
-          isLipSync = true;
           shotResult = await this.lipSyncRegistry.generateWithFallback({
             faceImagePath: visualImagePath,
             audioPath: shot.audioPath,
             durationMs: shot.durationMs,
             preferredProvider: preferredLipSyncProvider
           });
+          if (shotResult && shotResult.success) {
+            isLipSync = true;
+            lipSyncProviderUsed = shotResult.actualProvider;
+          }
         }
 
-        // Fallback to Camera Motion if lipsync was not requested or failed gracefully
+        // If LipSync was not requested or returned a graceful fallback/not configured
         if (!shotResult || !shotResult.success) {
           isLipSync = false;
           shotResult = await this.motionRegistry.generateWithFallback({
@@ -147,6 +137,7 @@ class VideoTimelineComposer {
             durationMs: shot.durationMs,
             preferredProvider: preferredMotionProvider
           });
+          motionProviderUsed = shotResult?.actualProvider || 'ken-burns-motion';
         }
 
         if (!shotResult || !shotResult.success || !shotResult.videoPath) {
@@ -159,13 +150,22 @@ class VideoTimelineComposer {
         shotAsset = this.assetStore.saveAsset({
           assetId,
           storyId,
+          sceneId: shot.sceneId,
           type: 'shot_video',
           targetId: shot.shotId,
+          shotId: shot.shotId,
           shotType: shot.shotType,
           cameraMotion: shot.cameraMotion,
+          characterIds: shot.activeSpeakerId ? [shot.activeSpeakerId] : [],
           activeSpeakerId: shot.activeSpeakerId,
           activeSpeakerName: shot.activeSpeakerName,
           dialogueId: shot.dialogueId,
+          dialogueIds: shot.dialogueId ? [shot.dialogueId] : [],
+          sourceImageAssetId: sourceImageAssetId || null,
+          audioAssetIds: shot.audioPath ? [shot.audioPath] : [],
+          motionProvider: motionProviderUsed,
+          lipSyncProvider: lipSyncProviderUsed,
+          outputVideoAssetId: assetId,
           durationMs: shot.durationMs,
           durationSec: shot.durationSec,
           width: 1080,
@@ -183,48 +183,85 @@ class VideoTimelineComposer {
 
       shot.videoUrl = shotAsset.videoUrl;
       shot.videoPath = shotAsset.filePath;
+      shot.traceableMetadata = {
+        storyId,
+        sceneId: shot.sceneId,
+        shotId: shot.shotId,
+        characterIds: shot.activeSpeakerId ? [shot.activeSpeakerId] : [],
+        dialogueIds: shot.dialogueId ? [shot.dialogueId] : [],
+        sourceImageAssetId: shotAsset.sourceImageAssetId,
+        audioAssetIds: shotAsset.audioAssetIds,
+        motionProvider: shotAsset.motionProvider,
+        lipSyncProvider: shotAsset.lipSyncProvider,
+        outputVideoAssetId: shotAsset.assetId
+      };
+
       renderedShotArtifacts.push(shotAsset);
     }
 
-    // 3. Generate Subtitles from Audio Timeline
+    // 4. Generate Subtitles from Audio Timeline
     const subtitles = SubtitleGenerator.generateSubtitles(storyPlan.audioTimeline || []);
 
-    // 4. Compose Final Master Video
+    // 5. Compose Final Master Video via FFmpeg Concat & Muxer
     const totalDurationMs = plannedShots.reduce((sum, s) => sum + s.durationMs, 0);
     const masterFileName = `story_final_${storyId}_${crypto.randomBytes(4).toString('hex')}.mp4`;
     const masterFilePath = path.join(VIDEO_ASSETS_DIR, masterFileName);
 
-    const hasFFmpeg = await this.checkFFmpeg();
-    if (hasFFmpeg) {
-      try {
-        // Create concat file list
-        const concatListPath = path.join(VIDEO_ASSETS_DIR, `concat_${storyId}.txt`);
-        const concatContent = renderedShotArtifacts.map(a => `file '${a.filePath.replace(/\\/g, '/')}'`).join('\n');
-        fs.writeFileSync(concatListPath, concatContent);
+    const concatListPath = path.join(VIDEO_ASSETS_DIR, `concat_${storyId}_${Date.now()}.txt`);
+    const concatContent = renderedShotArtifacts.map(a => `file '${path.basename(a.filePath)}'`).join('\n');
+    fs.writeFileSync(concatListPath, concatContent);
 
-        // FFmpeg Concat Command
-        let cmd = `ffmpeg -y -f concat -safe 0 -i "${concatListPath}" -c copy "${masterFilePath}"`;
-        if (storyPlan.masterAudio?.audioUrl) {
-          const masterAudioPath = path.join(process.cwd(), 'public', storyPlan.masterAudio.audioUrl);
-          if (fs.existsSync(masterAudioPath)) {
-            cmd = `ffmpeg -y -f concat -safe 0 -i "${concatListPath}" -i "${masterAudioPath}" -c:v libx264 -c:a aac -shortest -pix_fmt yuv420p "${masterFilePath}"`;
-          }
+    try {
+      const safeConcatPath = concatListPath.replace(/\\/g, '/');
+      const safeMasterPath = masterFilePath.replace(/\\/g, '/');
+
+      // Build aligned master audio track matching shot sequence
+      const audioConcatListPath = path.join(VIDEO_ASSETS_DIR, `audio_concat_${storyId}_${Date.now()}.txt`);
+      const audioConcatEntries = [];
+      const tempAudioFiles = [];
+
+      for (let sIdx = 0; sIdx < plannedShots.length; sIdx++) {
+        const s = plannedShots[sIdx];
+        const shotAudioFile = path.join(VIDEO_ASSETS_DIR, `shot_audio_${s.shotId}_${Date.now()}.aac`);
+        tempAudioFiles.push(shotAudioFile);
+        const safeShotAudioOut = shotAudioFile.replace(/\\/g, '/');
+        const shotDurationSec = (s.durationMs / 1000).toFixed(2);
+
+        if (s.audioPath && fs.existsSync(s.audioPath)) {
+          const safeAudioIn = s.audioPath.replace(/\\/g, '/');
+          await this.mediaCapability.execFfmpeg(`-y -t ${shotDurationSec} -i "${safeAudioIn}" -c:a aac -b:a 192k "${safeShotAudioOut}"`);
+        } else {
+          // Generate precise silence segment for shots without dialogue (e.g. establishing shot)
+          await this.mediaCapability.execFfmpeg(`-y -f lavfi -i anullsrc=r=24000:cl=mono -t ${shotDurationSec} -c:a aac -b:a 192k "${safeShotAudioOut}"`);
         }
 
-        await new Promise((resolve, reject) => {
-          exec(cmd, (err) => {
-            if (err) return reject(err);
-            resolve(true);
-          });
-        });
-
-        if (fs.existsSync(concatListPath)) fs.unlinkSync(concatListPath);
-      } catch (err) {
-        console.warn('FFmpeg Master Concat warning, falling back to native MP4 container:', err.message);
-        fs.writeFileSync(masterFilePath, this.createMp4MasterBuffer(totalDurationMs));
+        audioConcatEntries.push(`file '${path.basename(shotAudioFile)}'`);
       }
-    } else {
-      fs.writeFileSync(masterFilePath, this.createMp4MasterBuffer(totalDurationMs));
+
+      fs.writeFileSync(audioConcatListPath, audioConcatEntries.join('\n'));
+      const safeAudioConcatPath = audioConcatListPath.replace(/\\/g, '/');
+      const alignedAudioPath = path.join(VIDEO_ASSETS_DIR, `aligned_audio_${storyId}_${Date.now()}.aac`);
+      const safeAlignedAudioPath = alignedAudioPath.replace(/\\/g, '/');
+
+      try {
+        await this.mediaCapability.execFfmpeg(`-y -f concat -safe 0 -i "${safeAudioConcatPath}" -c:a copy "${safeAlignedAudioPath}"`);
+
+        // Mux video and aligned audio together
+        const cmdArgs = `-y -f concat -safe 0 -i "${safeConcatPath}" -i "${safeAlignedAudioPath}" -c:v copy -c:a aac -shortest -pix_fmt yuv420p "${safeMasterPath}"`;
+        await this.mediaCapability.execFfmpeg(cmdArgs);
+      } finally {
+        if (fs.existsSync(audioConcatListPath)) fs.unlinkSync(audioConcatListPath);
+        if (fs.existsSync(alignedAudioPath)) fs.unlinkSync(alignedAudioPath);
+        tempAudioFiles.forEach(f => {
+          if (fs.existsSync(f)) fs.unlinkSync(f);
+        });
+      }
+
+      if (!fs.existsSync(masterFilePath) || fs.statSync(masterFilePath).size < 1000) {
+        throw new Error('Master video file created by FFmpeg is missing or empty.');
+      }
+    } finally {
+      if (fs.existsSync(concatListPath)) fs.unlinkSync(concatListPath);
     }
 
     const masterAssetId = `video_master_${storyId}_${crypto.randomBytes(4).toString('hex')}`;
@@ -246,14 +283,14 @@ class VideoTimelineComposer {
       createdAt: new Date().toISOString()
     });
 
-    // 5. Run Real Video QA
+    // 6. Run Deep Real Video QA
     const qaResult = await RealVideoQA.evaluateVideoArtifact({
       videoPath: masterFilePath,
       audioDurationMs: totalDurationMs,
       shots: plannedShots
     });
 
-    // 6. Synchronize into StoryPlan
+    // 7. Synchronize into StoryPlan
     storyPlan.videoShots = plannedShots;
     storyPlan.masterVideo = {
       assetId: masterAssetId,

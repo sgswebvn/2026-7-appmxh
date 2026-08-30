@@ -2,6 +2,7 @@ const BaseMotionProvider = require('./baseMotionProvider');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { mediaCapability } = require('../mediaCapability');
 
 /**
  * Deterministic Mock Motion Provider (Strictly for Unit/Integration Testing)
@@ -13,35 +14,7 @@ class MockMotionProvider extends BaseMotionProvider {
     this.name = 'Deterministic Mock Motion Provider (Test Only)';
     this.shouldFail = config.shouldFail || false;
     this.failReason = config.failReason || 'SIMULATED_MOTION_ERROR';
-  }
-
-  createMp4ContainerBuffer(durationMs = 2000) {
-    const ftypBox = Buffer.from([
-      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70,
-      0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00,
-      0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32
-    ]);
-
-    const mdatHeader = Buffer.from([
-      0x00, 0x00, 0x10, 0x00, 0x6D, 0x64, 0x61, 0x74
-    ]);
-    const mdatPayload = Buffer.alloc(4088);
-    for (let i = 0; i < mdatPayload.length; i++) {
-      mdatPayload[i] = (i * 29 + 11) % 256;
-    }
-
-    const mvhdBox = Buffer.alloc(32);
-    mvhdBox.writeUInt32BE(32, 0);
-    mvhdBox.write('mvhd', 4, 4, 'ascii');
-    mvhdBox.writeUInt32BE(1000, 20);
-    mvhdBox.writeUInt32BE(durationMs, 24);
-
-    const moovBox = Buffer.alloc(40);
-    moovBox.writeUInt32BE(40, 0);
-    moovBox.write('moov', 4, 4, 'ascii');
-    mvhdBox.copy(moovBox, 8);
-
-    return Buffer.concat([ftypBox, mdatHeader, mdatPayload, moovBox]);
+    this.mediaCapability = config.mediaCapability || mediaCapability;
   }
 
   async generateMotion(options = {}) {
@@ -55,13 +28,32 @@ class MockMotionProvider extends BaseMotionProvider {
     }
 
     const durationMs = options.durationMs || 3000;
-    const videoBuffer = this.createMp4ContainerBuffer(durationMs);
-
+    const durationSec = (durationMs / 1000).toFixed(2);
     const outFileName = `motion_mock_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`;
     const outDir = path.join(process.cwd(), 'public', 'uploads', 'video-assets');
     fs.mkdirSync(outDir, { recursive: true });
     const outFilePath = path.join(outDir, outFileName);
-    fs.writeFileSync(outFilePath, videoBuffer);
+
+    const caps = await this.mediaCapability.checkMediaCapabilities();
+    if (caps.ffmpegAvailable) {
+      const safeOut = outFilePath.replace(/\\/g, '/');
+      const safeImage = (options.imagePath && fs.existsSync(options.imagePath))
+        ? options.imagePath.replace(/\\/g, '/')
+        : null;
+
+      if (safeImage) {
+        await this.mediaCapability.execFfmpeg(`-y -loop 1 -i "${safeImage}" -vf "scale=1080:1920,format=yuv420p" -c:v libx264 -t ${durationSec} -r 30 -pix_fmt yuv420p "${safeOut}"`);
+      } else {
+        await this.mediaCapability.execFfmpeg(`-y -f lavfi -i color=c=navy:s=1080x1920:d=${durationSec}:r=30 -vf "format=yuv420p" -c:v libx264 -pix_fmt yuv420p "${safeOut}"`);
+      }
+    } else {
+      // Fallback mock buffer for CI environments without ffmpeg
+      const buf = Buffer.alloc(1024);
+      buf.write('ftypisom', 4, 'ascii');
+      fs.writeFileSync(outFilePath, buf);
+    }
+
+    const videoBuffer = fs.readFileSync(outFilePath);
 
     return {
       success: true,
@@ -69,6 +61,10 @@ class MockMotionProvider extends BaseMotionProvider {
       videoPath: outFilePath,
       videoUrl: `/uploads/video-assets/${outFileName}`,
       durationMs,
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      codec: 'h264',
       provider: this.id,
       isMock: true
     };

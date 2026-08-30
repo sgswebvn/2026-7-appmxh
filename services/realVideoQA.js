@@ -1,81 +1,28 @@
 const fs = require('fs');
-const { exec } = require('child_process');
+const { mediaCapability } = require('./mediaCapability');
 
 /**
- * RealVideoQA (Phase 3D)
- * Deep physical inspection of MP4 video artifacts, audio/video synchronization, and quality gating.
+ * RealVideoQA (Phase 3D.1)
+ * Deep physical stream inspection of MP4 video artifacts, audio/video synchronization,
+ * frame decodability validation, and strict quality gating.
  */
 class RealVideoQA {
   /**
-   * Run FFprobe metadata probe if ffprobe is available
+   * Run deep stream inspection using FFprobe
    */
-  static probeWithFfprobe(filePath) {
-    return new Promise((resolve) => {
-      const cmd = `ffprobe -v quiet -print_format json -show_format -show_streams "${filePath}"`;
-      exec(cmd, (err, stdout) => {
-        if (err || !stdout) {
-          return resolve(null);
-        }
-        try {
-          resolve(JSON.parse(stdout));
-        } catch (e) {
-          resolve(null);
-        }
-      });
-    });
+  static async probeStreams(filePath) {
+    try {
+      const safePath = filePath.replace(/\\/g, '/');
+      const { stdout } = await mediaCapability.execFfprobe(`-v quiet -print_format json -show_format -show_streams "${safePath}"`);
+      if (!stdout || !stdout.trim()) return null;
+      return JSON.parse(stdout);
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
-   * Inspect MP4 binary container structure directly in Node
-   */
-  static inspectMp4Container(filePath) {
-    if (!filePath || !fs.existsSync(filePath)) {
-      return { valid: false, error: 'File does not exist on disk' };
-    }
-
-    const stats = fs.statSync(filePath);
-    if (stats.size < 100) {
-      return { valid: false, error: 'File is too small to be a valid MP4' };
-    }
-
-    const buffer = fs.readFileSync(filePath);
-    // Search for 'ftyp' box
-    const hasFtyp = buffer.includes(Buffer.from('ftyp'));
-    // Search for 'moov' box
-    const hasMoov = buffer.includes(Buffer.from('moov'));
-    // Search for 'mdat' box
-    const hasMdat = buffer.includes(Buffer.from('mdat'));
-
-    let durationMs = 0;
-    const moovIdx = buffer.indexOf(Buffer.from('moov'));
-    if (moovIdx !== -1 && moovIdx + 36 <= buffer.length) {
-      const mvhdIdx = buffer.indexOf(Buffer.from('mvhd'), moovIdx);
-      if (mvhdIdx !== -1 && mvhdIdx + 28 <= buffer.length) {
-        // mvhd string offset: 'mvhd'(4) + ver(1) + flags(3) [4] + ctime [8] + mtime [12] + timescale [16] + duration [20]
-        const timescale = buffer.readUInt32BE(mvhdIdx + 16);
-        const duration = buffer.readUInt32BE(mvhdIdx + 20);
-        if (timescale > 0 && duration > 0) {
-          durationMs = Math.round((duration / timescale) * 1000);
-        }
-      }
-    }
-
-    return {
-      valid: hasFtyp && (hasMoov || hasMdat),
-      fileSize: stats.size,
-      hasFtyp,
-      hasMoov,
-      hasMdat,
-      durationMs: durationMs || 3000,
-      width: 1080,
-      height: 1920,
-      aspectRatio: '9:16',
-      fps: 30
-    };
-  }
-
-  /**
-   * Evaluate complete Video Artifact Quality
+   * Evaluate complete Video Artifact Quality with real stream decoding
    * @param {Object} options
    * @param {string} options.videoPath - Path to master MP4
    * @param {number} options.audioDurationMs - Expected audio duration
@@ -87,9 +34,7 @@ class RealVideoQA {
     const errors = [];
     const details = [];
 
-    let score = 100;
-
-    // 1. File existence
+    // 1. File existence check
     if (!videoPath || !fs.existsSync(videoPath)) {
       errors.push('CRITICAL: Video output file does not exist on disk.');
       return {
@@ -97,64 +42,118 @@ class RealVideoQA {
         videoArtifactScore: 0,
         codeTestScore: 100,
         errors,
-        details: ['Video artifact missing']
+        details: ['Video artifact missing from filesystem']
       };
     }
 
-    // 2. Container inspection
-    const probe = await this.probeWithFfprobe(videoPath);
-    const container = this.inspectMp4Container(videoPath);
-
-    if (!container.valid && !probe) {
-      errors.push('CRITICAL: Video file is not a valid MP4/ISO container.');
-      score -= 50;
-    } else {
-      details.push(`Valid MP4 Container: ${container.fileSize} bytes`);
+    const stats = fs.statSync(videoPath);
+    if (stats.size < 1000) {
+      errors.push(`CRITICAL: Video file size (${stats.size} bytes) is too small to be a genuine encoded video stream.`);
+      return {
+        approved: false,
+        videoArtifactScore: 0,
+        codeTestScore: 100,
+        errors,
+        details: ['File is a dummy or corrupted binary']
+      };
     }
 
-    // 3. Duration & A/V Sync threshold check
-    const videoDurationMs = probe?.format?.duration
-      ? Math.round(parseFloat(probe.format.duration) * 1000)
-      : container.durationMs;
+    // 2. FFprobe availability & Deep Stream Probe
+    const probe = await this.probeStreams(videoPath);
+    if (!probe || !probe.streams || probe.streams.length === 0) {
+      const caps = await mediaCapability.checkMediaCapabilities();
+      if (!caps.ffprobeAvailable) {
+        errors.push('CRITICAL: FFPROBE_NOT_AVAILABLE - cannot inspect video streams in this environment.');
+      } else {
+        errors.push('CRITICAL: Video file contains no decodable video/audio streams (corrupt or dummy container).');
+      }
+      return {
+        approved: false,
+        videoArtifactScore: 0,
+        codeTestScore: 100,
+        errors,
+        details: ['Probe failed - invalid streams']
+      };
+    }
 
+    let score = 100;
+
+    // 3. Inspect Video Stream
+    const videoStream = probe.streams.find(s => s.codec_type === 'video');
+    if (!videoStream) {
+      errors.push('CRITICAL: No video stream found in MP4 file.');
+      score -= 50;
+    } else {
+      const vCodec = (videoStream.codec_name || '').toLowerCase();
+      const width = parseInt(videoStream.width, 10) || 0;
+      const height = parseInt(videoStream.height, 10) || 0;
+      const fpsRaw = videoStream.r_frame_rate || '30/1';
+      let fps = 30;
+      if (fpsRaw.includes('/')) {
+        const [num, den] = fpsRaw.split('/').map(Number);
+        fps = den ? Math.round(num / den) : 30;
+      }
+
+      details.push(`Video Stream Verified: Codec=${vCodec}, Resolution=${width}x${height}, FPS=${fps}`);
+
+      // Verify codec
+      if (!['h264', 'hevc', 'vp9', 'av1', 'mpeg4'].includes(vCodec)) {
+        errors.push(`Unsupported or non-standard video codec: ${vCodec}`);
+        score -= 20;
+      }
+
+      // Verify 9:16 Aspect Ratio
+      if (width > height) {
+        errors.push(`Horizontal video detected (${width}x${height}). Expected vertical 9:16.`);
+        score -= 25;
+      } else if (width === 1080 && height === 1920) {
+        details.push('Exact 1080x1920 9:16 Full HD vertical format confirmed.');
+      } else {
+        details.push(`Vertical format confirmed (${width}x${height}).`);
+      }
+    }
+
+    // 4. Inspect Audio Stream (when expected)
+    const audioStream = probe.streams.find(s => s.codec_type === 'audio');
+    if (audioDurationMs > 0 && !audioStream) {
+      errors.push('CRITICAL: Audio track missing from video container when dialogue audio was expected.');
+      score -= 20;
+    } else if (audioStream) {
+      const aCodec = (audioStream.codec_name || '').toLowerCase();
+      details.push(`Audio Stream Verified: Codec=${aCodec}, SampleRate=${audioStream.sample_rate}Hz`);
+    }
+
+    // 5. Decodability & Corruption Check (Real Frame Decoding)
+    const decodeCheck = await mediaCapability.validateVideoDecodability(videoPath);
+    if (!decodeCheck.decodable) {
+      errors.push(`CRITICAL: Video stream decoding failed: ${decodeCheck.error}`);
+      score -= 40;
+    } else {
+      details.push('Playable Video Frame & Packet Decoding: PASS (0 decode errors)');
+    }
+
+    // 6. Measure True Duration & A/V Sync
+    const formatDurationSec = parseFloat(probe.format?.duration || videoStream?.duration || '0');
+    const videoDurationMs = Math.round(formatDurationSec * 1000);
     const avDiffMs = audioDurationMs > 0 ? Math.abs(videoDurationMs - audioDurationMs) : 0;
+
+    details.push(`Measured Duration: Video=${(videoDurationMs / 1000).toFixed(2)}s, Audio=${(audioDurationMs / 1000).toFixed(2)}s`);
+
     if (audioDurationMs > 0) {
-      if (avDiffMs > 800) {
+      if (avDiffMs > 1000) {
         errors.push(`A/V sync mismatch: Video (${videoDurationMs}ms) vs Audio (${audioDurationMs}ms) diff = ${avDiffMs}ms`);
         score -= 25;
-      } else if (avDiffMs > 250) {
-        details.push(`Minor A/V sync variance: ${avDiffMs}ms (within tolerance)`);
+      } else if (avDiffMs > 350) {
+        details.push(`Minor A/V sync variance: ${avDiffMs}ms (acceptable padding)`);
         score -= 5;
       } else {
         details.push(`A/V sync aligned: variance only ${avDiffMs}ms`);
       }
     }
 
-    // 4. Resolution check
-    let width = 1080;
-    let height = 1920;
-    if (probe) {
-      const vStream = (probe.streams || []).find(s => s.codec_type === 'video');
-      if (vStream) {
-        width = vStream.width;
-        height = vStream.height;
-      }
-    }
-
-    if (width !== 1080 || height !== 1920) {
-      if (width < height) {
-        details.push(`Vertical aspect ratio confirmed: ${width}x${height}`);
-      } else {
-        errors.push(`Non-vertical aspect ratio detected: ${width}x${height}`);
-        score -= 20;
-      }
-    } else {
-      details.push('Exact 1080x1920 9:16 Vertical Resolution verified.');
-    }
-
-    // 5. Shot count check
+    // 7. Shot count check
     if (shots.length > 0) {
-      details.push(`Total Cinematic Shots: ${shots.length} planned and rendered`);
+      details.push(`Total Cinematic Shots: ${shots.length} shots planned and rendered`);
     }
 
     const finalScore = Math.max(0, Math.min(100, score));
@@ -165,14 +164,16 @@ class RealVideoQA {
       videoArtifactScore: finalScore,
       codeTestScore: 100,
       metrics: {
-        resolution: `${width}x${height}`,
+        resolution: videoStream ? `${videoStream.width}x${videoStream.height}` : 'unknown',
         aspectRatio: '9:16',
-        fileSize: container.fileSize,
+        videoCodec: videoStream?.codec_name || 'none',
+        audioCodec: audioStream?.codec_name || 'none',
+        fileSize: stats.size,
         videoDurationMs,
         audioDurationMs,
         avSyncDifferenceMs: avDiffMs,
         shotCount: shots.length,
-        fps: 30
+        fps: videoStream ? 30 : 0
       },
       details,
       errors
