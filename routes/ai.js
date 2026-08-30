@@ -197,4 +197,24 @@ router.post('/story-direct', authenticateToken, async (req, res) => {
   }
 });
 
+// 12. Autonomous Video Training & Self-Improvement Loop
+router.post('/autonomous-train', authenticateToken, async (req, res) => {
+  try {
+    const { topic, maxAttempts, qualityThreshold } = req.body;
+    const autonomousTrainingEngine = require('../services/autonomousVideoTrainingEngine');
+    const trainResult = await autonomousTrainingEngine.functionRunAutonomousLoop(
+      topic || 'Chủ đề video',
+      parseInt(maxAttempts) || 6,
+      parseInt(qualityThreshold) || 85
+    );
+
+    res.json({
+      success: true,
+      data: trainResult
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi chạy Autonomous Training: ' + err.message });
+  }
+});
+
 module.exports = router;

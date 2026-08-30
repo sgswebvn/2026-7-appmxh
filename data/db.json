@@ -58,6 +58,16 @@
       "geminiApiKey": "",
       "role": "user",
       "createdAt": "2026-08-15T12:43:10.027Z"
+    },
+    {
+      "_id": "c69fa289-e024-4d9d-a0f4-111345247761",
+      "id": "629b9296-b4bb-4ad4-8165-5b82f648b577",
+      "email": "admin@admin.com",
+      "password": "$2b$10$TlW1qhVuEXdSpWVO5fXPiupDWdZRGeaIpTTONyL8UwD.kNn3bM9uG",
+      "name": "Administrator",
+      "geminiApiKey": "",
+      "role": "admin",
+      "createdAt": "2026-08-30T02:36:56.375Z"
     }
   ],
   "geminiDrafts": [

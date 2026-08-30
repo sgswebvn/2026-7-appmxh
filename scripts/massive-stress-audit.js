@@ -190,6 +190,17 @@ async function runMassiveStressAudit() {
     logResult('STORY_DIRECTOR', 'Tạo Cast Đa Nhân Vật & Hội Thoại Tương Tác Qua Lại', 'FAIL', 'Thiếu diễn viên hoặc kịch bản đối thoại');
   }
 
+  // --- 2.8. AUTONOMOUS VIDEO TRAINING & ITERATIVE REFINEMENT TEST ---
+  console.log('\n--- 2.8. KIỂM THỬ AUTONOMOUS TRAINING & ITERATIVE REFINEMENT ENGINE ---');
+  const autonomousEngine = require('../services/autonomousVideoTrainingEngine');
+  const trainRun = await autonomousEngine.functionRunAutonomousLoop('Bí quyết nấu mì ramen cay tại nhà', 4, 85);
+
+  if (trainRun.totalAttempts >= 1 && trainRun.bestScore >= 85 && trainRun.isApproved) {
+    logResult('AUTONOMOUS_TRAIN', 'Chu trình Tự Động Lặp Generate -> Test -> Fix -> Approve', 'PASS', `Hoàn thành sau ${trainRun.totalAttempts} vòng lặp | Best Score: ${trainRun.bestScore}/100 (APPROVED)`);
+  } else {
+    logResult('AUTONOMOUS_TRAIN', 'Chu trình Tự Động Lặp Generate -> Test -> Fix -> Approve', 'FAIL', 'Không đạt ngưỡng phê duyệt');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {

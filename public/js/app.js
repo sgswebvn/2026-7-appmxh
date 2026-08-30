@@ -1334,6 +1334,70 @@ function initGeminiStudio() {
   });
 }
 
+// ==================== AUTO TRAIN & TEST SELF-IMPROVEMENT LOOP ====================
+async function triggerAutonomousTrainingLoop() {
+  const topic = document.getElementById('ai-topic')?.value?.trim();
+  if (!topic) {
+    showToast('Vui lòng nhập chủ đề video trước khi bắt đầu Auto Train!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-autonomous-train');
+  const progressBox = document.getElementById('master-pipeline-progress-box');
+  const stepText = document.getElementById('master-pipeline-step-text');
+  const percentText = document.getElementById('master-pipeline-percent-text');
+  const progressBar = document.getElementById('master-pipeline-progress-bar');
+
+  if (btn) btn.disabled = true;
+  if (progressBox) progressBox.style.display = 'block';
+  if (stepText) stepText.textContent = '🤖 [AUTONOMOUS ENGINE] Đang khởi động chu trình Generate -> Test -> Fix -> Approve...';
+  if (percentText) percentText.textContent = '10%';
+  if (progressBar) progressBar.style.width = '10%';
+
+  try {
+    showToast('🚀 Đang chạy chu trình Tự Động Huấn Luyện & Kiểm Thử Video (Max: 6 attempts)...', 'info');
+
+    const res = await fetch('/api/ai/autonomous-train', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        topic,
+        maxAttempts: 6,
+        qualityThreshold: 85
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const train = data.data;
+      if (percentText) percentText.textContent = '100%';
+      if (progressBar) progressBar.style.width = '100%';
+      if (stepText) {
+        stepText.textContent = train.isApproved
+          ? `🎉 [APPROVED] Đạt điểm chuẩn ${train.bestScore}/100 sau ${train.totalAttempts} vòng lặp!`
+          : `⚠️ Hoàn tất ${train.totalAttempts} vòng lặp (Điểm cao nhất: ${train.bestScore}/100)`;
+      }
+
+      // Render phiên bản tốt nhất (Best Version)
+      if (train.bestVersion) {
+        renderStoryDirectorUI(train.bestVersion.storyPlan);
+        if (train.bestVersion.scenes) {
+          currentAiStoryboardScenes = train.bestVersion.scenes;
+          renderStoryboardScenesGrid(train.bestVersion.scenes);
+        }
+      }
+
+      showToast(`🏆 HUẤN LUYỆN THÀNH CÔNG: Điểm chất lượng ${train.bestScore}/100 (${train.totalAttempts} vòng lặp)!`, 'success');
+    } else {
+      showToast(data.message || 'Lỗi huấn luyện tự hành', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi chu trình tự hành: ' + err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 // ==================== MASTER AUTO PIPELINE 1-CLICK (ZERO-MANUAL ENGINE) ====================
 async function triggerMasterAutoPipeline() {
   const topicInput = document.getElementById('ai-topic');
