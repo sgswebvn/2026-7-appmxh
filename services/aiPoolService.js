@@ -219,31 +219,36 @@ class AIPoolEngine {
     const channelNames = channels.map(c => c.title || c).join(', ');
 
     const prompt = `
-Bạn là Giám đốc Sáng tạo Nội dung Đa Kênh (Chief Content Officer) cho thương hiệu "${brandName || 'Thương hiệu đa kênh'}".
-Hãy phân tích chủ đề sau và tạo ra gói kịch bản video hoàn chỉnh, tối ưu thuật toán viral và SEO:
+Bạn là Giám đốc Sáng tạo & Sản xuất Video Triệu View (Chief Content Officer) cho thương hiệu "${brandName || 'Thương hiệu đa kênh'}".
+Hãy phân tích chủ đề sau và tạo ra gói kịch bản video CÓ CHIỀU SÂU THƯƠNG MẠI, chứa số liệu thực tế, địa danh/công cụ cụ thể, giữ chân người xem từ giây đầu đến giây cuối:
 
 CHỦ ĐỀ: "${topic}"
 ĐỐI TƯỢNG XEM: "${targetAudience}"
 GIỌNG VĂN / TONE: "${tone}"
 DANH SÁCH KÊNH PHÂN PHỐI: "${channelNames || 'Hệ thống đa kênh'}"
 
-YÊU CẦU: Trả về ĐÚNG CẤU TRÚC JSON sau (JSON thuần túy, không kèm bất kỳ ký tự nào ngoài JSON):
+YÊU CẦU NỘI DUNG CHIỀU SÂU & GIÁ TRỊ THƯƠNG MẠI:
+1. HOOK (0-3s): Phải trực diện, tạo khoảng trống thông tin bắt buộc phải xem tiếp, nêu rõ số liệu hoặc nghịch lý gây sốc.
+2. NỘI DUNG CHÍNH (Body Sections): Tuyệt đối KHÔNG viết chung chung. Phải nêu đích danh tên địa danh/tên công cụ/mức chi phí/số liệu cụ thể và mẹo thực chiến áp dụng được ngay.
+3. KÊU GỌI HÀNH ĐỘNG (CTA): Đưa ra lý do hấp dẫn có giá trị thực để người xem like, bình luận và follow kênh.
+
+YÊU CẦU KỸ THUẬT: Trả về ĐÚNG CẤU TRÚC JSON sau (JSON thuần túy, không kèm bất kỳ ký tự nào ngoài JSON):
 {
   "viralTitles": [
-    { "title": "Tiêu đề giật tít 1", "hookType": "Gây tò mò", "clickScore": 96 },
-    { "title": "Tiêu đề giật tít 2", "hookType": "Cảnh báo / Bí mật", "clickScore": 94 },
-    { "title": "Tiêu đề giật tít 3", "hookType": "Hướng dẫn siêu tốc", "clickScore": 92 },
-    { "title": "Tiêu đề giật tít 4", "hookType": "Trải nghiệm thực tế", "clickScore": 90 },
-    { "title": "Tiêu đề giật tít 5", "hookType": "Đặt câu hỏi tranh luận", "clickScore": 88 }
+    { "title": "Tiêu đề giật tít 1 kèm số liệu", "hookType": "Gây tò mò & Số liệu", "clickScore": 98 },
+    { "title": "Tiêu đề giật tít 2 bí mật", "hookType": "Cảnh báo / Bí mật", "clickScore": 95 },
+    { "title": "Tiêu đề giật tít 3 trải nghiệm thực tế", "hookType": "Hướng dẫn siêu tốc", "clickScore": 93 },
+    { "title": "Tiêu đề giật tít 4 giải pháp đột phá", "hookType": "Trải nghiệm thực tế", "clickScore": 91 },
+    { "title": "Tiêu đề giật tít 5 câu hỏi tranh luận", "hookType": "Đặt câu hỏi tranh luận", "clickScore": 89 }
   ],
   "script": {
-    "hook": "Câu mở đầu 3-5 giây đầu giữ chân khán giả ngay lập tức...",
+    "hook": "Câu mở đầu 0-3 giây gây bất ngờ kèm số liệu thực tế...",
     "bodySections": [
-      { "time": "00:05 - 00:20", "heading": "Phần 1: Vấn đề", "content": "Nội dung chi tiết..." },
-      { "time": "00:20 - 00:45", "heading": "Phần 2: Giải pháp & Bí quyết", "content": "Nội dung chi tiết..." },
-      { "time": "00:45 - 00:55", "heading": "Phần 3: Lưu ý quan trọng", "content": "Nội dung chi tiết..." }
+      { "time": "00:03 - 00:15", "heading": "Phần 1: Điểm nhấn 1 & Dữ liệu thực tế", "content": "Nội dung phân tích sâu sắc kèm tên địa danh hoặc mẹo cụ thể..." },
+      { "time": "00:15 - 00:30", "heading": "Phần 2: Bí quyết thực chiến & Trải nghiệm độc bản", "content": "Nội dung hướng dẫn chi tiết từng bước..." },
+      { "time": "00:30 - 00:45", "heading": "Phần 3: Sai lầm cần tránh & Tối ưu chi phí", "content": "Lưu ý quan trọng giúp tiết kiệm thời gian/tiền bạc..." }
     ],
-    "callToAction": "Lời kêu gọi hành động (CTA) thu hút like, comment và subscribe..."
+    "callToAction": "Lời kêu gọi hành động (CTA) gắn liền với giá trị phần tiếp theo..."
   },
   "seoDescription": "Bản mô tả chuẩn SEO có phần mở đầu hấp dẫn, timestamps mốc thời gian, liên kết và 5-7 hashtag...",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11", "tag12"],

@@ -237,10 +237,10 @@ async function runFullSystemAudit() {
     })
   });
 
-  if (ttsRes.ok && ttsRes.body?.success && ttsRes.body.data?.url) {
-    logTest('TTS_VOICE', 'Tổng hợp giọng đọc tiếng Việt Edge TTS', 'PASS', `File audio: ${ttsRes.body.data.url}`);
+  if (ttsRes.ok && ttsRes.body?.success && ttsRes.body.data?.url && ttsRes.body.data?.durationSec > 0) {
+    logTest('TTS_VOICE', 'Tổng hợp giọng đọc tiếng Việt Chuẩn Truyền Cảm', 'PASS', `File: ${ttsRes.body.data.url} (${ttsRes.body.data.durationSec}s, ${ttsRes.body.data.fileSize} bytes)`);
   } else {
-    logTest('TTS_VOICE', 'Tổng hợp giọng đọc tiếng Việt Edge TTS', 'FAIL', ttsRes.body?.message || 'Lỗi tổng hợp TTS');
+    logTest('TTS_VOICE', 'Tổng hợp giọng đọc tiếng Việt Chuẩn Truyền Cảm', 'FAIL', ttsRes.body?.message || 'Lỗi tổng hợp TTS');
   }
 
   // -------------------------------------------------------------

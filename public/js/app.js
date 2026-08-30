@@ -1633,12 +1633,12 @@ function detectNicheFromText(text = '') {
 async function generateVoiceFromScript() {
   const scriptText = getFullScriptText();
   if (!scriptText || scriptText.length < 5) {
-    showToast('Vui lòng tạo kịch bản AI trước khi tạo giọng đọc!', 'warning');
+    showToast('Vui lòng sinh kịch bản AI trước khi tạo file âm thanh!', 'warning');
     return;
   }
 
   const voiceSelect = document.getElementById('tts-voice-select');
-  const voice = voiceSelect ? voiceSelect.value : (currentPersonaId === 'minhanh-finance' ? 'vi-female' : 'vi-male');
+  const voice = voiceSelect ? voiceSelect.value : (currentPersonaId === 'minhanh-finance' || currentPersonaId === 'travel-eco' ? 'vi-female' : 'vi-male');
   const btn = document.getElementById('btn-generate-voice');
   const playerContainer = document.getElementById('tts-player-container');
   const audioPlayer = document.getElementById('tts-audio-player');
@@ -1649,7 +1649,7 @@ async function generateVoiceFromScript() {
   }
 
   try {
-    // Tầng 1: Gọi Edge Neural TTS server
+    // Tầng 1: Gọi Edge Neural TTS server (với Safe Chunker)
     const res = await fetch('/api/voice/generate', {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -1662,22 +1662,24 @@ async function generateVoiceFromScript() {
     });
 
     const data = await res.json();
-    if (data.success && data.audioUrl) {
-      currentGeneratedAudioUrl = data.audioUrl;
+    const finalAudioUrl = data.audioUrl || data.url || (data.data && data.data.url);
+
+    if (data.success && finalAudioUrl) {
+      currentGeneratedAudioUrl = finalAudioUrl;
       if (audioPlayer) {
-        audioPlayer.src = data.audioUrl;
+        audioPlayer.src = finalAudioUrl;
         audioPlayer.load();
         audioPlayer.play().catch(() => {});
       }
       if (playerContainer) playerContainer.style.display = 'block';
-      showToast('Đã tạo giọng đọc AI tiếng Việt thành công! Đang phát thử...', 'success');
+      showToast('🎉 Đã tạo giọng đọc AI tiếng Việt thành công! Đang phát thử...', 'success');
       return;
     }
   } catch (err) {
     console.warn('Lỗi gọi API TTS, chuyển sang Native Web Speech Synthesizer fallback:', err.message);
   }
 
-  // Tầng 2: Native Web Speech Neural Engine (0ms độ trễ, 100% không bao giờ lỗi)
+  // Tầng 2: Native Web Speech Neural Engine
   try {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(scriptText);
@@ -1685,7 +1687,6 @@ async function generateVoiceFromScript() {
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
 
-      // Tìm giọng tiếng Việt tối ưu trong trình duyệt
       const voices = window.speechSynthesis.getVoices();
       const viVoice = voices.find(v => v.lang.includes('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('an'));
       if (viVoice) utterance.voice = viVoice;
@@ -1706,7 +1707,7 @@ async function generateVoiceFromScript() {
   }
 }
 
-// ==================== CINEMATIC KEN BURNS 60FPS VIDEO COMPOSITOR ====================
+// ==================== CINEMATIC KEN BURNS 60FPS & MULTI-TRACK AUDIO COMPOSITOR ====================
 function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectRatio = '9:16') {
   return new Promise(async (resolve) => {
     const isVertical = aspectRatio === '9:16';
@@ -1715,7 +1716,7 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
     canvas.height = isVertical ? 1280 : 720;
     const ctx = canvas.getContext('2d');
 
-    // Nạp danh sách các hình ảnh phân cảnh đã tạo
+    // 1. Nạp danh sách các hình ảnh phân cảnh đã tạo
     let scenes = currentAiStoryboardScenes;
     if (!scenes || scenes.length === 0) {
       const fallback = brandPersonaService?.generateScenesFromScript({ hook: scriptText }, currentPersonaId, aspectRatio);
@@ -1743,8 +1744,55 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
     });
     const loadedAvatar = await avatarLoadedPromise;
 
-    const audio = new Audio(audioUrl);
+    // 2. KHỞI TẠO WEB AUDIO API MULTI-TRACK MIXER (VOICEOVER + BGM + SFX)
+    let audioCtx;
+    let audioDest;
+    let voiceGainNode;
+    let bgmGainNode;
+    let sfxGainNode;
+
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioDest = audioCtx.createMediaStreamDestination();
+
+      voiceGainNode = audioCtx.createGain();
+      voiceGainNode.gain.value = 1.0;
+      voiceGainNode.connect(audioDest);
+      voiceGainNode.connect(audioCtx.destination);
+
+      bgmGainNode = audioCtx.createGain();
+      bgmGainNode.gain.value = 0.22; // Nhạc nền vừa vặn không lấn át tiếng nói
+      bgmGainNode.connect(audioDest);
+      bgmGainNode.connect(audioCtx.destination);
+
+      sfxGainNode = audioCtx.createGain();
+      sfxGainNode.gain.value = 0.4;
+      sfxGainNode.connect(audioDest);
+      sfxGainNode.connect(audioCtx.destination);
+
+      // Kích hoạt Ambient BGM Synth (Hợp âm điện ảnh thư thái 432Hz/528Hz)
+      startCinematicBgmSynth(audioCtx, bgmGainNode);
+    } catch (e) {
+      console.warn('Web Audio Context khởi tạo hạn chế:', e.message);
+    }
+
+    const audio = new Audio();
     audio.crossOrigin = 'anonymous';
+    if (audioUrl) {
+      audio.src = audioUrl;
+    }
+
+    // Kết nối Voiceover Audio vào AudioContext nếu có Audio URL
+    let voiceSourceConnected = false;
+    audio.oncanplay = () => {
+      if (audioCtx && !voiceSourceConnected) {
+        try {
+          const src = audioCtx.createMediaElementSource(audio);
+          src.connect(voiceGainNode);
+          voiceSourceConnected = true;
+        } catch (err) {}
+      }
+    };
 
     audio.onloadedmetadata = () => {
       startRecording();
@@ -1754,19 +1802,88 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
     };
     setTimeout(() => {
       if (!audio.duration) startRecording(14);
-    }, 1500);
+    }, 1200);
+
+    // Hàm tạo âm thanh SFX Whoosh chuyển cảnh
+    function triggerSceneWhooshSfx() {
+      if (!audioCtx || !sfxGainNode) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const sweepGain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.35);
+
+        sweepGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+        sweepGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+        osc.connect(sweepGain);
+        sweepGain.connect(sfxGainNode);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch (e) {}
+    }
+
+    // Bộ Synth Nhạc Nền Điện Ảnh Tự Động (Cinematic Ambient BGM)
+    function startCinematicBgmSynth(ctx, outGain) {
+      const chords = [
+        [261.63, 329.63, 392.00, 523.25], // C Major
+        [220.00, 261.63, 329.63, 440.00], // A Minor
+        [174.61, 220.00, 261.63, 349.23], // F Major
+        [196.00, 246.94, 293.66, 392.00]  // G Major
+      ];
+
+      let chordIdx = 0;
+      const playNextChord = () => {
+        if (ctx.state === 'closed') return;
+        const currentChord = chords[chordIdx % chords.length];
+        chordIdx++;
+
+        currentChord.forEach(freq => {
+          try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = freq;
+
+            gain.gain.setValueAtTime(0.001, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 1.2);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.8);
+
+            osc.connect(gain);
+            gain.connect(outGain);
+            osc.start();
+            osc.stop(ctx.currentTime + 4.0);
+          } catch(e) {}
+        });
+
+        setTimeout(playNextChord, 3500);
+      };
+
+      playNextChord();
+    }
 
     function startRecording(fallbackDuration) {
-      const duration = (audio.duration && !isNaN(audio.duration)) ? audio.duration : (fallbackDuration || 14);
+      const duration = (audio.duration && !isNaN(audio.duration) && audio.duration > 1) ? audio.duration : (fallbackDuration || 14);
       const sentences = scriptText.split(/[.\n?!]/).map(s => s.trim()).filter(Boolean);
       const secPerSentence = duration / Math.max(1, sentences.length);
       const secPerScene = duration / Math.max(1, loadedImages.length);
 
+      // Gộp Luồng Video Canvas + Luồng Âm Thanh Multi-Track (Voice + BGM + SFX)
       const stream = canvas.captureStream(30);
+      if (audioDest && audioDest.stream) {
+        const audioTracks = audioDest.stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          stream.addTrack(audioTracks[0]);
+        }
+      }
+
       let mediaRecorder;
       try {
-        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-        mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+          ? 'video/webm;codecs=vp9,opus'
+          : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4');
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 128000 });
       } catch(e) {
         mediaRecorder = new MediaRecorder(stream);
       }
@@ -1780,9 +1897,12 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
       };
 
       mediaRecorder.start();
-      audio.play().catch(() => {});
+      if (audioUrl) {
+        audio.play().catch(() => {});
+      }
 
       let startTime = Date.now();
+      let lastSceneIdx = -1;
 
       function renderFrame() {
         const elapsed = (Date.now() - startTime) / 1000;
@@ -1797,9 +1917,15 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
         const currentScene = loadedImages[currentSceneIdx];
         const sceneElapsed = elapsed - (currentSceneIdx * secPerScene);
 
+        // Kích hoạt SFX Whoosh khi chuyển cảnh
+        if (currentSceneIdx !== lastSceneIdx) {
+          triggerSceneWhooshSfx();
+          lastSceneIdx = currentSceneIdx;
+        }
+
         // 2. Hiệu ứng Ken Burns (Slow Pan & Zoom 1.0 ➔ 1.15)
-        const zoomScale = 1.0 + (sceneElapsed / secPerScene) * 0.12;
-        const panX = Math.sin(sceneElapsed * 0.8) * 20;
+        const zoomScale = 1.0 + (sceneElapsed / secPerScene) * 0.14;
+        const panX = Math.sin(sceneElapsed * 0.8) * 22;
 
         ctx.save();
         ctx.fillStyle = '#090d16';
@@ -1881,6 +2007,7 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
         if (lowerS.includes('lỗi') || lowerS.includes('nguy hiểm') || lowerS.includes('dừng')) dynamicEmoji = '⚠️';
         if (lowerS.includes('bí mật') || lowerS.includes('sốc') || lowerS.includes('kinh ngạc')) dynamicEmoji = '🔥';
         if (lowerS.includes('nhanh') || lowerS.includes('tăng')) dynamicEmoji = '🚀';
+        if (lowerS.includes('du lịch') || lowerS.includes('sinh thái') || lowerS.includes('thiên nhiên')) dynamicEmoji = '🌿';
 
         // 5. Hộp Phụ Đề Chữ Vàng Hormozi Ngắt Dòng Thông Minh (Chống Tràn Mép 100%)
         const maxSubWidth = canvas.width - 120;
