@@ -39,6 +39,7 @@ const capcutRoutes = require('./routes/capcut');
 const brollRoutes = require('./routes/broll');
 const abtestRoutes = require('./routes/abtest');
 const generalRoutes = require('./routes/general');
+const directorFactoryRoutes = require('./routes/directorFactory');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -130,6 +131,7 @@ app.use('/api/clipper', clipperRoutes);
 app.use('/api/capcut', capcutRoutes);
 app.use('/api/broll', brollRoutes);
 app.use('/api/abtest', abtestRoutes);
+app.use('/api/factory', directorFactoryRoutes);
 app.use('/api', generalRoutes);
 
 // Trang giao diện chính

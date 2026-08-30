@@ -228,6 +228,24 @@ async function runMassiveStressAudit() {
     logResult('FREE_AI_POOL', 'Đa Model AI Miễn Phí', 'FAIL', 'Lỗi cấu hình model free');
   }
 
+  // --- 2.11. AI VIDEO DIRECTOR & AUTONOMOUS FACTORY STATE MACHINE TEST ---
+  console.log('\n--- 2.11. KIỂM THỬ AI VIDEO DIRECTOR & AUTONOMOUS FACTORY ENGINE ---');
+  const factoryService = require('../services/videoDirectorFactory');
+  const project = await factoryService.createAndRunAutonomousProject('Bát mì cay hải sản 7 cấp độ', 'CONVERSATION', 85, 4);
+
+  // Test Partial Fix on Shot 1
+  const fixResult = await factoryService.partialRegenerateComponent(project.id, {
+    targetType: 'SHOT',
+    targetId: '1',
+    instructions: 'Góc quay cận cảnh nước dùng sôi sùng sục và khói thơm'
+  });
+
+  if (project.id && project.bestScore >= 85 && fixResult.success) {
+    logResult('DIRECTOR_FACTORY', 'Autonomous Factory 12-Step State Machine & Partial Repair', 'PASS', `Dự án: ${project.title} | Điểm Best Version: ${project.bestScore}/100 | Sửa riêng phân đoạn: THÀNH CÔNG`);
+  } else {
+    logResult('DIRECTOR_FACTORY', 'Autonomous Factory 12-Step State Machine & Partial Repair', 'FAIL', 'Lỗi State Machine hoặc Partial Fix');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {

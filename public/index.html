@@ -33,41 +33,54 @@
       </select>
     </div>
 
-    <!-- Danh Sách Tab Menu Dọc -->
+    <!-- Danh Sách Tab Menu Dọc (5 Core Workspaces + Publishing) -->
     <nav class="sidebar-nav nav-tabs">
-      <button class="nav-tab active" data-tab="publish-tab">
-        <span>Phân Phối Video</span>
+      <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase; padding:6px 12px; letter-spacing:0.5px;">AI Video Factory</div>
+      <button class="nav-tab active" data-tab="gemini-tab" style="border-left:3px solid #e11d48;">
+        <span>🏭 1. FACTORY (Tự Hành)</span>
+        <span class="tab-badge" style="background:#e11d48; color:#fff;">1-Click</span>
       </button>
-      <button class="nav-tab" data-tab="gemini-tab">
-        <span>AI Script Studio</span>
+      <button class="nav-tab" data-tab="director-tab" style="border-left:3px solid #f43f5e;">
+        <span>🎬 2. DIRECTOR (Đạo Diễn)</span>
+      </button>
+      <button class="nav-tab" data-tab="production-tab" style="border-left:3px solid #38bdf8;">
+        <span>🎥 3. PRODUCTION (Dựng)</span>
+      </button>
+      <button class="nav-tab" data-tab="ailab-tab" style="border-left:3px solid #10b981;">
+        <span>🧪 4. AI LAB (QA & Sửa Lỗi)</span>
+      </button>
+      <button class="nav-tab" data-tab="memory-tab" style="border-left:3px solid #8b5cf6;">
+        <span>🧠 5. MEMORY (Tự Học)</span>
+      </button>
+
+      <div style="font-size:0.65rem; color:#94a3b8; font-weight:700; text-transform:uppercase; padding:8px 12px 4px; letter-spacing:0.5px; margin-top:6px; border-top:1px solid #1e293b;">Phân Phối & Kênh</div>
+      <button class="nav-tab" data-tab="publish-tab">
+        <span>🚀 Phân Phối Video</span>
       </button>
       <button class="nav-tab" data-tab="content-tab">
-        <span>Kho Nội Dung</span>
+        <span>🗄️ Kho Nội Dung</span>
         <span class="tab-badge" id="content-count-badge">0</span>
       </button>
       <button class="nav-tab" data-tab="planner-tab">
-        <span>Lịch Ma Trận</span>
+        <span>📅 Lịch Đăng Giờ Vàng</span>
       </button>
       <button class="nav-tab" data-tab="clipper-tab">
-        <span>Cắt Video Dài ➔ Shorts</span>
+        <span>✂️ Cắt Dài ➔ Shorts</span>
         <span class="tab-badge" style="background:#831843; color:#f472b6;">Opus AI</span>
       </button>
       <button class="nav-tab" data-tab="brands-tab">
-        <span>Quản Lý Brand</span>
+        <span>🏷️ Quản Lý Brand</span>
         <span class="tab-badge" id="brand-count-badge">0</span>
       </button>
       <button class="nav-tab" data-tab="channels-tab">
-        <span>Mạng Xã Hội</span>
+        <span>🌐 Mạng Xã Hội</span>
         <span class="tab-badge" id="channel-count-badge">0</span>
       </button>
       <button class="nav-tab" data-tab="analytics-tab">
-        <span>Thống Kê & Tăng Trưởng</span>
-      </button>
-      <button class="nav-tab" data-tab="history-tab">
-        <span>Lịch Sử & Hạn Mức</span>
+        <span>📊 Thống Kê & ROI</span>
       </button>
       <button class="nav-tab" data-tab="admin-tab" id="nav-tab-admin" style="display:none; color:#fb7185; border-color:rgba(225, 29, 72, 0.3);">
-        <span>Quản Trị Admin</span>
+        <span>👑 Quản Trị Admin</span>
       </button>
     </nav>
 
@@ -682,6 +695,185 @@
 
         </div>
 
+      </div>
+    </section>
+
+    <!-- ==================== WORKSPACE 2: DIRECTOR (ĐẠO DIỄN CỐT TRUYỆN & DIỄN VIÊN) ==================== -->
+    <section id="director-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="color:#f43f5e; display:flex; align-items:center; gap:8px;">
+              <span>🎬</span> DIRECTOR WORKSPACE — Quản Lý Dàn Diễn Viên & Hội Thoại
+            </h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Triết lý: <strong>"A Video is a Sequence of Character Performances"</strong> — Nhân vật có danh tính, lời thoại, hành động và cảm xúc độc lập.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-sm btn-primary" onclick="switchTab('gemini-tab')">
+              ⚡ Chạy Tạo Story Mới Trong Factory
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. Dàn Diễn Viên Cast Grid -->
+        <div style="background:#090d16; border:1px solid #1e293b; padding:14px; border-radius:8px; margin-bottom:14px;">
+          <h4 style="color:#38bdf8; font-size:0.88rem; font-weight:700; margin-bottom:10px;">👥 DÀN DIỄN VIÊN ĐƯỢC CHỌN (CHARACTER CAST MATRIX):</h4>
+          <div id="director-cast-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+            <!-- Render động các diễn viên tại đây -->
+          </div>
+        </div>
+
+        <!-- 2. Ma Trận Quan Hệ & Cốt Truyện -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:14px;">
+          <div style="background:#090d16; border:1px solid #1e293b; padding:12px; border-radius:8px;">
+            <h4 style="color:#fbbf24; font-size:0.85rem; font-weight:700; margin-bottom:8px;">🔗 QUAN HỆ & TÂM LÝ NHÂN VẬT (RELATIONSHIPS):</h4>
+            <div id="director-relationships-container" style="font-size:0.78rem; color:#cbd5e1; line-height:1.6;"></div>
+          </div>
+          <div style="background:#090d16; border:1px solid #1e293b; padding:12px; border-radius:8px;">
+            <h4 style="color:#a855f7; font-size:0.85rem; font-weight:700; margin-bottom:8px;">📖 CỐT TRUYỆN & BỐI CẢNH (STORY WORLD & CONFLICT):</h4>
+            <div id="director-story-world-container" style="font-size:0.78rem; color:#cbd5e1; line-height:1.6;"></div>
+          </div>
+        </div>
+
+        <!-- 3. Luồng Đối Thoại & Phân Cảnh Chi Tiết -->
+        <div style="background:#070a12; border:1px solid #34d399; padding:14px; border-radius:8px;">
+          <h4 style="color:#34d399; font-size:0.88rem; font-weight:700; margin-bottom:10px;">💬 KỊCH BẢN ĐỐI THOẠI & PHÂN CẢNH (DIALOGUE & SHOT BREAKDOWN):</h4>
+          <div id="director-dialogues-stream" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== WORKSPACE 3: PRODUCTION (SẢN XUẤT & DỰNG VIDEO) ==================== -->
+    <section id="production-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="color:#38bdf8; display:flex; align-items:center; gap:8px;">
+              <span>🎥</span> PRODUCTION WORKSPACE — Dựng Video Điện Ảnh & Âm Thanh Đa Kênh
+            </h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Điều phối quy trình Multi-track Voiceover, Khẩu hình (Lip-sync), Ken Burns 60FPS Motion Video & Hiệu ứng SFX.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-sm btn-primary" onclick="renderVideoFromAiStudio()">
+              🎬 Render Video Ngay
+            </button>
+          </div>
+        </div>
+
+        <!-- Production Pipeline Status -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:14px;">
+          <div style="background:#090d16; border:1px solid #1e293b; padding:10px; border-radius:6px; text-align:center;">
+            <span style="font-size:1.2rem;">🎙️</span>
+            <strong style="display:block; color:#fff; font-size:0.8rem; margin-top:4px;">Multi-Track Voiceover</strong>
+            <span style="color:#34d399; font-size:0.72rem;">Đồng Bộ Độc Lập</span>
+          </div>
+          <div style="background:#090d16; border:1px solid #1e293b; padding:10px; border-radius:6px; text-align:center;">
+            <span style="font-size:1.2rem;">👄</span>
+            <strong style="display:block; color:#fff; font-size:0.8rem; margin-top:4px;">Lip-Sync & Khẩu Hình</strong>
+            <span style="color:#38bdf8; font-size:0.72rem;">Khớp Từng Mili-giây</span>
+          </div>
+          <div style="background:#090d16; border:1px solid #1e293b; padding:10px; border-radius:6px; text-align:center;">
+            <span style="font-size:1.2rem;">🎥</span>
+            <strong style="display:block; color:#fff; font-size:0.8rem; margin-top:4px;">Ken Burns 60FPS</strong>
+            <span style="color:#fbbf24; font-size:0.72rem;">Chuyển Động Điện Ảnh</span>
+          </div>
+          <div style="background:#090d16; border:1px solid #1e293b; padding:10px; border-radius:6px; text-align:center;">
+            <span style="font-size:1.2rem;">🔊</span>
+            <strong style="display:block; color:#fff; font-size:0.8rem; margin-top:4px;">Audio Master 100%</strong>
+            <span style="color:#a855f7; font-size:0.72rem;">Voice + BGM + SFX</span>
+          </div>
+        </div>
+
+        <!-- Video Player & Shot Timeline -->
+        <div style="background:#070a12; border:1px solid #1e293b; padding:14px; border-radius:8px;">
+          <h4 style="color:#38bdf8; font-size:0.88rem; font-weight:700; margin-bottom:10px;">TIMELINE PHÂN CẢNH & TRÌNH PHÁT VIDEO ĐIỆN ẢNH:</h4>
+          <div id="production-shots-timeline" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:14px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== WORKSPACE 4: AI LAB (QA TESTING & PARTIAL FIX) ==================== -->
+    <section id="ailab-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="color:#10b981; display:flex; align-items:center; gap:8px;">
+              <span>🧪</span> AI LAB WORKSPACE — Đo Lường Chất Lượng & Sửa Lỗi Từng Phần
+            </h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Tự động chẩn đoán lỗi (Hard-Fail Detection), quản lý các phiên bản (v001 vs v002) và <strong>chỉ sửa duy nhất phân đoạn bị lỗi (Partial Repair)</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Bảng Đo Lường Điểm Trọng Số -->
+        <div style="background:#090d16; border:1px solid #10b981; padding:14px; border-radius:8px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong style="color:#10b981; font-size:0.9rem;">📊 BẢNG ĐIỂM CHẤT LƯỢNG TRỌNG SỐ (WEIGHTED QA SCORE):</strong>
+            <span class="status-badge status-success" id="ailab-score-badge" style="font-size:0.85rem; font-weight:700;">Score: 91/100 (APPROVED)</span>
+          </div>
+          <div id="ailab-metrics-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px;"></div>
+        </div>
+
+        <!-- Bảng Sửa Lỗi Từng Phân Đoạn (Partial Repair Box) -->
+        <div style="background:#0f172a; border:1px solid #f59e0b; padding:14px; border-radius:8px; margin-bottom:14px;">
+          <h4 style="color:#fbbf24; font-size:0.88rem; font-weight:700; margin-bottom:8px;">🛠️ SỬA LỖI TỪNG PHÂN ĐOẠN (PARTIAL REGENERATION):</h4>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin-bottom:10px;">Tiết kiệm 80% Quota: Chọn đúng phân cảnh hoặc câu thoại cần sửa để AI sinh lại riêng phân đoạn đó.</p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="triggerPartialFix('SHOT', '1', 'Thêm góc quay cận cảnh biểu cảm ngạc nhiên')" style="border-color:#38bdf8; color:#38bdf8;">
+              🔄 Sửa Riêng Shot 1 (Góc Quay)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="triggerPartialFix('DIALOGUE', '0', 'Nhấn mạnh sự hài hước và ngây ngô')" style="border-color:#34d399; color:#34d399;">
+              💬 Sửa Riêng Lời Thoại #1
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="triggerPartialFix('CAST', 'char_baby_mango', 'Tăng độ đáng yêu và ánh mắt to tròn')" style="border-color:#f472b6; color:#f472b6;">
+              🎭 Tinh Chỉnh Riêng Nhân Vật
+            </button>
+          </div>
+        </div>
+
+        <!-- Lịch Sử Các Phiên Bản (Versioning v001 vs v002) -->
+        <div style="background:#070a12; border:1px solid #1e293b; padding:14px; border-radius:8px;">
+          <h4 style="color:#38bdf8; font-size:0.88rem; font-weight:700; margin-bottom:10px;">📚 LỊCH SỬ PHIÊN BẢN (VERSION CONTROL: v001 ➔ v002 ➔ BEST):</h4>
+          <div id="ailab-version-history-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== WORKSPACE 5: MEMORY (KHO TRI THỨC TỰ HỌC) ==================== -->
+    <section id="memory-tab" class="tab-pane">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="color:#8b5cf6; display:flex; align-items:center; gap:8px;">
+              <span>🧠</span> MEMORY WORKSPACE — Cơ Sở Dữ Liệu Tự Học (Self-Learning Memory)
+            </h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+              Lưu trữ các công thức video thành công (Winning Patterns), mẫu lỗi cần tránh (Failed Patterns) và mẫu nhân vật chuẩn vàng.
+            </p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline" onclick="loadMemoryWorkspaceData()" style="border-color:#8b5cf6; color:#c084fc;">
+            🔄 Tải Lại Tri Thức
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
+          <!-- Winning Patterns -->
+          <div style="background:#090d16; border:1px solid #34d399; padding:14px; border-radius:8px;">
+            <h4 style="color:#34d399; font-size:0.88rem; font-weight:700; margin-bottom:10px;">🏆 CÔNG THỨC CHIẾN THẮNG (WINNING PATTERNS):</h4>
+            <div id="memory-winning-patterns-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+
+          <!-- Failed Patterns -->
+          <div style="background:#090d16; border:1px solid #ef4444; padding:14px; border-radius:8px;">
+            <h4 style="color:#f87171; font-size:0.88rem; font-weight:700; margin-bottom:10px;">⚠️ MẪU LỖI CẦN TRÁNH (FAILED PATTERNS & FIXES):</h4>
+            <div id="memory-failed-patterns-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+        </div>
       </div>
     </section>
 

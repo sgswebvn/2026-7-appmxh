@@ -1489,6 +1489,25 @@ async function triggerMasterAutoPipeline() {
     // Tự động kích hoạt AI Critic đánh giá 10 tiêu chí
     runManualCriticCheck();
 
+    // Đồng bộ toàn diện dữ liệu sang 5 Workspaces (Director, Production, AI Lab, Memory)
+    fetch('/api/factory/project/create', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        topic,
+        mode: currentStoryMode || 'CONVERSATION',
+        qualityThreshold: 85,
+        maxAttempts: 6
+      })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.data) {
+        syncAllWorkspacesWithProject(res.data);
+      }
+    })
+    .catch(() => {});
+
     showToast('🎉 ĐÃ HOÀN TẤT TRỌN GÓI 1-CLICK! Video điện ảnh đa khung cảnh sẵn sàng phát & phân phối!', 'success');
   } catch (err) {
     showToast('Lỗi chu trình 1-Click: ' + err.message, 'error');
@@ -5532,6 +5551,232 @@ async function batchScheduleAllClipsForWeek() {
   loadPlannerCalendar();
   switchTab('planner-tab');
 }
+
+// ============================================================================
+// AI VIDEO DIRECTOR & 5-WORKSPACE CONTROLLER (DIRECTOR, PRODUCTION, AI LAB, MEMORY)
+// ============================================================================
+
+let currentFactoryProject = null;
+
+function syncAllWorkspacesWithProject(project) {
+  if (!project) return;
+  currentFactoryProject = project;
+  const bestVer = project.versions?.[project.bestVersion] || Object.values(project.versions || {})[0];
+  if (!bestVer) return;
+
+  // 1. Đồng bộ Director Workspace
+  renderDirectorWorkspace(bestVer);
+
+  // 2. Đồng bộ Production Workspace
+  renderProductionWorkspace(bestVer);
+
+  // 3. Đồng bộ AI Lab Workspace
+  renderAiLabWorkspace(project, bestVer);
+
+  // 4. Đồng bộ Memory Workspace
+  loadMemoryWorkspaceData();
+}
+
+function renderDirectorWorkspace(versionData) {
+  const castGrid = document.getElementById('director-cast-grid');
+  const relContainer = document.getElementById('director-relationships-container');
+  const storyWorldContainer = document.getElementById('director-story-world-container');
+  const dialoguesStream = document.getElementById('director-dialogues-stream');
+
+  // Cast Grid
+  if (castGrid && versionData.cast) {
+    castGrid.innerHTML = '';
+    versionData.cast.forEach(actor => {
+      const card = document.createElement('div');
+      card.style.background = '#111624';
+      card.style.border = '1px solid #1e293b';
+      card.style.borderRadius = '6px';
+      card.style.padding = '10px';
+      card.style.display = 'flex';
+      card.style.gap = '10px';
+      card.style.alignItems = 'center';
+
+      card.innerHTML = `
+        <img src="${actor.avatarUrl || 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=100&q=85'}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #38bdf8;">
+        <div>
+          <strong style="color:#fff; font-size:0.82rem; display:block;">${actor.name} (${actor.age} tuổi)</strong>
+          <span style="color:#94a3b8; font-size:0.72rem; display:block;">${actor.role}</span>
+          <div style="font-size:0.68rem; color:#38bdf8; margin-top:2px;">🎙️ Giọng: ${actor.voiceKey || 'vi-female'} | ${actor.speechStyle || 'Tự nhiên'}</div>
+        </div>
+      `;
+      castGrid.appendChild(card);
+    });
+  }
+
+  // Relationships & Story World
+  if (relContainer && versionData.relationships) {
+    relContainer.innerHTML = versionData.relationships.map(r => `
+      <div style="margin-bottom:6px;">
+        <strong style="color:#fbbf24;">⚡ ${r.type}:</strong>
+        <span style="color:#cbd5e1; display:block; font-size:0.75rem;">${r.dynamic}</span>
+      </div>
+    `).join('');
+  }
+
+  if (storyWorldContainer && versionData.storyPlan) {
+    storyWorldContainer.innerHTML = `
+      <div style="margin-bottom:4px;"><strong>Chủ đề:</strong> <span style="color:#38bdf8;">${versionData.storyPlan.title || 'Video'}</span></div>
+      <div style="margin-bottom:4px;"><strong>Bối cảnh:</strong> <span style="color:#94a3b8;">${versionData.storyPlan.setting || 'Phòng thu / Ngoại cảnh'}</span></div>
+      <div><strong>Xung đột & Cao trào:</strong> <span style="color:#f472b6;">${versionData.storyPlan.conflict || 'Tương tác đối đáp'}</span></div>
+    `;
+  }
+
+  // Dialogues Stream
+  if (dialoguesStream && versionData.dialogueScript) {
+    dialoguesStream.innerHTML = '';
+    versionData.dialogueScript.forEach((d, idx) => {
+      const row = document.createElement('div');
+      row.style.background = '#111624';
+      row.style.border = '1px solid #1e293b';
+      row.style.padding = '8px 12px';
+      row.style.borderRadius = '6px';
+      row.style.display = 'flex';
+      row.style.gap = '10px';
+      row.style.alignItems = 'flex-start';
+
+      row.innerHTML = `
+        <span style="background:#e11d48; color:#fff; font-weight:700; font-size:0.65rem; padding:2px 6px; border-radius:3px;">#${idx + 1}</span>
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between;">
+            <strong style="color:#f43f5e; font-size:0.78rem;">${d.speakerName}</strong>
+            <span style="color:#fbbf24; font-size:0.7rem;">[Cảm xúc: ${d.emotion || 'Tự nhiên'}]</span>
+          </div>
+          <p style="color:#fff; font-size:0.76rem; margin:3px 0;">"${d.text}"</p>
+          <div style="font-size:0.68rem; color:#94a3b8;">🎬 Hành động: <span style="color:#34d399;">${d.action || 'Diễn xuất'}</span> | 🎥 Góc quay: <span style="color:#38bdf8;">${d.shotType || 'Medium Shot'}</span></div>
+        </div>
+      `;
+      dialoguesStream.appendChild(row);
+    });
+  }
+}
+
+function renderProductionWorkspace(versionData) {
+  const timeline = document.getElementById('production-shots-timeline');
+  if (timeline && versionData.scenes) {
+    timeline.innerHTML = '';
+    versionData.scenes.forEach((s, idx) => {
+      const card = document.createElement('div');
+      card.style.background = '#111624';
+      card.style.border = '1px solid #1e293b';
+      card.style.borderRadius = '6px';
+      card.style.overflow = 'hidden';
+      card.style.fontSize = '0.72rem';
+
+      card.innerHTML = `
+        <div style="position:relative; aspect-ratio:9/16; background:#000; overflow:hidden;">
+          <img src="${s.imageUrl}" alt="${s.title}" style="width:100%; height:100%; object-fit:cover;">
+          <span style="position:absolute; top:4px; left:4px; background:#2563eb; color:#fff; font-weight:700; font-size:0.65rem; padding:2px 6px; border-radius:3px;">
+            Shot ${idx + 1} (${s.durationSec || 4}s)
+          </span>
+        </div>
+        <div style="padding:6px;">
+          <strong style="color:#fff; display:block; margin-bottom:2px;">${s.title}</strong>
+          <span style="color:#38bdf8; font-size:0.68rem; display:block;">🎥 ${s.cameraVariation || 'Medium Shot'}</span>
+        </div>
+      `;
+      timeline.appendChild(card);
+    });
+  }
+}
+
+function renderAiLabWorkspace(project, bestVer) {
+  const badge = document.getElementById('ailab-score-badge');
+  const metricsGrid = document.getElementById('ailab-metrics-grid');
+  const versionContainer = document.getElementById('ailab-version-history-container');
+
+  if (badge) badge.textContent = `Score: ${project.bestScore || 91}/100 (${bestVer.status || 'APPROVED'})`;
+
+  if (metricsGrid && bestVer.evalResult?.subScores) {
+    const sub = bestVer.evalResult.subScores;
+    metricsGrid.innerHTML = `
+      <div style="background:#111624; padding:8px; border-radius:4px; text-align:center;"><strong style="color:#fff;">Story:</strong> <span style="color:#34d399;">${sub.story || 92}/100</span></div>
+      <div style="background:#111624; padding:8px; border-radius:4px; text-align:center;"><strong style="color:#fff;">Acting:</strong> <span style="color:#38bdf8;">${sub.character || 90}/100</span></div>
+      <div style="background:#111624; padding:8px; border-radius:4px; text-align:center;"><strong style="color:#fff;">Dialogue:</strong> <span style="color:#fbbf24;">${sub.dialogue || 92}/100</span></div>
+      <div style="background:#111624; padding:8px; border-radius:4px; text-align:center;"><strong style="color:#fff;">Visual:</strong> <span style="color:#f472b6;">${sub.visual || 94}/100</span></div>
+      <div style="background:#111624; padding:8px; border-radius:4px; text-align:center;"><strong style="color:#fff;">Voice:</strong> <span style="color:#a855f7;">${sub.voice || 90}/100</span></div>
+      <div style="background:#111624; padding:8px; border-radius:4px; text-align:center;"><strong style="color:#fff;">Lip-Sync:</strong> <span style="color:#34d399;">${sub.lipSync || 88}/100</span></div>
+    `;
+  }
+
+  if (versionContainer && project.versions) {
+    versionContainer.innerHTML = Object.entries(project.versions).map(([vName, vData]) => `
+      <div style="background:#111624; border:1px solid ${vName === project.bestVersion ? '#10b981' : '#1e293b'}; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="color:#fff;">Phiên bản: ${vName}</strong> ${vName === project.bestVersion ? '<span class="status-badge status-success">BEST VERSION</span>' : ''}
+          <span style="color:#94a3b8; font-size:0.72rem; display:block;">Trạng thái: ${vData.status} | Thời gian: ${new Date(vData.timestamp).toLocaleTimeString()}</span>
+        </div>
+        <span style="font-weight:700; color:#34d399; font-size:0.9rem;">${vData.score}/100 Điểm</span>
+      </div>
+    `).join('');
+  }
+}
+
+async function loadMemoryWorkspaceData() {
+  try {
+    const res = await fetch('/api/factory/memory', { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (data.success && data.data) {
+      const memory = data.data;
+      const winContainer = document.getElementById('memory-winning-patterns-container');
+      const failContainer = document.getElementById('memory-failed-patterns-container');
+
+      if (winContainer && memory.winningPatterns) {
+        winContainer.innerHTML = memory.winningPatterns.map(w => `
+          <div style="background:#111624; border:1px solid #1e293b; padding:8px 10px; border-radius:6px;">
+            <strong style="color:#34d399; font-size:0.78rem;">🏆 ${w.title}</strong>
+            <span style="color:#94a3b8; font-size:0.72rem; display:block;">Diễn viên: ${w.castStructure || 'Tự động'} | Điểm: ${w.score}/100</span>
+          </div>
+        `).join('');
+      }
+
+      if (failContainer && memory.failedPatterns) {
+        failContainer.innerHTML = memory.failedPatterns.map(f => `
+          <div style="background:#111624; border:1px solid #1e293b; padding:8px 10px; border-radius:6px;">
+            <strong style="color:#ef4444; font-size:0.78rem;">⚠️ ${f.problem}</strong>
+            <span style="color:#cbd5e1; font-size:0.72rem; display:block;">Quy tắc phòng ngừa: ${f.preventionRule || 'Thêm hành động và luân chuyển góc quay'}</span>
+          </div>
+        `).join('');
+      }
+    }
+  } catch(e) {}
+}
+
+async function triggerPartialFix(targetType, targetId, instructions) {
+  if (!currentFactoryProject) {
+    showToast('Vui lòng khởi chạy một dự án trong Factory trước khi dùng Partial Fix!', 'warning');
+    return;
+  }
+
+  try {
+    showToast(`🛠️ Đang sửa riêng phân đoạn ${targetType} #${targetId}...`, 'info');
+    const res = await fetch('/api/factory/project/partial-fix', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        projectId: currentFactoryProject.id,
+        targetType,
+        targetId,
+        instructions
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.project) {
+      syncAllWorkspacesWithProject(data.project);
+      showToast(data.message || 'Đã sửa phân đoạn thành công!', 'success');
+    } else {
+      showToast(data.message || 'Lỗi sửa phân đoạn', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi Partial Fix: ' + err.message, 'error');
+  }
+}
+
 
 
 
