@@ -1159,6 +1159,9 @@ function renderAiResults(data, isAiGenerated, providerName) {
     if (debateBox) debateBox.style.display = 'none';
   }
 
+  // Render Story Director (Cast, Relationships & Dialogues)
+  renderStoryDirectorUI(data.storyPlan || data.conversationalStory);
+
   // Render Script (Hook, Body, CTA)
   if (data.script) {
     document.getElementById('ai-script-panel').style.display = 'block';

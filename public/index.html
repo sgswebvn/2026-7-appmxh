@@ -458,6 +458,57 @@
             </div>
           </div>
 
+          <!-- Generation Mode Selector Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#0b1120; border:1px solid #38bdf8; padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.1rem;">🎬</span>
+              <div>
+                <h4 style="color:#38bdf8; font-size:0.86rem; font-weight:700; margin:0;">Chế Độ Sản Xuất Video (Story Production Mode):</h4>
+                <p style="font-size:0.72rem; color:var(--text-muted); margin:0;">Chọn cách thức nhân vật tương tác và biểu diễn câu chuyện</p>
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn btn-sm btn-primary" id="btn-mode-conversation" onclick="switchStoryMode('CONVERSATION')" style="font-size:0.75rem; padding:4px 10px;">
+                👥 Mode 2: Đối Thoại Nhân Vật (Default)
+              </button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-mode-narrator" onclick="switchStoryMode('NARRATOR')" style="font-size:0.75rem; padding:4px 10px;">
+                🎙️ Mode 1: Người Kể Chuyện (Doc)
+              </button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-mode-hybrid" onclick="switchStoryMode('HYBRID')" style="font-size:0.75rem; padding:4px 10px;">
+                🎭 Mode 3: Kết Hợp Hybrid
+              </button>
+            </div>
+          </div>
+
+          <!-- ==================== KHU VỰC STORY DIRECTOR (ĐẠO DIỄN CỐT TRUYỆN & DÀN DIỄN VIÊN) ==================== -->
+          <div id="story-director-panel" class="glass-panel" style="background:#090d16; border:1px solid #f43f5e; padding:14px; margin-bottom:12px; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.2rem;">🎬</span>
+                <h4 style="color:#f43f5e; font-size:0.92rem; font-weight:700; margin:0;">STORY DIRECTOR — Đạo Diễn Nhân Vật & Kịch Bản Đối Thoại</h4>
+              </div>
+              <span class="status-badge status-success" style="font-size:0.7rem;" id="story-director-mode-badge">Conversational Mode Active</span>
+            </div>
+
+            <!-- Cast & Relationships -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:10px; margin-bottom:12px;">
+              <div style="background:#111624; border:1px solid #1e293b; padding:10px; border-radius:6px;">
+                <strong style="color:#38bdf8; font-size:0.78rem; display:block; margin-bottom:6px;">👥 DÀN DIỄN VIÊN (CHARACTER CAST):</strong>
+                <div id="story-director-cast-container" style="font-size:0.75rem; color:#cbd5e1; line-height:1.5;"></div>
+              </div>
+              <div style="background:#111624; border:1px solid #1e293b; padding:10px; border-radius:6px;">
+                <strong style="color:#fbbf24; font-size:0.78rem; display:block; margin-bottom:6px;">🔗 QUAN HỆ & TÂM LÝ (RELATIONSHIP):</strong>
+                <div id="story-director-rel-container" style="font-size:0.75rem; color:#cbd5e1; line-height:1.5;"></div>
+              </div>
+            </div>
+
+            <!-- Live Dialogue Preview Stream -->
+            <div style="background:#0c101a; border:1px solid #1e293b; padding:10px; border-radius:6px;">
+              <strong style="color:#34d399; font-size:0.78rem; display:block; margin-bottom:6px;">💬 KỊCH BẢN ĐỐI THOẠI & BIỂU CẢM (DIALOGUE SCRIPT):</strong>
+              <div id="story-director-dialogue-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+          </div>
+
           <!-- Multi-Agent Debate & Trend Insights Box -->
           <div id="ai-agent-debate-box" class="glass-panel" style="display:none; background:#0b1120; border:1px solid rgba(56, 189, 248, 0.4); padding:14px; margin-bottom:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">

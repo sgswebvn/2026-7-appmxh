@@ -181,4 +181,20 @@ router.post('/context-analyze', authenticateToken, async (req, res) => {
   }
 });
 
+// 11. Conversational Story Director & Multi-Character Dialogue Engine
+router.post('/story-direct', authenticateToken, async (req, res) => {
+  try {
+    const { topic, mode } = req.body;
+    const conversationalDirector = require('../services/conversationalStoryDirectorService');
+    const storyPlan = conversationalDirector.generateConversationalStory(topic || '', mode || 'CONVERSATION');
+
+    res.json({
+      success: true,
+      data: storyPlan
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi khởi tạo Story Director: ' + err.message });
+  }
+});
+
 module.exports = router;

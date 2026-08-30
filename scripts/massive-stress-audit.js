@@ -178,6 +178,18 @@ async function runMassiveStressAudit() {
     logResult('VISUAL_STORY', 'Chủ đề Người Cao Tuổi & AI: Đa dạng góc máy, hành động và nhân vật', 'FAIL', 'Bị lặp cảnh hoặc thiếu đa dạng góc máy');
   }
 
+  // --- 2.7. STORY DIRECTOR & MULTI-CHARACTER CONVERSATIONAL CAST TEST ---
+  console.log('\n--- 2.7. KIỂM THỬ STORY DIRECTOR & MULTI-CHARACTER DIALOGUE ENGINE ---');
+  const conversationalDirector = require('../services/conversationalStoryDirectorService');
+  const storyPlan = conversationalDirector.generateConversationalStory('Người cao tuổi bắt đầu sử dụng AI', 'CONVERSATION');
+
+  if (storyPlan.cast?.length >= 2 && storyPlan.dialogueScript?.length >= 4 && storyPlan.relationships?.length >= 1) {
+    const speakers = storyPlan.cast.map(c => c.name).join(' & ');
+    logResult('STORY_DIRECTOR', 'Tạo Cast Đa Nhân Vật & Hội Thoại Tương Tác Qua Lại', 'PASS', `Cast: ${speakers} | ${storyPlan.dialogueScript.length} câu thoại đối đáp`);
+  } else {
+    logResult('STORY_DIRECTOR', 'Tạo Cast Đa Nhân Vật & Hội Thoại Tương Tác Qua Lại', 'FAIL', 'Thiếu diễn viên hoặc kịch bản đối thoại');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {
