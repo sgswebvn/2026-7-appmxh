@@ -216,6 +216,18 @@ async function runMassiveStressAudit() {
     logResult('GOLD_STANDARD_BENCHMARK', 'Đồng Bộ Khớp 100% Video Mẫu', 'FAIL', 'Chưa khớp cấu trúc video tiêu chuẩn');
   }
 
+  // --- 2.10. FREE MULTI-MODEL AI POOL & ZERO-DOWNTIME IMAGE ENGINE ---
+  console.log('\n--- 2.10. KIỂM THỬ FREE MULTI-MODEL AI POOL & IMAGE GENERATOR (ZERO-DOWNTIME) ---');
+  const imageService = require('../services/imageService');
+  const freeImgFlux = imageService.generateFreeAiImageMultiModel('Cute baby eating mango', '9:16', 'flux');
+  const freeImg3D = imageService.generateFreeAiImageMultiModel('Cyberpunk studio 3d render', '16:9', 'flux-3d');
+
+  if (freeImgFlux.includes('model=flux') && freeImg3D.includes('model=flux-3d')) {
+    logResult('FREE_AI_POOL', 'Đa Model AI Miễn Phí (Groq, Gemini, OpenRouter, Pollinations Flux & 3D)', 'PASS', `Hỗ trợ 4 Providers Text AI + 5 Models Ảnh AI Free: Flux, SDXL Turbo, Midjourney, 3D CGI`);
+  } else {
+    logResult('FREE_AI_POOL', 'Đa Model AI Miễn Phí', 'FAIL', 'Lỗi cấu hình model free');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {

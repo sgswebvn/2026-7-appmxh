@@ -180,12 +180,40 @@ class AIPoolEngine {
     throw lastErr;
   }
 
+  // ==================== PROVIDER 4: POLLINATIONS.AI UNLIMITED FREE GATEWAY ====================
+  async callPollinationsFreeAI(prompt) {
+    const models = ['openai', 'mistral', 'claude-hybrid', 'qwen-coder', 'deepseek'];
+    let lastErr = null;
+
+    for (const model of models) {
+      try {
+        const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${model}&json=true`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
+        const text = await res.text();
+        if (text && text.trim().length > 10) {
+          return { content: text, provider: `Pollinations Unlimited Free (${model})` };
+        }
+      } catch (err) {
+        lastErr = err;
+        console.warn(`[AI Pool] Pollinations ${model} gặp lỗi:`, err.message);
+      }
+    }
+    throw lastErr || new Error('Pollinations Free Engine không phản hồi.');
+  }
+
   // ==================== QUERY RAW PROMPT THÔNG QUA FAILOVER POOL ====================
   async queryActivePool(prompt, customApiKey = null) {
     const providersQueue = [
       { id: 'groq', fn: () => this.callGroq(prompt, customApiKey) },
       { id: 'gemini', fn: () => this.callGemini(prompt, customApiKey) },
-      { id: 'openrouter', fn: () => this.callOpenRouter(prompt, customApiKey) }
+      { id: 'openrouter', fn: () => this.callOpenRouter(prompt, customApiKey) },
+      { id: 'pollinations_free', fn: () => this.callPollinationsFreeAI(prompt) }
     ];
 
     let lastError = null;

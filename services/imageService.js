@@ -128,6 +128,20 @@ class ImageService {
 
     return matched ? matched.url : nicheLib[0].url;
   }
+
+  // Tự động sinh ảnh AI miễn phí đa Model (Pollinations Flux Pro, Turbo, Midjourney, 3D CGI)
+  generateFreeAiImageMultiModel(prompt = '', aspectRatio = '9:16', modelName = 'flux') {
+    const isVertical = aspectRatio === '9:16';
+    const width = isVertical ? 720 : 1280;
+    const height = isVertical ? 1280 : 720;
+    const seed = Math.floor(Math.random() * 90000) + 10000;
+
+    const availableModels = ['flux', 'flux-realism', 'flux-3d', 'turbo', 'midjourney'];
+    const chosenModel = availableModels.includes(modelName) ? modelName : 'flux';
+
+    const cleanPrompt = encodeURIComponent(prompt.trim() || 'Cinematic 4k masterpiece photorealistic');
+    return `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=${chosenModel}`;
+  }
 }
 
 module.exports = new ImageService();
