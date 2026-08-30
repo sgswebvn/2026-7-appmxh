@@ -948,3 +948,13 @@ body {
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
 }
+
+/* ==================== TAB PANES ==================== */
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+

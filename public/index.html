@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Social Factory helps teams plan, create, and distribute social video content across brands and channels.">
   <title>YouTube Multi-Publisher - Phân Phối Video Đa Kênh</title>
+  <link rel="icon" type="image/png" href="app_icon_1024x1024.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -712,16 +713,29 @@
             </p>
           </div>
           <div style="display:flex; gap:8px;">
-            <button type="button" class="btn btn-sm btn-primary" onclick="switchTab('gemini-tab')">
-              ⚡ Chạy Tạo Story Mới Trong Factory
+            <button type="button" class="btn btn-sm btn-primary" onclick="switchTab('production-tab')" style="background:#2563eb;">
+              🎥 Tiếp Tục Sang Production ➔
             </button>
           </div>
         </div>
 
+        <!-- 0. Topic Input & StoryPlan Generation Bar -->
+        <div style="background:#0b101d; border:1px solid #38bdf8; padding:12px 16px; border-radius:8px; margin-bottom:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="director-topic-input" class="form-input" style="flex:1; min-width:240px; background:#070a12; border-color:#1e293b;" placeholder="Nhập chủ đề bất kỳ (VD: Một bà cụ bán bánh mì gặp một đứa trẻ, Ông già lần đầu dùng TikTok...)" value="Một gia đình thử mì cay">
+          <button type="button" class="btn btn-sm btn-primary" id="btn-director-generate-story" onclick="generateStoryPlanFromDirector()" style="background:linear-gradient(135deg, #f43f5e, #e11d48); white-space:nowrap;">
+            ⚡ Tạo StoryPlan Bằng AI
+          </button>
+        </div>
+
         <!-- 1. Dàn Diễn Viên Cast Grid -->
         <div style="background:#090d16; border:1px solid #1e293b; padding:14px; border-radius:8px; margin-bottom:14px;">
-          <h4 style="color:#38bdf8; font-size:0.88rem; font-weight:700; margin-bottom:10px;">👥 DÀN DIỄN VIÊN ĐƯỢC CHỌN (CHARACTER CAST MATRIX):</h4>
-          <div id="director-cast-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h4 style="color:#38bdf8; font-size:0.88rem; font-weight:700; margin:0;">👥 DÀN DIỄN VIÊN ĐƯỢC CHỌN (CHARACTER CAST MATRIX):</h4>
+            <button type="button" class="btn btn-xs btn-outline" onclick="openAddCharacterModal()" style="border-color:#38bdf8; color:#38bdf8; font-size:0.75rem;">
+              + Thêm Nhân Vật Mới
+            </button>
+          </div>
+          <div id="director-cast-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
             <!-- Render động các diễn viên tại đây -->
           </div>
         </div>
@@ -729,7 +743,10 @@
         <!-- 2. Ma Trận Quan Hệ & Cốt Truyện -->
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:14px;">
           <div style="background:#090d16; border:1px solid #1e293b; padding:12px; border-radius:8px;">
-            <h4 style="color:#fbbf24; font-size:0.85rem; font-weight:700; margin-bottom:8px;">🔗 QUAN HỆ & TÂM LÝ NHÂN VẬT (RELATIONSHIPS):</h4>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h4 style="color:#fbbf24; font-size:0.85rem; font-weight:700; margin:0;">🔗 QUAN HỆ & TÂM LÝ NHÂN VẬT (RELATIONSHIPS):</h4>
+              <button type="button" class="btn btn-xs btn-outline" onclick="openAddRelationshipModal()" style="border-color:#fbbf24; color:#fbbf24; font-size:0.72rem;">+ Thêm</button>
+            </div>
             <div id="director-relationships-container" style="font-size:0.78rem; color:#cbd5e1; line-height:1.6;"></div>
           </div>
           <div style="background:#090d16; border:1px solid #1e293b; padding:12px; border-radius:8px;">
@@ -1888,6 +1905,90 @@
             <button type="button" class="btn btn-sm btn-outline" onclick="closeEditScriptModal()">Hủy</button>
             <button type="submit" class="btn btn-sm btn-primary" id="btn-save-edit-script">💾 Lưu Thay Đổi</button>
           </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Chỉnh Sửa Nhân Vật (Character Editor Modal) -->
+  <div id="character-edit-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center;">
+    <div class="glass-panel" style="max-width:560px; width:90%; max-height:90vh; overflow-y:auto; background:#0b101b; border:1px solid #38bdf8; border-radius:8px; padding:20px;">
+      <div class="panel-header" style="margin-bottom:14px;">
+        <h3 class="panel-title" id="character-edit-modal-title" style="color:#38bdf8; font-size:1rem;">✏️ Chỉnh Sửa Thông Tin Nhân Vật</h3>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeCharacterEditModal()">✕</button>
+      </div>
+      <form id="character-edit-form" onsubmit="saveCharacterEdit(event)">
+        <input type="hidden" id="char-edit-id">
+        <input type="hidden" id="char-edit-mode" value="edit">
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label" for="char-edit-name">Tên Nhân Vật *</label>
+          <input type="text" id="char-edit-name" class="form-input" required placeholder="Ví dụ: Ông Minh">
+        </div>
+        <div class="grid-2" style="margin-bottom:10px;">
+          <div>
+            <label class="form-label" for="char-edit-age">Tuổi</label>
+            <input type="number" id="char-edit-age" class="form-input" required min="1" max="120" value="25">
+          </div>
+          <div>
+            <label class="form-label" for="char-edit-gender">Giới tính</label>
+            <select id="char-edit-gender" class="form-select">
+              <option value="female">Nữ (Female)</option>
+              <option value="male">Nam (Male)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label" for="char-edit-role">Vai trò (Role / Archetype)</label>
+          <input type="text" id="char-edit-role" class="form-input" placeholder="Ví dụ: Grandfather (Elderly), Child, Chef, Student...">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label" for="char-edit-voice">Giọng Đọc (Voice)</label>
+          <select id="char-edit-voice" class="form-select">
+            <option value="vi-female">Hoài My (Nữ - Tiếng Việt Truyền Cảm)</option>
+            <option value="vi-male">Nam Minh (Nam - Tiếng Việt Bản Lĩnh)</option>
+            <option value="en-female">Jenny (Nữ - Tiếng Anh US)</option>
+            <option value="en-male">Guy (Nam - Tiếng Anh US)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="char-edit-prompt">Prompt Ngoại Hình Nhất Quán (Visual Prompt)</label>
+          <textarea id="char-edit-prompt" class="form-textarea" style="min-height:75px; font-size:0.8rem;" placeholder="Mô tả chi tiết ngoại hình để giữ nhất quán hình ảnh AI..."></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #1e293b; padding-top:12px;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="closeCharacterEditModal()">Hủy</button>
+          <button type="submit" class="btn btn-sm btn-primary">💾 Lưu Nhân Vật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Thêm Mối Quan Hệ (Add Relationship Modal) -->
+  <div id="relationship-add-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center;">
+    <div class="glass-panel" style="max-width:480px; width:90%; background:#0b101b; border:1px solid #fbbf24; border-radius:8px; padding:20px;">
+      <div class="panel-header" style="margin-bottom:14px;">
+        <h3 class="panel-title" style="color:#fbbf24; font-size:1rem;">🔗 Thêm Mối Quan Hệ Nhân Vật</h3>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeAddRelationshipModal()">✕</button>
+      </div>
+      <form id="relationship-add-form" onsubmit="saveRelationship(event)">
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label" for="rel-from-char">Từ Nhân Vật:</label>
+          <select id="rel-from-char" class="form-select"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label" for="rel-to-char">Đến Nhân Vật:</label>
+          <select id="rel-to-char" class="form-select"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label" for="rel-type">Loại Quan Hệ (VD: Grandfather ↔ Granddaughter):</label>
+          <input type="text" id="rel-type" class="form-input" required placeholder="Ví dụ: Vendor ↔ Customer">
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="rel-dynamic">Tâm lý & Động lực tương tác (Dynamic):</label>
+          <textarea id="rel-dynamic" class="form-textarea" style="min-height:60px;" placeholder="Ví dụ: Tương tác đối đáp lém lỉnh, gây cười bất ngờ"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #1e293b; padding-top:12px;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="closeAddRelationshipModal()">Hủy</button>
+          <button type="submit" class="btn btn-sm btn-primary">💾 Lưu Quan Hệ</button>
         </div>
       </form>
     </div>

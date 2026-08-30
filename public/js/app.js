@@ -300,6 +300,8 @@ function switchTab(tabId) {
     loadContentProjects();
   } else if (tabId === 'planner-tab') {
     loadContentPlans();
+  } else if (tabId === 'director-tab') {
+    renderDirectorWorkspace(currentStoryPlan || {});
   }
 }
 
@@ -5577,81 +5579,377 @@ function syncAllWorkspacesWithProject(project) {
   loadMemoryWorkspaceData();
 }
 
-function renderDirectorWorkspace(versionData) {
+let currentStoryPlan = null;
+
+async function generateStoryPlanFromDirector() {
+  const topicInput = document.getElementById('director-topic-input');
+  const topic = (topicInput?.value || '').trim();
+  if (!topic) {
+    showToast('Vui lòng nhập chủ đề video để AI tạo StoryPlan!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-director-generate-story');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '⏳ Đang tạo StoryPlan...';
+    btn.disabled = true;
+  }
+
+  try {
+    showToast(`🎬 Đang dùng AI phân tích và xây dựng StoryPlan: "${topic}"...`, 'info');
+    const res = await fetch('/api/factory/story-plan/generate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        topic,
+        style: 'conversational cinematic vertical short',
+        durationTarget: 30
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      currentStoryPlan = data.data;
+      renderDirectorWorkspace(currentStoryPlan);
+      showToast(`🎉 Đã tạo thành công StoryPlan với ${currentStoryPlan.characters?.length || 0} nhân vật & ${currentStoryPlan.dialogues?.length || 0} câu thoại!`, 'success');
+    } else {
+      showToast(data.message || 'Lỗi khi tạo StoryPlan', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối tạo StoryPlan: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  }
+}
+
+function renderDirectorWorkspace(planData) {
+  if (!planData) return;
+  currentStoryPlan = planData;
+
+  const characters = planData.characters || planData.cast || [];
+  const relationships = planData.relationships || [];
+  const scenes = planData.scenes || [];
+  const dialogues = planData.dialogues || planData.dialogueScript || [];
+  const shots = planData.shots || [];
+
   const castGrid = document.getElementById('director-cast-grid');
   const relContainer = document.getElementById('director-relationships-container');
   const storyWorldContainer = document.getElementById('director-story-world-container');
+  const scenesContainer = document.getElementById('director-scenes-container');
   const dialoguesStream = document.getElementById('director-dialogues-stream');
 
-  // Cast Grid
-  if (castGrid && versionData.cast) {
+  // 1. Dàn Diễn Viên (Character Cast Matrix)
+  if (castGrid) {
     castGrid.innerHTML = '';
-    versionData.cast.forEach(actor => {
-      const card = document.createElement('div');
-      card.style.background = '#111624';
-      card.style.border = '1px solid #1e293b';
-      card.style.borderRadius = '6px';
-      card.style.padding = '10px';
-      card.style.display = 'flex';
-      card.style.gap = '10px';
-      card.style.alignItems = 'center';
+    if (characters.length === 0) {
+      castGrid.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Chưa có nhân vật nào. Nhập chủ đề và bấm "Tạo StoryPlan Bằng AI" phía trên.</div>';
+    } else {
+      characters.forEach(actor => {
+        const card = document.createElement('div');
+        card.style.background = '#111624';
+        card.style.border = '1px solid #1e293b';
+        card.style.borderRadius = '8px';
+        card.style.padding = '12px';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '8px';
 
-      card.innerHTML = `
-        <img src="${actor.avatarUrl || 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=100&q=85'}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid #38bdf8;">
-        <div>
-          <strong style="color:#fff; font-size:0.82rem; display:block;">${actor.name} (${actor.age} tuổi)</strong>
-          <span style="color:#94a3b8; font-size:0.72rem; display:block;">${actor.role}</span>
-          <div style="font-size:0.68rem; color:#38bdf8; margin-top:2px;">🎙️ Giọng: ${actor.voiceKey || 'vi-female'} | ${actor.speechStyle || 'Tự nhiên'}</div>
-        </div>
-      `;
-      castGrid.appendChild(card);
-    });
+        const voiceId = actor.voice?.voiceId || actor.voiceKey || actor.voice || 'vi-female';
+        const voiceLabel = voiceId === 'vi-male' ? 'Nam Minh (Nam)' : voiceId === 'vi-female' ? 'Hoài My (Nữ)' : voiceId;
+
+        card.innerHTML = `
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #38bdf8, #6366f1); display:flex; align-items:center; justify-content:center; font-size:1.4rem; border:2px solid #38bdf8; flex-shrink:0;">
+              ${actor.gender === 'male' ? (actor.age > 55 ? '👴' : actor.age < 12 ? '👦' : '👨') : (actor.age > 55 ? '👵' : actor.age < 12 ? '👧' : '👩')}
+            </div>
+            <div style="flex:1; min-width:0;">
+              <strong style="color:#fff; font-size:0.86rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${actor.name} (${actor.age}t)</strong>
+              <span style="color:#38bdf8; font-size:0.72rem; display:block;">${actor.role || 'Nhân vật'}</span>
+            </div>
+            <button type="button" class="btn btn-xs btn-outline" onclick="openEditCharacterModal('${actor.id}')" style="border-color:#38bdf8; color:#38bdf8; padding:3px 8px; font-size:0.7rem;">
+              ✏️ Sửa
+            </button>
+          </div>
+          <div style="font-size:0.7rem; color:#94a3b8; line-height:1.4; border-top:1px solid #1e293b; padding-top:6px;">
+            <div>🎙️ <strong>Giọng:</strong> <span style="color:#a855f7;">${voiceLabel}</span></div>
+            <div>🎨 <strong>Visual:</strong> <span style="color:#cbd5e1;">${actor.visualPrompt || actor.appearance?.face || 'Realism AI Portrait'}</span></div>
+          </div>
+        `;
+        castGrid.appendChild(card);
+      });
+    }
   }
 
-  // Relationships & Story World
-  if (relContainer && versionData.relationships) {
-    relContainer.innerHTML = versionData.relationships.map(r => `
-      <div style="margin-bottom:6px;">
-        <strong style="color:#fbbf24;">⚡ ${r.type}:</strong>
-        <span style="color:#cbd5e1; display:block; font-size:0.75rem;">${r.dynamic}</span>
-      </div>
-    `).join('');
+  // 2. Mối quan hệ (Relationships)
+  if (relContainer) {
+    if (relationships.length === 0) {
+      relContainer.innerHTML = '<span style="color:#94a3b8; font-size:0.75rem;">Chưa có mối quan hệ được thiết lập.</span>';
+    } else {
+      relContainer.innerHTML = relationships.map(r => {
+        const fromChar = characters.find(c => c.id === r.fromCharacterId)?.name || r.fromCharacterId;
+        const toChar = characters.find(c => c.id === r.toCharacterId)?.name || r.toCharacterId;
+        return `
+          <div style="background:#0b101b; border:1px solid #1e293b; padding:8px 10px; border-radius:6px; margin-bottom:6px;">
+            <strong style="color:#fbbf24; font-size:0.78rem;">⚡ ${fromChar} ↔ ${toChar} (${r.relationship || r.type}):</strong>
+            <span style="color:#cbd5e1; display:block; font-size:0.73rem; margin-top:2px;">${r.dynamic}</span>
+          </div>
+        `;
+      }).join('');
+    }
   }
 
-  if (storyWorldContainer && versionData.storyPlan) {
+  // 3. Bối cảnh câu chuyện (Story World & Conflict)
+  if (storyWorldContainer) {
     storyWorldContainer.innerHTML = `
-      <div style="margin-bottom:4px;"><strong>Chủ đề:</strong> <span style="color:#38bdf8;">${versionData.storyPlan.title || 'Video'}</span></div>
-      <div style="margin-bottom:4px;"><strong>Bối cảnh:</strong> <span style="color:#94a3b8;">${versionData.storyPlan.setting || 'Phòng thu / Ngoại cảnh'}</span></div>
-      <div><strong>Xung đột & Cao trào:</strong> <span style="color:#f472b6;">${versionData.storyPlan.conflict || 'Tương tác đối đáp'}</span></div>
+      <div style="margin-bottom:6px;"><strong>Chủ đề:</strong> <span style="color:#38bdf8;">${planData.title || planData.topic || 'Video AI'}</span></div>
+      <div style="margin-bottom:6px;"><strong>Thể loại & Phong cách:</strong> <span style="color:#34d399;">${planData.genre || 'Mini-Drama'} | ${planData.style || '9:16 Vertical Short'}</span></div>
+      <div style="margin-bottom:6px;"><strong>Thời lượng mục tiêu:</strong> <span style="color:#fbbf24;">${planData.durationTarget || 30} giây</span></div>
     `;
   }
 
-  // Dialogues Stream
-  if (dialoguesStream && versionData.dialogueScript) {
-    dialoguesStream.innerHTML = '';
-    versionData.dialogueScript.forEach((d, idx) => {
-      const row = document.createElement('div');
-      row.style.background = '#111624';
-      row.style.border = '1px solid #1e293b';
-      row.style.padding = '8px 12px';
-      row.style.borderRadius = '6px';
-      row.style.display = 'flex';
-      row.style.gap = '10px';
-      row.style.alignItems = 'flex-start';
+  // 4. Danh Sách Phân Cảnh (Scenes & Shots)
+  if (scenesContainer) {
+    scenesContainer.innerHTML = '';
+    if (scenes.length === 0) {
+      scenesContainer.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Chưa có phân cảnh nào.</div>';
+    } else {
+      scenes.forEach((sc, idx) => {
+        const sceneShots = shots.filter(sh => sh.sceneId === sc.id);
+        const charNames = (sc.characters || []).map(cId => characters.find(c => c.id === cId)?.name || cId).join(', ');
 
-      row.innerHTML = `
-        <span style="background:#e11d48; color:#fff; font-weight:700; font-size:0.65rem; padding:2px 6px; border-radius:3px;">#${idx + 1}</span>
-        <div style="flex:1;">
-          <div style="display:flex; justify-content:space-between;">
-            <strong style="color:#f43f5e; font-size:0.78rem;">${d.speakerName}</strong>
-            <span style="color:#fbbf24; font-size:0.7rem;">[Cảm xúc: ${d.emotion || 'Tự nhiên'}]</span>
+        const card = document.createElement('div');
+        card.style.background = '#0b101b';
+        card.style.border = '1px solid #1e293b';
+        card.style.borderRadius = '6px';
+        card.style.padding = '10px';
+        card.style.fontSize = '0.75rem';
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="color:#a855f7;">Scene ${idx + 1}: ${sc.location || 'Địa điểm'}</strong>
+            <span style="color:#94a3b8; font-size:0.7rem;">🕒 ${sc.time || 'Ban ngày'}</span>
           </div>
-          <p style="color:#fff; font-size:0.76rem; margin:3px 0;">"${d.text}"</p>
-          <div style="font-size:0.68rem; color:#94a3b8;">🎬 Hành động: <span style="color:#34d399;">${d.action || 'Diễn xuất'}</span> | 🎥 Góc quay: <span style="color:#38bdf8;">${d.shotType || 'Medium Shot'}</span></div>
-        </div>
-      `;
-      dialoguesStream.appendChild(row);
+          <div style="color:#cbd5e1; margin-bottom:4px;">👥 Diễn viên: <span style="color:#38bdf8;">${charNames || 'Tất cả'}</span></div>
+          <div style="color:#94a3b8; margin-bottom:4px;">🎬 Hành động: ${sc.action || sc.environment || 'Diễn biến câu chuyện'}</div>
+          <div style="color:#34d399; font-size:0.7rem;">🎥 Gồm ${sceneShots.length || 1} góc quay (Shots)</div>
+        `;
+        scenesContainer.appendChild(card);
+      });
+    }
+  }
+
+  // 5. Luồng Lời Thoại (Speaker-Attributed Dialogues Stream)
+  if (dialoguesStream) {
+    dialoguesStream.innerHTML = '';
+    if (dialogues.length === 0) {
+      dialoguesStream.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Chưa có lời thoại.</div>';
+    } else {
+      dialogues.forEach((d, idx) => {
+        const speaker = characters.find(c => c.id === d.speakerId);
+        const speakerName = speaker?.name || d.speakerName || d.speakerId || 'Người nói';
+        const speakerRole = speaker?.role || '';
+        const voiceId = d.voiceId || speaker?.voice?.voiceId || (speaker?.gender === 'male' ? 'vi-male' : 'vi-female');
+        const voiceTag = voiceId === 'vi-male' ? '🎙️ Nam Minh' : '🎙️ Hoài My';
+
+        const row = document.createElement('div');
+        row.style.background = '#111624';
+        row.style.border = '1px solid #1e293b';
+        row.style.padding = '10px 14px';
+        row.style.borderRadius = '8px';
+        row.style.display = 'flex';
+        row.style.gap = '12px';
+        row.style.alignItems = 'flex-start';
+
+        row.innerHTML = `
+          <div style="width:36px; height:36px; border-radius:50%; background:#1e293b; display:flex; align-items:center; justify-content:center; font-size:1.1rem; border:1px solid #38bdf8; flex-shrink:0;">
+            ${speaker?.gender === 'male' ? (speaker?.age > 55 ? '👴' : '👨') : (speaker?.age > 55 ? '👵' : '👩')}
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <div>
+                <strong style="color:#f43f5e; font-size:0.85rem;">${speakerName}</strong>
+                ${speakerRole ? `<span style="color:#94a3b8; font-size:0.72rem; margin-left:4px;">(${speakerRole})</span>` : ''}
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span style="background:rgba(168,85,247,0.2); color:#c084fc; font-size:0.68rem; padding:2px 6px; border-radius:3px; font-weight:600;">${voiceTag}</span>
+                <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-size:0.68rem; padding:2px 6px; border-radius:3px;">[Cảm xúc: ${d.emotion || 'Tự nhiên'}]</span>
+              </div>
+            </div>
+            <p style="color:#fff; font-size:0.82rem; margin:6px 0; font-weight:500; line-height:1.5;">"${d.text}"</p>
+            <div style="font-size:0.7rem; color:#94a3b8; display:flex; gap:12px; flex-wrap:wrap;">
+              <span>🎬 Hành động: <strong style="color:#34d399;">${d.action || 'Diễn xuất'}</strong></span>
+              <span>📍 Cảnh: <strong style="color:#38bdf8;">${d.sceneId || 'Scene 1'}</strong></span>
+            </div>
+          </div>
+        `;
+        dialoguesStream.appendChild(row);
+      });
+    }
+  }
+}
+
+function openEditCharacterModal(charId) {
+  if (!currentStoryPlan) return;
+  const characters = currentStoryPlan.characters || [];
+  const char = characters.find(c => c.id === charId);
+  if (!char) return;
+
+  document.getElementById('character-edit-modal-title').textContent = '✏️ Chỉnh Sửa Thông Tin Nhân Vật';
+  document.getElementById('char-edit-id').value = char.id;
+  document.getElementById('char-edit-mode').value = 'edit';
+  document.getElementById('char-edit-name').value = char.name || '';
+  document.getElementById('char-edit-age').value = char.age || 25;
+  document.getElementById('char-edit-gender').value = char.gender || 'female';
+  document.getElementById('char-edit-role').value = char.role || '';
+  document.getElementById('char-edit-voice').value = char.voice?.voiceId || char.voice || 'vi-female';
+  document.getElementById('char-edit-prompt').value = char.visualPrompt || char.appearance?.face || '';
+
+  const modal = document.getElementById('character-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function openAddCharacterModal() {
+  if (!currentStoryPlan) {
+    showToast('Vui lòng tạo StoryPlan trước khi thêm nhân vật!', 'warning');
+    return;
+  }
+  document.getElementById('character-edit-modal-title').textContent = '➕ Thêm Nhân Vật Mới Vào StoryPlan';
+  document.getElementById('char-edit-id').value = '';
+  document.getElementById('char-edit-mode').value = 'add';
+  document.getElementById('char-edit-name').value = '';
+  document.getElementById('char-edit-age').value = 25;
+  document.getElementById('char-edit-gender').value = 'female';
+  document.getElementById('char-edit-role').value = 'Supporting Character';
+  document.getElementById('char-edit-voice').value = 'vi-female';
+  document.getElementById('char-edit-prompt').value = '';
+
+  const modal = document.getElementById('character-edit-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeCharacterEditModal() {
+  const modal = document.getElementById('character-edit-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveCharacterEdit(event) {
+  event.preventDefault();
+  if (!currentStoryPlan) return;
+
+  const mode = document.getElementById('char-edit-mode').value;
+  const charId = document.getElementById('char-edit-id').value;
+  const name = document.getElementById('char-edit-name').value.trim();
+  const age = Number(document.getElementById('char-edit-age').value) || 25;
+  const gender = document.getElementById('char-edit-gender').value;
+  const role = document.getElementById('char-edit-role').value.trim();
+  const voiceId = document.getElementById('char-edit-voice').value;
+  const visualPrompt = document.getElementById('char-edit-prompt').value.trim();
+
+  const payload = {
+    name,
+    age,
+    gender,
+    role,
+    voice: {
+      voiceId,
+      language: 'vi-VN',
+      gender,
+      tone: 'Tự nhiên'
+    },
+    visualPrompt: visualPrompt || `Cinematic portrait of ${name}, ${age} years old, ${gender}, photorealistic`
+  };
+
+  try {
+    const url = mode === 'edit'
+      ? `/api/factory/story-plan/${currentStoryPlan.storyId}/character/${charId}`
+      : `/api/factory/story-plan/${currentStoryPlan.storyId}/character`;
+    const method = mode === 'edit' ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload)
     });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      currentStoryPlan = data.data;
+      renderDirectorWorkspace(currentStoryPlan);
+      closeCharacterEditModal();
+      showToast(mode === 'edit' ? `✅ Đã cập nhật nhân vật ${name} thành công!` : `✅ Đã thêm nhân vật ${name}!`, 'success');
+    } else {
+      showToast(data.message || 'Lỗi lưu nhân vật', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối lưu nhân vật: ' + err.message, 'error');
+  }
+}
+
+function openAddRelationshipModal() {
+  if (!currentStoryPlan || !(currentStoryPlan.characters || []).length) {
+    showToast('Cần ít nhất 2 nhân vật để thiết lập mối quan hệ!', 'warning');
+    return;
+  }
+  const fromSelect = document.getElementById('rel-from-char');
+  const toSelect = document.getElementById('rel-to-char');
+  if (fromSelect && toSelect) {
+    const opts = (currentStoryPlan.characters || []).map(c => `<option value="${c.id}">${c.name} (${c.role || c.id})</option>`).join('');
+    fromSelect.innerHTML = opts;
+    toSelect.innerHTML = opts;
+    if (currentStoryPlan.characters.length > 1) {
+      toSelect.selectedIndex = 1;
+    }
+  }
+  const modal = document.getElementById('relationship-add-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddRelationshipModal() {
+  const modal = document.getElementById('relationship-add-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveRelationship(event) {
+  event.preventDefault();
+  if (!currentStoryPlan) return;
+
+  const fromCharacterId = document.getElementById('rel-from-char').value;
+  const toCharacterId = document.getElementById('rel-to-char').value;
+  const relationship = document.getElementById('rel-type').value.trim();
+  const dynamic = document.getElementById('rel-dynamic').value.trim();
+
+  if (fromCharacterId === toCharacterId) {
+    showToast('Không thể thiết lập mối quan hệ giữa cùng 1 nhân vật!', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/relationship`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        fromCharacterId,
+        toCharacterId,
+        relationship,
+        dynamic
+      })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      currentStoryPlan = data.data;
+      renderDirectorWorkspace(currentStoryPlan);
+      closeAddRelationshipModal();
+      showToast('✅ Đã thêm mối quan hệ thành công!', 'success');
+    } else {
+      showToast(data.message || 'Lỗi thêm mối quan hệ', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi mối quan hệ: ' + err.message, 'error');
   }
 }
 
