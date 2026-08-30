@@ -65,85 +65,18 @@ class BrandPersonaService {
     const height = isVertical ? 1280 : 720;
     const baseSeed = Math.floor(Math.random() * 80000) + 10000;
 
-    const scenes = [];
-
-    const topicFirstEngine = require('./topicFirstImageEngine');
-    const contextFirstService = require('./contextFirstCharacterService');
-
-    // 1. Phân tích bối cảnh toàn diện theo nguyên tắc Topic-First & World-First
+    const visualStoryEngine = require('./visualStorytellingEngine');
     const topicText = scriptData.topic || scriptData.hook || scriptData.body || 'Chủ đề video';
-    const contextPlan = contextFirstService.analyzeTopicContext(topicText, scriptData);
 
-    // Scene 1: Hook (Mở đầu bùng nổ)
-    const hookText = scriptData.hook || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.';
-    const hookPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, hookText, 1, 4);
-    const hookImgData = topicFirstEngine.matchTopicAndSceneImage(topicText, hookText, 0);
-
-    scenes.push({
-      index: 1,
-      type: 'HOOK',
-      title: 'Phân cảnh 1: Hook Thu Hút 3s Đầu',
-      text: hookText,
-      durationSec: 4,
-      prompt: hookPromptData.prompt,
-      hasCharacter: hookPromptData.hasCharacter,
-      characterRole: hookImgData.characterProfile?.role || hookPromptData.characterRole,
-      imageUrl: hookImgData.imageUrl,
-      personaAvatarUrl: hookPromptData.hasCharacter ? (hookImgData.imageUrl || persona.avatarUrl) : null,
-      personaName: hookImgData.characterProfile?.role ? hookImgData.characterProfile.role.split('/')[0].trim() : (hookPromptData.characterDNA?.name || persona.name)
-    });
-
-    // Scene 2 & 3: Body Sections (Nội dung chính)
-    const sections = (scriptData.bodySections && scriptData.bodySections.length > 0)
-      ? scriptData.bodySections
-      : [{ heading: 'Nội dung cốt lõi', content: scriptData.body || 'Chi tiết các bước thực hiện tự động hóa tăng trưởng.' }];
-
-    sections.slice(0, 3).forEach((sec, idx) => {
-      const secContent = sec.content || sec.heading || '';
-      const bodyPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, secContent, idx + 2, sections.length + 2);
-      const bodyImgData = topicFirstEngine.matchTopicAndSceneImage(topicText, secContent, idx + 1);
-
-      scenes.push({
-        index: idx + 2,
-        type: 'BODY',
-        title: `Phân cảnh ${idx + 2}: ${sec.heading || 'Nội dung chính ' + (idx + 1)}`,
-        text: secContent,
-        durationSec: 5,
-        prompt: bodyPromptData.prompt,
-        hasCharacter: bodyPromptData.hasCharacter,
-        characterRole: bodyImgData.characterProfile?.role || bodyPromptData.characterRole,
-        imageUrl: bodyImgData.imageUrl,
-        personaAvatarUrl: bodyPromptData.hasCharacter ? (bodyImgData.imageUrl || persona.avatarUrl) : null,
-        personaName: bodyImgData.characterProfile?.role ? bodyImgData.characterProfile.role.split('/')[0].trim() : (bodyPromptData.characterDNA?.name || persona.name)
-      });
-    });
-
-    // Final Scene: Call To Action (Kêu gọi hành động)
-    const ctaText = scriptData.callToAction || scriptData.cta || 'Nhấn theo dõi kênh để không bỏ lỡ các bí quyết tiếp theo!';
-    const ctaPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, ctaText, scenes.length + 1, scenes.length + 1);
-    const ctaImgData = topicFirstEngine.matchTopicAndSceneImage(topicText, ctaText, 4);
-
-    scenes.push({
-      index: scenes.length + 1,
-      type: 'CTA',
-      title: `Phân cảnh ${scenes.length + 1}: Kêu Gọi Hành Động (CTA)`,
-      text: ctaText,
-      durationSec: 4,
-      prompt: ctaPromptData.prompt,
-      hasCharacter: ctaPromptData.hasCharacter,
-      characterRole: ctaImgData.characterProfile?.role || ctaPromptData.characterRole,
-      imageUrl: ctaImgData.imageUrl,
-      personaAvatarUrl: ctaPromptData.hasCharacter ? (ctaImgData.imageUrl || persona.avatarUrl) : null,
-      personaName: ctaImgData.characterProfile?.role ? ctaImgData.characterProfile.role.split('/')[0].trim() : (ctaPromptData.characterDNA?.name || persona.name)
-    });
+    const generatedScenes = visualStoryEngine.generateVisualStoryScenes(topicText, scriptData);
 
     return {
       persona,
       baseSeed,
       aspectRatio,
-      totalScenes: scenes.length,
-      estimatedDurationSec: scenes.reduce((acc, s) => acc + s.durationSec, 0),
-      scenes
+      totalScenes: generatedScenes.length,
+      estimatedDurationSec: generatedScenes.reduce((acc, s) => acc + s.durationSec, 0),
+      scenes: generatedScenes
     };
   }
 

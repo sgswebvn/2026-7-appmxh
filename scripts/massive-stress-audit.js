@@ -156,6 +156,28 @@ async function runMassiveStressAudit() {
     logResult('CONTEXT_FIRST', 'Thợ Rèn Trung Cổ Đồng Bộ Tạp Dề Chống Cháy & Búa Rèn', 'FAIL', 'Lỗi phân tích bối cảnh Trung Cổ');
   }
 
+  // --- 2.6. VISUAL STORYTELLING & NO-DUPLICATE SHOTS TEST ---
+  console.log('\n--- 2.6. KIỂM THỬ VISUAL STORYTELLING & ĐA DẠNG GÓC MÁY / HÀNH ĐỘNG ---');
+  const visualStoryEngine = require('../services/visualStorytellingEngine');
+
+  const elderlyAiScenes = visualStoryEngine.generateVisualStoryScenes('Người cao tuổi dùng AI tạo video và hình ảnh', {
+    hook: 'Bạn có biết người 70 tuổi đang dùng AI làm video triệu view?',
+    bodySections: [
+      { heading: 'Bước 1: Nhập lệnh', content: 'Gõ câu lệnh prompt trên laptop' },
+      { heading: 'Bước 2: AI biến đổi', content: 'Màn hình tạo ra bức tranh nghệ thuật sống động' }
+    ],
+    callToAction: 'Nhận hướng dẫn miễn phí'
+  });
+
+  const distinctCameras = new Set(elderlyAiScenes.map(s => s.cameraVariation));
+  const distinctRoles = new Set(elderlyAiScenes.map(s => s.characterRole));
+
+  if (elderlyAiScenes.length >= 4 && distinctCameras.size >= 3 && distinctRoles.size >= 2) {
+    logResult('VISUAL_STORY', 'Chủ đề Người Cao Tuổi & AI: Đa dạng góc máy, hành động và nhân vật', 'PASS', `Tạo ${elderlyAiScenes.length} scenes | ${distinctCameras.size} góc quay khác nhau | Nhân vật: Bà cụ, Ông cụ, Gia đình`);
+  } else {
+    logResult('VISUAL_STORY', 'Chủ đề Người Cao Tuổi & AI: Đa dạng góc máy, hành động và nhân vật', 'FAIL', 'Bị lặp cảnh hoặc thiếu đa dạng góc máy');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {
