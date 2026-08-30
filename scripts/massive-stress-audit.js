@@ -128,6 +128,34 @@ async function runMassiveStressAudit() {
     }
   }
 
+  // --- 2.5. CONTEXT-FIRST CHARACTER & WORLD-FIRST PROTOCOL TEST ---
+  console.log('\n--- 2.5. KIỂM THỬ NGUYÊN TẮC CONTEXT-FIRST & WORLD-FIRST ---');
+  const contextFirstService = require('../services/contextFirstCharacterService');
+
+  // Test 1: Amazon Explorer Context
+  const amazonAnalysis = contextFirstService.analyzeTopicContext('Thám hiểm rừng rậm Amazon hoang dã');
+  if (amazonAnalysis.needsCharacter && amazonAnalysis.characterDNA?.clothing.includes('trekking') && amazonAnalysis.contextScore.overallScore >= 8.0) {
+    logResult('CONTEXT_FIRST', 'Nhân vật Thám Hiểm Rừng Khớp 100% Trang Phục & Bối Cảnh', 'PASS', `Role: ${amazonAnalysis.characterRole} (Score: ${amazonAnalysis.contextScore.overallScore}/10)`);
+  } else {
+    logResult('CONTEXT_FIRST', 'Nhân vật Thám Hiểm Rừng Khớp 100% Trang Phục & Bối Cảnh', 'FAIL', 'Trang phục không phù hợp');
+  }
+
+  // Test 2: ASMR No-Character Guarantee
+  const asmrAnalysis = contextFirstService.analyzeTopicContext('Cắt kính hoa quả quả bơ ASMR cực kỳ thư giãn');
+  if (!asmrAnalysis.needsCharacter && asmrAnalysis.characterDNA === null) {
+    logResult('CONTEXT_FIRST', 'Chủ đề ASMR / Macro Tuyệt Đối Không Chèn Người Tùy Tiện', 'PASS', 'Tập trung 100% vào vật thể, dao cắt và âm học bề mặt');
+  } else {
+    logResult('CONTEXT_FIRST', 'Chủ đề ASMR / Macro Tuyệt Đối Không Chèn Người Tùy Tiện', 'FAIL', 'Vẫn chèn nhân vật vào ASMR');
+  }
+
+  // Test 3: Medieval Blacksmith Context
+  const medievalAnalysis = contextFirstService.analyzeTopicContext('Bí mật lò rèn kiếm hiệp sĩ thời trung cổ');
+  if (medievalAnalysis.needsCharacter && medievalAnalysis.characterDNA?.clothing.includes('leather apron')) {
+    logResult('CONTEXT_FIRST', 'Thợ Rèn Trung Cổ Đồng Bộ Tạp Dề Chống Cháy & Búa Rèn', 'PASS', `Role: ${medievalAnalysis.characterRole}`);
+  } else {
+    logResult('CONTEXT_FIRST', 'Thợ Rèn Trung Cổ Đồng Bộ Tạp Dề Chống Cháy & Búa Rèn', 'FAIL', 'Lỗi phân tích bối cảnh Trung Cổ');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {

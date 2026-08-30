@@ -165,17 +165,19 @@ router.get('/knowledge', authenticateToken, async (req, res) => {
   }
 });
 
-// 9. Ghi nhận Failure Memory và sinh quy tắc mới
-router.post('/failure-memory', authenticateToken, async (req, res) => {
+// 10. Phân tích bối cảnh toàn diện theo nguyên tắc World-First & Context-First
+router.post('/context-analyze', authenticateToken, async (req, res) => {
   try {
-    const record = await videoResearchAgent.logFailure(req.body);
+    const { topic, scriptData } = req.body;
+    const contextFirstService = require('../services/contextFirstCharacterService');
+    const analysis = contextFirstService.analyzeTopicContext(topic || '', scriptData || {});
+
     res.json({
       success: true,
-      message: 'Đã lưu bài học thất bại và cập nhật quy tắc sản xuất mới!',
-      record
+      data: analysis
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Lỗi ghi nhận Failure Memory: ' + err.message });
+    res.status(500).json({ success: false, message: 'Lỗi phân tích bối cảnh: ' + err.message });
   }
 });
 

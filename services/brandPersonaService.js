@@ -67,28 +67,35 @@ class BrandPersonaService {
 
     const scenes = [];
 
-const imageService = require('./imageService');
+    const imageService = require('./imageService');
+    const contextFirstService = require('./contextFirstCharacterService');
 
-    // Xác định Niche từ Persona
+    // 1. Phân tích bối cảnh toàn diện theo nguyên tắc World-First
+    const topicText = scriptData.hook || scriptData.body || 'Khám phá thế giới';
+    const contextPlan = contextFirstService.analyzeTopicContext(topicText, scriptData);
+
+    // Xác định Niche từ Persona hoặc ContextPlan
     let niche = 'general';
-    if (personaId === 'travel-eco') niche = 'travel_eco';
-    else if (personaId === 'alex-tech') niche = 'tech_ai';
-    else if (personaId === 'minhanh-finance') niche = 'finance_money';
+    if (contextPlan.genre.includes('Nature') || contextPlan.genre.includes('Adventure') || personaId === 'travel-eco') niche = 'travel_eco';
+    else if (contextPlan.genre.includes('Sci-Fi') || personaId === 'alex-tech') niche = 'tech_ai';
+    else if (contextPlan.genre.includes('Finance') || personaId === 'minhanh-finance') niche = 'finance_money';
     else if (personaId === 'kenji-story') niche = 'storytelling_history';
 
     // Scene 1: Hook (Mở đầu bùng nổ)
     const hookText = scriptData.hook || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.';
-    const hookPrompt = `${persona.theme}, cinematic establishing shot, dramatic visual showing: ${this.translateContextToEnglish(hookText)}, highly detailed, masterpiece, 8k`;
+    const hookPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, hookText, 1, 4);
     scenes.push({
       index: 1,
       type: 'HOOK',
       title: 'Phân cảnh 1: Hook Thu Hút 3s Đầu',
       text: hookText,
       durationSec: 4,
-      prompt: hookPrompt,
+      prompt: hookPromptData.prompt,
+      hasCharacter: hookPromptData.hasCharacter,
+      characterRole: hookPromptData.characterRole,
       imageUrl: imageService.matchBestSceneImage(hookText, niche, 0),
-      personaAvatarUrl: persona.avatarUrl,
-      personaName: persona.name
+      personaAvatarUrl: hookPromptData.hasCharacter ? persona.avatarUrl : null,
+      personaName: hookPromptData.hasCharacter ? (hookPromptData.characterDNA?.name || persona.name) : 'Bối Cảnh Tự Nhiên / Macro Vật Thể'
     });
 
     // Scene 2 & 3: Body Sections (Nội dung chính)
@@ -98,33 +105,37 @@ const imageService = require('./imageService');
 
     sections.slice(0, 3).forEach((sec, idx) => {
       const secContent = sec.content || sec.heading || '';
-      const secPrompt = `${persona.theme}, close-up cinematic shot, storytelling angle showing: ${this.translateContextToEnglish(secContent)}, consistent style, ultra photorealistic, 8k`;
+      const bodyPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, secContent, idx + 2, sections.length + 2);
       scenes.push({
         index: idx + 2,
         type: 'BODY',
         title: `Phân cảnh ${idx + 2}: ${sec.heading || 'Nội dung chính ' + (idx + 1)}`,
         text: secContent,
         durationSec: 5,
-        prompt: secPrompt,
+        prompt: bodyPromptData.prompt,
+        hasCharacter: bodyPromptData.hasCharacter,
+        characterRole: bodyPromptData.characterRole,
         imageUrl: imageService.matchBestSceneImage(secContent, niche, idx + 1),
-        personaAvatarUrl: persona.avatarUrl,
-        personaName: persona.name
+        personaAvatarUrl: bodyPromptData.hasCharacter ? persona.avatarUrl : null,
+        personaName: bodyPromptData.hasCharacter ? (bodyPromptData.characterDNA?.name || persona.name) : 'Bối Cảnh Tự Nhiên / Macro Vật Thể'
       });
     });
 
     // Final Scene: Call To Action (Kêu gọi hành động)
     const ctaText = scriptData.callToAction || scriptData.cta || 'Nhấn theo dõi kênh để không bỏ lỡ các bí quyết tiếp theo!';
-    const ctaPrompt = `${persona.theme}, epic climax shot, inspiring victorious atmosphere with futuristic holographic subscribe icons, ${this.translateContextToEnglish(ctaText)}, 8k, cinematic`;
+    const ctaPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, ctaText, scenes.length + 1, scenes.length + 1);
     scenes.push({
       index: scenes.length + 1,
       type: 'CTA',
       title: `Phân cảnh ${scenes.length + 1}: Kêu Gọi Hành Động (CTA)`,
       text: ctaText,
       durationSec: 4,
-      prompt: ctaPrompt,
+      prompt: ctaPromptData.prompt,
+      hasCharacter: ctaPromptData.hasCharacter,
+      characterRole: ctaPromptData.characterRole,
       imageUrl: imageService.matchBestSceneImage(ctaText, niche, 4),
-      personaAvatarUrl: persona.avatarUrl,
-      personaName: persona.name
+      personaAvatarUrl: ctaPromptData.hasCharacter ? persona.avatarUrl : null,
+      personaName: ctaPromptData.hasCharacter ? (ctaPromptData.characterDNA?.name || persona.name) : 'Bối Cảnh Tự Nhiên / Macro Vật Thể'
     });
 
     return {
