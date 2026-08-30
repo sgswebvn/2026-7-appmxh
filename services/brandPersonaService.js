@@ -67,6 +67,15 @@ class BrandPersonaService {
 
     const scenes = [];
 
+const imageService = require('./imageService');
+
+    // Xác định Niche từ Persona
+    let niche = 'general';
+    if (personaId === 'travel-eco') niche = 'travel_eco';
+    else if (personaId === 'alex-tech') niche = 'tech_ai';
+    else if (personaId === 'minhanh-finance') niche = 'finance_money';
+    else if (personaId === 'kenji-story') niche = 'storytelling_history';
+
     // Scene 1: Hook (Mở đầu bùng nổ)
     const hookText = scriptData.hook || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.';
     const hookPrompt = `${persona.theme}, cinematic establishing shot, dramatic visual showing: ${this.translateContextToEnglish(hookText)}, highly detailed, masterpiece, 8k`;
@@ -77,7 +86,7 @@ class BrandPersonaService {
       text: hookText,
       durationSec: 4,
       prompt: hookPrompt,
-      imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(hookPrompt)}?width=${width}&height=${height}&seed=${baseSeed}&nologo=true&model=flux`,
+      imageUrl: imageService.matchBestSceneImage(hookText, niche, 0),
       personaAvatarUrl: persona.avatarUrl,
       personaName: persona.name
     });
@@ -97,7 +106,7 @@ class BrandPersonaService {
         text: secContent,
         durationSec: 5,
         prompt: secPrompt,
-        imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(secPrompt)}?width=${width}&height=${height}&seed=${baseSeed + idx + 1}&nologo=true&model=flux`,
+        imageUrl: imageService.matchBestSceneImage(secContent, niche, idx + 1),
         personaAvatarUrl: persona.avatarUrl,
         personaName: persona.name
       });
@@ -113,7 +122,7 @@ class BrandPersonaService {
       text: ctaText,
       durationSec: 4,
       prompt: ctaPrompt,
-      imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(ctaPrompt)}?width=${width}&height=${height}&seed=${baseSeed + 99}&nologo=true&model=flux`,
+      imageUrl: imageService.matchBestSceneImage(ctaText, niche, 4),
       personaAvatarUrl: persona.avatarUrl,
       personaName: persona.name
     });

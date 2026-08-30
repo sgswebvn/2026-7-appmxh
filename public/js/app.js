@@ -1750,6 +1750,8 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
     let voiceGainNode;
     let bgmGainNode;
     let sfxGainNode;
+    let decodedVoiceBuffer = null;
+    let totalDuration = 14;
 
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1761,12 +1763,12 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
       voiceGainNode.connect(audioCtx.destination);
 
       bgmGainNode = audioCtx.createGain();
-      bgmGainNode.gain.value = 0.22; // Nhạc nền vừa vặn không lấn át tiếng nói
+      bgmGainNode.gain.value = 0.22; // Nhạc nền điện ảnh du dương vừa vặn
       bgmGainNode.connect(audioDest);
       bgmGainNode.connect(audioCtx.destination);
 
       sfxGainNode = audioCtx.createGain();
-      sfxGainNode.gain.value = 0.4;
+      sfxGainNode.gain.value = 0.45;
       sfxGainNode.connect(audioDest);
       sfxGainNode.connect(audioCtx.destination);
 
@@ -1776,33 +1778,26 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
       console.warn('Web Audio Context khởi tạo hạn chế:', e.message);
     }
 
-    const audio = new Audio();
-    audio.crossOrigin = 'anonymous';
-    if (audioUrl) {
-      audio.src = audioUrl;
-    }
-
-    // Kết nối Voiceover Audio vào AudioContext nếu có Audio URL
-    let voiceSourceConnected = false;
-    audio.oncanplay = () => {
-      if (audioCtx && !voiceSourceConnected) {
-        try {
-          const src = audioCtx.createMediaElementSource(audio);
-          src.connect(voiceGainNode);
-          voiceSourceConnected = true;
-        } catch (err) {}
+    // Nạp và giải mã trực tiếp file âm thanh giọng đọc vào bộ nhớ RAM (Zero CORS)
+    if (audioUrl && audioCtx) {
+      try {
+        const audioRes = await fetch(audioUrl);
+        if (audioRes.ok) {
+          const arrayBuf = await audioRes.arrayBuffer();
+          decodedVoiceBuffer = await audioCtx.decodeAudioData(arrayBuf);
+          if (decodedVoiceBuffer && decodedVoiceBuffer.duration > 1) {
+            totalDuration = Math.ceil(decodedVoiceBuffer.duration) + 0.5;
+          }
+        }
+      } catch (err) {
+        console.warn('Giải mã trực tiếp ArrayBuffer thất bại, sử dụng thời lượng ước lượng:', err.message);
+        const wordCount = scriptText.split(/\s+/).length;
+        totalDuration = Math.max(10, Math.ceil(wordCount / 2.8));
       }
-    };
-
-    audio.onloadedmetadata = () => {
-      startRecording();
-    };
-    audio.onerror = () => {
-      startRecording(14);
-    };
-    setTimeout(() => {
-      if (!audio.duration) startRecording(14);
-    }, 1200);
+    } else {
+      const wordCount = scriptText.split(/\s+/).length;
+      totalDuration = Math.max(10, Math.ceil(wordCount / 2.8));
+    }
 
     // Hàm tạo âm thanh SFX Whoosh chuyển cảnh
     function triggerSceneWhooshSfx() {
@@ -1811,16 +1806,16 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
         const osc = audioCtx.createOscillator();
         const sweepGain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(450, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.35);
+        osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
 
-        sweepGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
-        sweepGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+        sweepGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        sweepGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
 
         osc.connect(sweepGain);
         sweepGain.connect(sfxGainNode);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.35);
+        osc.stop(audioCtx.currentTime + 0.3);
       } catch (e) {}
     }
 
@@ -1835,7 +1830,7 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
 
       let chordIdx = 0;
       const playNextChord = () => {
-        if (ctx.state === 'closed') return;
+        if (!ctx || ctx.state === 'closed') return;
         const currentChord = chords[chordIdx % chords.length];
         chordIdx++;
 
@@ -1847,24 +1842,27 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
             osc.frequency.value = freq;
 
             gain.gain.setValueAtTime(0.001, ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 1.2);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.8);
+            gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 1.0);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.4);
 
             osc.connect(gain);
             gain.connect(outGain);
             osc.start();
-            osc.stop(ctx.currentTime + 4.0);
+            osc.stop(ctx.currentTime + 3.5);
           } catch(e) {}
         });
 
-        setTimeout(playNextChord, 3500);
+        setTimeout(playNextChord, 3000);
       };
 
       playNextChord();
     }
 
+    // Bắt đầu Render & Record Video
+    startRecording(totalDuration);
+
     function startRecording(fallbackDuration) {
-      const duration = (audio.duration && !isNaN(audio.duration) && audio.duration > 1) ? audio.duration : (fallbackDuration || 14);
+      const duration = fallbackDuration || totalDuration || 14;
       const sentences = scriptText.split(/[.\n?!]/).map(s => s.trim()).filter(Boolean);
       const secPerSentence = duration / Math.max(1, sentences.length);
       const secPerScene = duration / Math.max(1, loadedImages.length);
@@ -1891,14 +1889,24 @@ function generateRealInteractiveMotionVideo(title, scriptText, audioUrl, aspectR
       const chunks = [];
       mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/mp4' });
+        const mimeType = mediaRecorder.mimeType || 'video/mp4';
+        const blob = new Blob(chunks, { type: mimeType });
         const videoBlobUrl = URL.createObjectURL(blob);
         resolve(videoBlobUrl);
       };
 
       mediaRecorder.start();
-      if (audioUrl) {
-        audio.play().catch(() => {});
+
+      // Bắt đầu phát giọng đọc từ RAM qua Web Audio Node
+      if (decodedVoiceBuffer && audioCtx) {
+        try {
+          const bufferSource = audioCtx.createBufferSource();
+          bufferSource.buffer = decodedVoiceBuffer;
+          bufferSource.connect(voiceGainNode);
+          bufferSource.start(0);
+        } catch(e) {
+          console.warn('Lỗi buffer source start:', e.message);
+        }
       }
 
       let startTime = Date.now();
@@ -2225,12 +2233,13 @@ function downloadRenderedVideo() {
   const a = document.createElement('a');
   a.href = currentRenderedVideoUrl;
   const title = (aiGeneratedData?.titles && aiGeneratedData.titles[0]) || 'Video_AI_Shorts_2026';
-  a.download = `${title.replace(/[^a-zA-Z0-9_\-]/g, '_')}.mp4`;
+  const ext = currentRenderedVideoUrl.startsWith('blob:') ? 'mp4' : 'mp4';
+  a.download = `${title.replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF\-]/gi, '_')}.${ext}`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
 
-  showToast('Bắt đầu tải video MP4 điện ảnh về máy tính của bạn...', 'success');
+  showToast('Bắt đầu tải video MP4 có đầy đủ âm thanh & hình ảnh 4K về máy tính...', 'success');
 }
 
 // ==================== SEAMLESS 1-CLICK PUBLISHING BRIDGE ====================
