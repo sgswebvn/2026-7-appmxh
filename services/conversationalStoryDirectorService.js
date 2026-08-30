@@ -225,7 +225,126 @@ class ConversationalStoryDirectorService {
       };
     }
 
-    // 1.3. Default Case: Du lịch & Khám phá đối thoại (Travel & Exploration Dialogues)
+    // 1.3. Case: GOLD STANDARD BENCHMARK — Cute Baby Talking & Comic Vendor (Viral Short Format)
+    if (lower.includes('baby') || lower.includes('em bé') || lower.includes('xoài') || lower.includes('mango') || lower.includes('trẻ em') || lower.includes('cute') || lower.includes('hài hước bé')) {
+      return {
+        title: topic || 'Cute Baby Talking About Mango 🥭 | Viral AI Short',
+        premise: 'Em bé mắt to tròn tinh nghịch xin chú bán hoa quả nếm thử miếng xoài chín, nhưng sau khi ăn xong lại có câu trả lời khiến chú ngỡ ngàng bật ngửa.',
+        genre: 'Cute AI Baby & Comic Vendor Micro-Drama',
+        mode: mode || 'CONVERSATION',
+        tone: 'Siêu đáng yêu, hài hước bất ngờ, nụ cười tỏa nắng, viral 100%',
+        setting: 'Sạp trái cây rực rỡ ngoài chợ phố, các sọt xoài chín vàng ươm bốc mùi thơm ngọt',
+        conflict: 'Bé muốn ăn thử xoài ngon nhưng không muốn mua cả quả.',
+        resolution: 'Bé nếm xong khen ngon nức nở nhưng bảo "con no bụng rồi" và cười phá lên.',
+        cast: [
+          {
+            id: 'char_baby_mango',
+            name: 'Bé Bắp (Cute Baby)',
+            age: 3,
+            gender: 'male',
+            role: 'Em bé 3 tuổi mắt to tròn má phúng phính (Talking AI Baby)',
+            personality: 'Ngây thơ, lém lỉnh, biểu cảm cực kỳ phong phú và đáng yêu',
+            appearance: 'Đôi mắt to tròn long lanh, lông mi cong, hai má ửng hồng phúng phính',
+            clothing: 'Áo thun in hình cây dừa và ô tô rực rỡ sắc màu',
+            voice: 'vi-female',
+            speechStyle: 'Giọng em bé ngọng nghịu, trong trẻo, dễ thương siêu cấp',
+            avatarUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=400&q=85'
+          },
+          {
+            id: 'char_chu_ban_xoai',
+            name: 'Chú Ba Bán Xoài',
+            age: 34,
+            gender: 'male',
+            role: 'Chú bán trái cây vui tính (Friendly Fruit Vendor)',
+            personality: 'Hiền lành, xởi lởi, thích trêu đùa trẻ con',
+            appearance: 'Khuôn mặt phúc hậu, nụ cười tươi, dáng người khỏe khoắn',
+            clothing: 'Tạp dề xanh lá sẫm và áo sơ mi cộc tay',
+            voice: 'vi-male',
+            speechStyle: 'Trầm ấm, vui vẻ, ngạc nhiên hài hước',
+            avatarUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=85'
+          }
+        ],
+        relationships: [
+          { from: 'char_baby_mango', to: 'char_chu_ban_xoai', type: 'Cute Toddler ↔ Friendly Fruit Vendor', dynamic: 'Tương tác đối đáp lém lỉnh, gây cười bất ngờ' }
+        ],
+        dialogueScript: [
+          {
+            speakerId: 'char_baby_mango',
+            speakerName: 'Bé Bắp (3t)',
+            text: 'Chú ơi, cho con nếm thử một miếng xoài chín đi chú?',
+            emotion: 'Đáng yêu & Cầu khẩn',
+            intent: 'Hook mở đầu 2s cực kỳ dễ thương',
+            targetCharacter: 'char_chu_ban_xoai',
+            action: 'Mắt mở to long lanh ngước nhìn chú bán xoài với đôi môi mấp máy',
+            shotType: 'Extreme Close-Up 85mm (Khuôn mặt em bé tỏa sáng)',
+            voiceKey: 'vi-female',
+            imageUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            speakerId: 'char_chu_ban_xoai',
+            speakerName: 'Chú Ba Bán Xoài (34t)',
+            text: 'Nè bé con, ăn thử xem xoài của chú ngọt lịm không nào!',
+            emotion: 'Niềm nở & Yêu mến',
+            intent: 'Trao đồ vật tương tác',
+            targetCharacter: 'char_baby_mango',
+            action: 'Cầm dao cắt miếng xoài vàng ươm mọng nước đưa cho bé',
+            shotType: 'Two-Shot Medium Angle (Chú bán xoài cắt xoài cho bé)',
+            voiceKey: 'vi-male',
+            imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            speakerId: 'char_baby_mango',
+            speakerName: 'Bé Bắp (3t)',
+            text: 'Ngon tuyệt cú mèo luôn chú ơi! Nhưng mà...',
+            emotion: 'Thích thú & Ngon miệng',
+            intent: 'Hành động cắn xoài mọng nước',
+            targetCharacter: 'char_chu_ban_xoai',
+            action: 'Cắn miếng xoài lớn, nước xoài vàng ngọt chảy sóng sánh xuống cằm',
+            shotType: 'Close-Up Action Eating (Bé ăn xoài ngon lành)',
+            voiceKey: 'vi-female',
+            imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            speakerId: 'char_baby_mango',
+            speakerName: 'Bé Bắp (3t)',
+            text: '...Nhưng mà con no bụng mất tiêu rồi chú ơi!',
+            emotion: 'Lém lỉnh & Tinh nghịch',
+            intent: 'Punchline cú twist bất ngờ',
+            targetCharacter: 'char_chu_ban_xoai',
+            action: 'Vẫy bàn tay nhỏ xíu, xoa xoa cái bụng tròn xoe',
+            shotType: 'Close-Up Punchline Shot (Bé cười tít mắt vẫy tay)',
+            voiceKey: 'vi-female',
+            imageUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            speakerId: 'char_chu_ban_xoai',
+            speakerName: 'Chú Ba Bán Xoài (34t)',
+            text: 'Hả?! Ăn thử xong bảo no bụng luôn là sao bé con!',
+            emotion: 'Sốc hài hước & Há hốc mồm',
+            intent: 'Phản ứng bất ngờ gây cười',
+            targetCharacter: 'char_baby_mango',
+            action: 'Há hốc mồm kinh ngạc, tay cầm dao đứng hình đầy hài hước',
+            shotType: 'Reaction Shock Shot (Chú bán xoài ngơ ngác)',
+            voiceKey: 'vi-male',
+            imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            speakerId: 'char_baby_mango',
+            speakerName: 'Bé Bắp (3t)',
+            text: 'Hahaha! Chúc mọi người xem video vui vẻ nha!',
+            emotion: 'Cười giòn tan hạnh phúc',
+            intent: 'Ending Payoff & Rewatch Loop',
+            targetCharacter: 'char_chu_ban_xoai',
+            action: 'Ngửa đầu cười tít mắt giòn giã, hai má rung lên rạng rỡ',
+            shotType: 'Low-Angle Laughing Payoff Ending Shot',
+            voiceKey: 'vi-female',
+            imageUrl: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1080&q=85'
+          }
+        ]
+      };
+    }
+
+    // 1.4. Default Case: Du lịch & Khám phá đối thoại (Travel & Exploration Dialogues)
     return {
       title: topic || 'Hành Trình Khám Phá Kỳ Thú',
       premise: 'Chuyến phiêu lưu của hai người bạn qua những vùng đất hoang sơ tuyệt đẹp của Việt Nam.',

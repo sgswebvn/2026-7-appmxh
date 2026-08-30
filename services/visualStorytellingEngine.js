@@ -190,41 +190,74 @@ class VisualStorytellingEngine {
         ]
       },
 
-      // 4. EM BÉ & HÀI HƯỚC (CUTE BABY & VIRAL SHORT)
+      // 4. EM BÉ & HÀI HƯỚC (GOLD STANDARD BENCHMARK: CUTE BABY & MANGO VENDOR)
       cute_baby: {
-        keywords: ['em bé', 'baby', 'trẻ em', 'cute', 'hài hước bé', 'toddler'],
+        keywords: ['em bé', 'baby', 'trẻ em', 'cute', 'hài hước bé', 'toddler', 'xoài', 'mango'],
         beats: [
           {
             shotType: 'HOOK',
-            purpose: 'Cận cảnh em bé mắt to tròn tạo sự thu hút đáng yêu tức thì',
-            sceneDescription: 'Em bé bụ bẫm mắt to tròn long lanh nhìn chằm chằm đầy tò mò',
-            characterRole: 'Em bé dễ thương (Cute Toddler)',
-            mainObject: 'Khuôn mặt em bé với đôi mắt to tròn và má phúng phính',
-            action: 'Chớp mắt ngây thơ, mấp máy môi',
-            camera: 'Extreme Close-Up 85mm, ánh sáng dịu nhẹ',
-            motionType: 'Slow push-in, đôi mắt lúng liếng',
+            purpose: 'Cận cảnh em bé mắt to tròn lóng lánh xin nếm thử xoài chín',
+            sceneDescription: 'Em bé 3 tuổi bụ bẫm với đôi mắt to tròn lóng lánh, má phúng phính ngước nhìn với biểu cảm siêu dễ thương',
+            characterRole: 'Bé Bắp (Cute Talking AI Baby)',
+            mainObject: 'Gương mặt em bé đáng yêu và sọt xoài vàng ươm',
+            action: 'Chớp mắt ngây thơ, mấp máy môi xin ăn thử xoài',
+            camera: 'Extreme Close-Up 85mm, ánh sáng tự nhiên dịu ngọt',
+            motionType: 'Slow push-in, đôi mắt lúng liếng, lông mi cong',
             stockUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1080&q=85'
           },
           {
-            shotType: 'ACTION_INTERACT',
-            purpose: 'Tương tác hài hước với đồ vật / trái cây tươi ngon',
-            sceneDescription: 'Em bé cầm quả xoài / món đồ chơi giơ lên miệng nếm thử',
-            characterRole: 'Em bé ngây ngô & Người lớn',
-            mainObject: 'Miếng xoài vàng ươm mọng nước',
-            action: 'Cắn thử miếng xoài, biểu cảm ngạc nhiên thích thú',
-            camera: 'Medium Close-Up 50mm',
-            motionType: 'Đầu lắc lư thích thú, tay vẫy nhẹ',
+            shotType: 'INTERACTION_VENDOR',
+            purpose: 'Chú bán trái cây vui vẻ cắt miếng xoài ngọt trao cho bé',
+            sceneDescription: 'Chú bán hoa quả tươi cười cầm dao cắt miếng xoài vàng ươm mọng nước đưa cho em bé',
+            characterRole: 'Chú Ba Bán Xoài (Friendly Fruit Vendor)',
+            mainObject: 'Dao gọt hoa quả và miếng xoài chín vàng ươm',
+            action: 'Cắt lát xoài mỏng, tươi cười trao tận tay bé',
+            camera: 'Two-Shot Medium Angle 50mm, không gian sạp trái cây rực rỡ',
+            motionType: 'Chuyển động cắt xoài và đưa tay mượt mà',
+            stockUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            shotType: 'ACTION_EATING',
+            purpose: 'Hành động bé cắn miếng xoài lớn nước ngọt chảy sóng sánh',
+            sceneDescription: 'Em bé há to miệng cắn miếng xoài ngọt ngào, nước xoài vàng chảy nhẹ xuống cằm đầy chân thực',
+            characterRole: 'Bé Bắp ăn ngon lành (Happy Toddler)',
+            mainObject: 'Miếng xoài vàng ươm mọng nước trên tay bé',
+            action: 'Nhai ngấu nghiến, nhắm mắt xuýt xoa khen ngon',
+            camera: 'Close-Up Action Shot 85mm, độ nét cao',
+            motionType: 'Miệng nhai mấp máy, biểu cảm thỏa mãn tột độ',
             stockUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=1080&q=85'
           },
           {
-            shotType: 'PAYOFF_LAUGH',
-            purpose: 'Tiếng cười giòn tan kết thúc video và kích thích rewatch',
-            sceneDescription: 'Em bé ngửa đầu cười tít mắt rạng rỡ, hai má ửng hồng',
-            characterRole: 'Em bé cười tươi (Laughing Baby)',
-            mainObject: 'Nụ cười thiên thần tỏa sáng',
-            action: 'Cười khúc khích, hai tay xoa bụng',
-            camera: 'Low-Angle Close-Up 85mm',
-            motionType: 'Hai vai rung lên theo tiếng cười giòn giã',
+            shotType: 'PUNCHLINE_TWIST',
+            purpose: 'Cú twist hài hước: Nếm xong bé xoa bụng bảo "con no rồi"',
+            sceneDescription: 'Em bé vừa cười lém lỉnh vừa vẫy bàn tay nhỏ xíu và xoa cái bụng tròn xoe',
+            characterRole: 'Bé Bắp lém lỉnh (Mischievous Baby)',
+            mainObject: 'Bàn tay nhỏ xíu vẫy vẫy và chiếc bụng no tròn',
+            action: 'Vẫy tay từ chối mua, mắt cười tít lại đầy tinh nghịch',
+            camera: 'Medium Close-Up 50mm',
+            motionType: 'Tay vẫy nhẹ, đầu lắc lư lém lỉnh',
+            stockUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            shotType: 'REACTION_SHOCK',
+            purpose: 'Biểu cảm đứng hình há hốc mồm của chú bán xoài tạo tiếng cười',
+            sceneDescription: 'Chú bán xoài mắt mở to, há hốc miệng đứng hình vì bất ngờ trước câu trả lời của bé',
+            characterRole: 'Chú Ba Bán Xoài đứng hình (Shocked Vendor)',
+            mainObject: 'Khuôn mặt sững sờ hài hước của người lớn',
+            action: 'Đứng hình há hốc miệng, chớp mắt ngơ ngác',
+            camera: 'Medium Reaction Close-Up 85mm',
+            motionType: 'Máy quay rung nhẹ tạo hiệu ứng ngỡ ngàng (Comic Shock Zoom)',
+            stockUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1080&q=85'
+          },
+          {
+            shotType: 'PAYOFF_LAUGH_ENDING',
+            purpose: 'Tiếng cười giòn tan của em bé kết thúc video tạo cảm xúc tích cực và vòng lặp xem lại',
+            sceneDescription: 'Em bé ngửa đầu cười tít mắt rung cả hai má, hai tay xoa bụng cười giòn giã',
+            characterRole: 'Em bé cười vang thiên thần (Laughing Angel)',
+            mainObject: 'Nụ cười thiên thần tỏa sáng rạng rỡ',
+            action: 'Cười khúc khích sảng khoái, hai tay vỗ nhẹ',
+            camera: 'Low-Angle Close-Up 85mm, ánh sáng vàng lung linh',
+            motionType: 'Hai vai rung lên theo nhịp cười giòn giã, camera zoom out nhẹ',
             stockUrl: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1080&q=85'
           }
         ]

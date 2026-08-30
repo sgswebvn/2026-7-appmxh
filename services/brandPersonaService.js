@@ -10,6 +10,15 @@
 class BrandPersonaService {
   constructor() {
     this.personas = {
+      'baby-cute': {
+        id: 'baby-cute',
+        name: 'Bé Bắp (Gold Standard - Viral Cute Talking Baby)',
+        gender: 'male',
+        voiceKey: 'vi-female',
+        theme: 'Vibrant Colorful Fruit Market Stall, Fresh Golden Mangoes, Sunshine Street Scene, Hyperrealistic 3D CGI Cute Baby with sparkling big eyes and rosy cheeks, 8k resolution, photorealistic, viral shorts aesthetic',
+        avatarPrompt: 'Cinematic portrait of an adorable 3-year-old toddler with huge sparkling round eyes, long curved eyelashes, chubby rosy cheeks, wearing a colorful t-shirt with palm trees and toy cars, smiling sweetly with vibrant fruit market background, 8k photorealistic',
+        avatarUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=400&q=85'
+      },
       'alex-tech': {
         id: 'alex-tech',
         name: 'Alex AI (Chuyên Gia Công Nghệ & AI)',

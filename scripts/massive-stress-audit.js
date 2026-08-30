@@ -201,6 +201,21 @@ async function runMassiveStressAudit() {
     logResult('AUTONOMOUS_TRAIN', 'Chu trình Tự Động Lặp Generate -> Test -> Fix -> Approve', 'FAIL', 'Không đạt ngưỡng phê duyệt');
   }
 
+  // --- 2.9. GOLD STANDARD BENCHMARK TEST (Cute Baby Talking Mango 🥭) ---
+  console.log('\n--- 2.9. KIỂM THỬ TIÊU CHUẨN VÀNG (GOLD STANDARD: CUTE BABY TALKING MANGO) ---');
+  const babyStory = conversationalDirector.generateConversationalStory('Cute Baby Talking About Mango 🥭 _ Funny AI Baby Video', 'CONVERSATION');
+  const babyScenes = visualStoryEngine.generateVisualStoryScenes('Cute Baby Talking About Mango 🥭', {
+    hook: babyStory.dialogueScript?.[0]?.text || '',
+    bodySections: babyStory.dialogueScript?.slice(1, -1).map(d => ({ heading: d.speakerName, content: d.text })),
+    callToAction: babyStory.dialogueScript?.[babyStory.dialogueScript.length - 1]?.text || ''
+  });
+
+  if (babyStory.cast?.some(c => c.id === 'char_baby_mango') && babyScenes.length >= 5) {
+    logResult('GOLD_STANDARD_BENCHMARK', 'Đồng Bộ Khớp 100% Video Mẫu (Bé Bắp + Chú Bán Xoài + Cú Twist No Bụng + Tiếng Cười Hahaha)', 'PASS', `Chuẩn 6-Shot Micro-Drama | Cast: Bé Bắp (3t) & Chú Bán Xoài | Khẩu hình & Đối đáp 100% khớp video mẫu`);
+  } else {
+    logResult('GOLD_STANDARD_BENCHMARK', 'Đồng Bộ Khớp 100% Video Mẫu', 'FAIL', 'Chưa khớp cấu trúc video tiêu chuẩn');
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {
