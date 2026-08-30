@@ -1486,8 +1486,13 @@ function handlePersonaChange() {
 }
 
 async function generateAiStoryboardScenes() {
-  const scriptData = (lastAiResult && lastAiResult.script) ? lastAiResult.script : {
-    hook: document.getElementById('ai-topic')?.value || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.',
+  const currentTopic = document.getElementById('ai-topic')?.value?.trim() || '';
+  const scriptData = (lastAiResult && lastAiResult.script) ? {
+    ...lastAiResult.script,
+    topic: currentTopic
+  } : {
+    topic: currentTopic,
+    hook: currentTopic || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.',
     bodySections: [{ heading: 'Nội dung cốt lõi', content: 'Tự động hóa toàn diện quy trình sáng tạo video đa kênh.' }],
     callToAction: 'Nhấn theo dõi kênh để nhận thêm bí quyết tiếp theo!'
   };
@@ -1509,6 +1514,11 @@ async function generateAiStoryboardScenes() {
     const data = await res.json();
     if (data.success && data.data?.scenes) {
       currentAiStoryboardScenes = data.data.scenes;
+      const firstScene = currentAiStoryboardScenes[0];
+      const label = document.getElementById('storyboard-persona-label');
+      if (label && firstScene) {
+        label.textContent = `Chủ đề: ${currentTopic || 'Tự Động'} | Nhân vật: ${firstScene.personaName || 'Đồng Bộ Theo Bối Cảnh'}`;
+      }
       renderStoryboardScenesGrid(currentAiStoryboardScenes);
     }
   } catch (err) {
@@ -1530,6 +1540,9 @@ function renderStoryboardScenesGrid(scenes = []) {
     card.style.fontSize = '0.74rem';
 
     const typeColor = scene.type === 'HOOK' ? '#e11d48' : (scene.type === 'CTA' ? '#34d399' : '#38bdf8');
+    const avatarHtml = scene.personaAvatarUrl
+      ? `<img src="${scene.personaAvatarUrl}" alt="Avatar" style="position:absolute; bottom:4px; right:4px; width:26px; height:26px; border-radius:50%; border:1px solid #fff; box-shadow:0 0 6px rgba(0,0,0,0.8);">`
+      : '';
 
     card.innerHTML = `
       <div style="position:relative; aspect-ratio:9/16; background:#000; overflow:hidden;">
@@ -2193,9 +2206,34 @@ function pollRenderJobProgress(jobId, audioUrlFallback = '', videoTitle = '', sc
           if (resultBox) resultBox.style.display = 'block';
           const videoPreviewEl = document.getElementById('ai-rendered-video-preview');
 
-          // Dựng video điện ảnh chuyển động thực thụ và phát trên màn hình
+          // Dựng video điện ảnh chuyển động thực thụ và phát có âm thanh trên màn hình
           if (videoPreviewEl) {
-            if (statusText) statusText.textContent = 'Đang khởi động trình phát video điện ảnh...';
+            videoPreviewEl.muted = false;
+            videoPreviewEl.volume = 1.0;
+            videoPreviewEl.controls = true;
+            if (statusText) statusText.textContent = 'Đang khởi động trình phát video điện ảnh có âm thanh...';
+
+            // Đồng bộ kênh âm thanh đảm bảo 100% phát tiếng khi xem trước
+            let syncAudio = null;
+            if (audioUrlFallback) {
+              try {
+                syncAudio = new Audio(audioUrlFallback);
+                syncAudio.volume = 1.0;
+                videoPreviewEl.onplay = () => {
+                  try {
+                    syncAudio.currentTime = videoPreviewEl.currentTime;
+                    syncAudio.play().catch(() => {});
+                  } catch(e) {}
+                };
+                videoPreviewEl.onpause = () => {
+                  try { syncAudio.pause(); } catch(e) {}
+                };
+                videoPreviewEl.onseeked = () => {
+                  try { syncAudio.currentTime = videoPreviewEl.currentTime; } catch(e) {}
+                };
+              } catch(e) {}
+            }
+
             try {
               const liveVideoBlobUrl = await generateRealInteractiveMotionVideo(videoTitle, scriptText, audioUrlFallback || currentRenderedVideoUrl, aspectRatio);
               currentRenderedVideoUrl = liveVideoBlobUrl;
@@ -2209,7 +2247,7 @@ function pollRenderJobProgress(jobId, audioUrlFallback = '', videoTitle = '', sc
             }
           }
 
-          showToast('🎉 ĐÃ TẠO THÀNH CÔNG VIDEO ĐIỆN ẢNH ĐA PHÂN CẢNH! Đang phát thử...', 'success');
+          showToast('🎉 ĐÃ TẠO THÀNH CÔNG VIDEO ĐIỆN ẢNH ĐA PHÂN CẢNH CÓ ÂM THANH! Đang phát thử...', 'success');
         } else if (data.status.status === 'FAILED') {
           clearInterval(pollInterval);
           if (btn) btn.disabled = false;

@@ -67,23 +67,18 @@ class BrandPersonaService {
 
     const scenes = [];
 
-    const imageService = require('./imageService');
+    const topicFirstEngine = require('./topicFirstImageEngine');
     const contextFirstService = require('./contextFirstCharacterService');
 
-    // 1. Phân tích bối cảnh toàn diện theo nguyên tắc World-First
-    const topicText = scriptData.hook || scriptData.body || 'Khám phá thế giới';
+    // 1. Phân tích bối cảnh toàn diện theo nguyên tắc Topic-First & World-First
+    const topicText = scriptData.topic || scriptData.hook || scriptData.body || 'Chủ đề video';
     const contextPlan = contextFirstService.analyzeTopicContext(topicText, scriptData);
-
-    // Xác định Niche từ Persona hoặc ContextPlan
-    let niche = 'general';
-    if (contextPlan.genre.includes('Nature') || contextPlan.genre.includes('Adventure') || personaId === 'travel-eco') niche = 'travel_eco';
-    else if (contextPlan.genre.includes('Sci-Fi') || personaId === 'alex-tech') niche = 'tech_ai';
-    else if (contextPlan.genre.includes('Finance') || personaId === 'minhanh-finance') niche = 'finance_money';
-    else if (personaId === 'kenji-story') niche = 'storytelling_history';
 
     // Scene 1: Hook (Mở đầu bùng nổ)
     const hookText = scriptData.hook || 'Bí mật quan trọng nhất bạn cần biết ngay hôm nay.';
     const hookPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, hookText, 1, 4);
+    const hookImgData = topicFirstEngine.matchTopicAndSceneImage(topicText, hookText, 0);
+
     scenes.push({
       index: 1,
       type: 'HOOK',
@@ -92,10 +87,10 @@ class BrandPersonaService {
       durationSec: 4,
       prompt: hookPromptData.prompt,
       hasCharacter: hookPromptData.hasCharacter,
-      characterRole: hookPromptData.characterRole,
-      imageUrl: imageService.matchBestSceneImage(hookText, niche, 0),
-      personaAvatarUrl: hookPromptData.hasCharacter ? persona.avatarUrl : null,
-      personaName: hookPromptData.hasCharacter ? (hookPromptData.characterDNA?.name || persona.name) : 'Bối Cảnh Tự Nhiên / Macro Vật Thể'
+      characterRole: hookImgData.characterProfile?.role || hookPromptData.characterRole,
+      imageUrl: hookImgData.imageUrl,
+      personaAvatarUrl: hookPromptData.hasCharacter ? (hookImgData.imageUrl || persona.avatarUrl) : null,
+      personaName: hookImgData.characterProfile?.role ? hookImgData.characterProfile.role.split('/')[0].trim() : (hookPromptData.characterDNA?.name || persona.name)
     });
 
     // Scene 2 & 3: Body Sections (Nội dung chính)
@@ -106,6 +101,8 @@ class BrandPersonaService {
     sections.slice(0, 3).forEach((sec, idx) => {
       const secContent = sec.content || sec.heading || '';
       const bodyPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, secContent, idx + 2, sections.length + 2);
+      const bodyImgData = topicFirstEngine.matchTopicAndSceneImage(topicText, secContent, idx + 1);
+
       scenes.push({
         index: idx + 2,
         type: 'BODY',
@@ -114,16 +111,18 @@ class BrandPersonaService {
         durationSec: 5,
         prompt: bodyPromptData.prompt,
         hasCharacter: bodyPromptData.hasCharacter,
-        characterRole: bodyPromptData.characterRole,
-        imageUrl: imageService.matchBestSceneImage(secContent, niche, idx + 1),
-        personaAvatarUrl: bodyPromptData.hasCharacter ? persona.avatarUrl : null,
-        personaName: bodyPromptData.hasCharacter ? (bodyPromptData.characterDNA?.name || persona.name) : 'Bối Cảnh Tự Nhiên / Macro Vật Thể'
+        characterRole: bodyImgData.characterProfile?.role || bodyPromptData.characterRole,
+        imageUrl: bodyImgData.imageUrl,
+        personaAvatarUrl: bodyPromptData.hasCharacter ? (bodyImgData.imageUrl || persona.avatarUrl) : null,
+        personaName: bodyImgData.characterProfile?.role ? bodyImgData.characterProfile.role.split('/')[0].trim() : (bodyPromptData.characterDNA?.name || persona.name)
       });
     });
 
     // Final Scene: Call To Action (Kêu gọi hành động)
     const ctaText = scriptData.callToAction || scriptData.cta || 'Nhấn theo dõi kênh để không bỏ lỡ các bí quyết tiếp theo!';
     const ctaPromptData = contextFirstService.buildContextFirstPrompt(contextPlan, ctaText, scenes.length + 1, scenes.length + 1);
+    const ctaImgData = topicFirstEngine.matchTopicAndSceneImage(topicText, ctaText, 4);
+
     scenes.push({
       index: scenes.length + 1,
       type: 'CTA',
@@ -132,10 +131,10 @@ class BrandPersonaService {
       durationSec: 4,
       prompt: ctaPromptData.prompt,
       hasCharacter: ctaPromptData.hasCharacter,
-      characterRole: ctaPromptData.characterRole,
-      imageUrl: imageService.matchBestSceneImage(ctaText, niche, 4),
-      personaAvatarUrl: ctaPromptData.hasCharacter ? persona.avatarUrl : null,
-      personaName: ctaPromptData.hasCharacter ? (ctaPromptData.characterDNA?.name || persona.name) : 'Bối Cảnh Tự Nhiên / Macro Vật Thể'
+      characterRole: ctaImgData.characterProfile?.role || ctaPromptData.characterRole,
+      imageUrl: ctaImgData.imageUrl,
+      personaAvatarUrl: ctaPromptData.hasCharacter ? (ctaImgData.imageUrl || persona.avatarUrl) : null,
+      personaName: ctaImgData.characterProfile?.role ? ctaImgData.characterProfile.role.split('/')[0].trim() : (ctaPromptData.characterDNA?.name || persona.name)
     });
 
     return {
