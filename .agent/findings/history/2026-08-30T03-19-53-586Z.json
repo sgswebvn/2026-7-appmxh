@@ -1,0 +1,16 @@
+[
+  {
+    "id": "F-002",
+    "severity": "P1",
+    "category": "BUG",
+    "page": "/",
+    "title": "Browser console errors detected",
+    "problem": "The live homepage emitted browser errors.",
+    "evidence": [
+      "Cannot read properties of null (reading 'addEventListener')"
+    ],
+    "expected": "Homepage loads without console errors.",
+    "recommendation": "Investigate the affected client-side dependency before changing unrelated code.",
+    "status": "open"
+  }
+]

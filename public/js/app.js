@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await checkAuthStatus();
   loadBrands();
 
-  document.getElementById('btn-add-channel').addEventListener('click', openOAuthPopup);
+  document.getElementById('btn-add-channel')?.addEventListener('click', openOAuthPopup);
   document.getElementById('btn-refresh-history').addEventListener('click', () => {
     loadQuota();
     loadHistory();

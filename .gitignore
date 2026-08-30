@@ -24,3 +24,10 @@ yarn-debug.log*
 yarn-error.log*
 .idea
 .vscode
+
+# Autonomous agent runtime artifacts
+.agent/screenshots/before/*.png
+.agent/screenshots/after/*.png
+.agent/cycles/cycle-*/
+playwright-report/
+test-results/

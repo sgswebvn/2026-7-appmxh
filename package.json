@@ -5,7 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "agent": "tsx orchestrator/src/index.ts",
+    "agent:review": "tsx orchestrator/src/index.ts review",
+    "agent:improve": "tsx orchestrator/src/index.ts improve",
+    "agent:verify": "tsx orchestrator/src/index.ts verify",
+    "agent:status": "tsx orchestrator/src/index.ts status",
+    "agent:check": "tsc --noEmit",
+    "test:smoke": "playwright test"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -23,5 +30,11 @@
     "multer": "^1.4.5-lts.1",
     "uuid": "^11.1.0"
   },
-  "type": "commonjs"
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.4.0",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
 }

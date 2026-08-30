@@ -1,0 +1,28 @@
+[
+  {
+    "id": "TASK-001",
+    "finding_id": "F-002",
+    "priority": "P1",
+    "title": "Browser console errors detected",
+    "description": "The live homepage emitted browser errors.\n\nRecommendation: Investigate the affected client-side dependency before changing unrelated code.",
+    "acceptance_criteria": [
+      "Homepage loads without console errors.",
+      "The affected page loads without browser console errors."
+    ],
+    "assigned_to": "codex",
+    "status": "failed"
+  },
+  {
+    "id": "TASK-002",
+    "finding_id": "F-001",
+    "priority": "P2",
+    "title": "Homepage lacks a meta description",
+    "description": "The rendered homepage has no meta description, which weakens link previews and search-result context.\n\nRecommendation: Add a task-scoped meta description to public/index.html.",
+    "acceptance_criteria": [
+      "The homepage provides a concise meta description.",
+      "The affected page loads without browser console errors."
+    ],
+    "assigned_to": "codex",
+    "status": "testing"
+  }
+]

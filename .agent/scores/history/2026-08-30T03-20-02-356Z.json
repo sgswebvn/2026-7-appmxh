@@ -1,0 +1,14 @@
+{
+  "score": 100,
+  "threshold": 85,
+  "approved": true,
+  "dimensions": {
+    "UI": 10,
+    "UX": 15,
+    "PRODUCT_LOGIC": 25,
+    "ARCHITECTURE": 15,
+    "PERFORMANCE": 5,
+    "AUTOMATION": 30
+  },
+  "updatedAt": "2026-08-30T03:20:02.355Z"
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "TASK-001",
+    "finding_id": "F-002",
+    "priority": "P1",
+    "title": "Browser console errors detected",
+    "description": "The live homepage emitted browser errors.\n\nRecommendation: Investigate the affected client-side dependency before changing unrelated code.",
+    "acceptance_criteria": [
+      "Homepage loads without console errors.",
+      "The affected page loads without browser console errors."
+    ],
+    "assigned_to": "codex",
+    "status": "failed"
+  }
+]

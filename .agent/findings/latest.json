@@ -1,0 +1,117 @@
+[
+  {
+    "id": "F-P0-01",
+    "severity": "P0",
+    "category": "ARCHITECTURE",
+    "page": "/production",
+    "title": "Video Rendering Completely Disconnected from Scene/Shot Pipeline",
+    "problem": "videoRenderService.js generates a video using a single solid background color (lavfi color) with an audio track or a 12-byte dummy buffer fallback. It completely discards all generated scenes, shots, visual assets, and camera motions.",
+    "evidence": [
+      "videoRenderService.js line 171: ffmpeg -y -loop 1 -f lavfi -i color=c=${bgColor}:s=${width}x${height}:d=60 -i ${audioPath}",
+      "videoRenderService.js line 203: createFallbackVideo creates a 12-byte dummy file"
+    ],
+    "expected": "Video rendering engine must compose and concatenate the actual shot video/image sequences corresponding to each dialogue scene.",
+    "recommendation": "Replace the single color loop with a multi-track timeline video compositor that stitches generated video clips/shot images with transitions, captions, and audio.",
+    "status": "open"
+  },
+  {
+    "id": "F-P0-02",
+    "severity": "P0",
+    "category": "PRODUCT_LOGIC",
+    "page": "/director",
+    "title": "Absence of Real AI Image & Video Generation Engine",
+    "problem": "The application does not integrate with any AI image (Imagen/SD/Flux) or AI video (Kling/Runway/Pika/Luma/Wan) API. All visual assets are static hardcoded Unsplash stock photos.",
+    "evidence": [
+      "conversationalStoryDirectorService.js & visualStorytellingEngine.js hardcode static Unsplash URLs (e.g. images.unsplash.com/photo-...)",
+      "No prompt-to-image or image-to-video generation worker is present in services/"
+    ],
+    "expected": "The factory should generate custom visual assets and video clips tailored to the specific topic and character prompts.",
+    "recommendation": "Integrate standard Text-to-Image and Image-to-Video generation APIs to produce real dynamic shot clips from prompt descriptions.",
+    "status": "open"
+  },
+  {
+    "id": "F-P0-03",
+    "severity": "P0",
+    "category": "ARCHITECTURE",
+    "page": "/production",
+    "title": "No Multi-Voice Conversational Audio Synthesis",
+    "problem": "voiceService.js only synthesizes a single monolithic audio track. It cannot generate distinct voice tracks for multiple speakers (e.g. Grandfather vs Granddaughter, Baby vs Fruit Vendor) and stitch them into a synchronized dialogue track.",
+    "evidence": [
+      "voiceService.js has only single-string fetchTtsChunk",
+      "videoRenderService.js only accepts a single audioPath parameter"
+    ],
+    "expected": "Dialogue engine must generate individual audio chunks for each dialogue line using the assigned character voice, then concatenate them with appropriate pauses.",
+    "recommendation": "Build a MultiSpeakerAudioComposer that iterates over dialogueScript, invokes TTS with character-specific voiceKey, and merges timestamps into a master dialogue audio stream.",
+    "status": "open"
+  },
+  {
+    "id": "F-P0-04",
+    "severity": "P0",
+    "category": "PRODUCT_LOGIC",
+    "page": "/director",
+    "title": "Zero Character Visual Consistency Across Scenes and Shots",
+    "problem": "Across different shots of the same story, completely different people from random stock photos appear. There is no mechanism (LoRA, IP-Adapter, Character Reference, Seed) to keep character appearance consistent.",
+    "evidence": [
+      "Elderly AI story uses photo-1581579438747 for shot 1 (grandmother), photo-1544717305 for shot 2 (grandfather), and photo-1555066931 for shot 3 (keyboard)"
+    ],
+    "expected": "Characters maintain recognizable facial features, hair, clothing, and style across all scenes in a video.",
+    "recommendation": "Implement Character Reference Sheets (front, 3/4 view) and pass consistent character visual embeddings/reference images to image/video generation models.",
+    "status": "open"
+  },
+  {
+    "id": "F-P1-01",
+    "severity": "P1",
+    "category": "PRODUCT_LOGIC",
+    "page": "/factory",
+    "title": "Hardcoded Topic Archetypes with Static Fallbacks",
+    "problem": "conversationalStoryDirectorService.js uses rigid if/else keyword checks (elderly, noodles, baby, travel). Any custom user topic outside these keywords falls back to a static travel script instead of dynamically generating novel story arcs.",
+    "evidence": [
+      "conversationalStoryDirectorService.js lines 27, 134, 229 contain hardcoded keyword branches returning predefined static JS objects"
+    ],
+    "expected": "LLM (Gemini API) should dynamically generate custom story worlds, character casts, conflicts, and dialogue scripts for any arbitrary user topic.",
+    "recommendation": "Connect generateConversationalStory to structured Gemini LLM prompt output returning a dynamic StoryPlan JSON.",
+    "status": "open"
+  },
+  {
+    "id": "F-P1-02",
+    "severity": "P1",
+    "category": "UX",
+    "page": "/director",
+    "title": "No User-Facing Character Creator or Relationship Editor",
+    "problem": "Users cannot create, customize, or save custom characters (e.g. specifying age, gender, role, personality, visual style, voice). The UI only displays read-only character cards from backend templates.",
+    "evidence": [
+      "public/index.html director-cast-grid is purely populated via innerHTML from template objects with no Add/Edit Character buttons or forms"
+    ],
+    "expected": "Users should be able to create custom character profiles, assign voices, and define relationship dynamics between characters.",
+    "recommendation": "Add a Character Library and Cast Builder UI allowing users to create, preview avatars, and assign voice models to characters.",
+    "status": "open"
+  },
+  {
+    "id": "F-P1-03",
+    "severity": "P1",
+    "category": "ARCHITECTURE",
+    "page": "/production",
+    "title": "Missing Character Performance & Lip-Sync Animation",
+    "problem": "The product aims to create conversational short videos, but has no lip-sync or character animation pipeline (e.g. LivePortrait, SadTalker, Wav2Lip, or video generation with speech driving mouth movement).",
+    "evidence": [
+      "No lip-sync service or animation engine exists in services/ or orchestrator/"
+    ],
+    "expected": "When a character speaks a dialogue line, their mouth and facial expressions should animate to match the voice audio.",
+    "recommendation": "Integrate a lip-sync or video generation API that takes the character keyframe and dialogue audio chunk to produce talking video shots.",
+    "status": "open"
+  },
+  {
+    "id": "F-P2-01",
+    "severity": "P2",
+    "category": "UX",
+    "page": "/ailab",
+    "title": "Simulated Mock Evaluation Metrics in AI Lab & Memory",
+    "problem": "The AI Lab workspace and Memory database display hardcoded quality scores (91/100, 94/100) and simulated evaluation loops that do not reflect the actual rendered video artifact.",
+    "evidence": [
+      "autonomousVideoTrainingEngine.js calculates synthetic mathematical scores based on length of strings rather than inspecting rendered video files"
+    ],
+    "expected": "QA and evaluation should inspect the actual rendered MP4 video (resolution, audio sync, frame rate, speech clarity).",
+    "recommendation": "Update the verification pipeline to analyze the exported video file metadata and playback stream.",
+    "status": "open"
+  }
+]

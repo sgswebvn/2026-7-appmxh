@@ -1,0 +1,18 @@
+{
+  "maxCycles": 10,
+  "maxTasksPerCycle": 3,
+  "qualityThreshold": 85,
+  "requireTestsPassing": true,
+  "requireBrowserVerification": true,
+  "server": {
+    "host": "127.0.0.1",
+    "port": 3000,
+    "baseUrl": "http://127.0.0.1:3000",
+    "command": "node server.js"
+  },
+  "antigravity": {
+    "enabled": false,
+    "command": null,
+    "reviewTimeoutMs": 60000
+  }
+}

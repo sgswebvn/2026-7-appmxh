@@ -1,0 +1,16 @@
+[
+  {
+    "id": "F-001",
+    "severity": "P1",
+    "category": "BUG",
+    "page": "/",
+    "title": "Browser console 404 error on initial load due to missing favicon resource",
+    "problem": "The live homepage emitted a 404 (Not Found) console error upon load because the browser automatically requests /favicon.ico when no explicit favicon relation is declared.",
+    "evidence": [
+      "Playwright console error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "expected": "Homepage loads cleanly with 200 OK and 0 browser console errors.",
+    "recommendation": "Add explicit <link rel=\"icon\" href=\"/app_icon_1024x1024.png\"> in public/index.html to eliminate the 404 error.",
+    "status": "open"
+  }
+]

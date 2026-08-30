@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "autonomous-development-orchestrator": {
+      "command": "npx",
+      "args": ["tsx", "orchestrator/src/mcp/server.ts"],
+      "cwd": "C:\\Users\\user\\Desktop\\New folder (2)\\2026-4-ytbmuti"
+    }
+  }
+}
