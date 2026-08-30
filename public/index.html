@@ -651,12 +651,28 @@
         </div>
 
         <!-- Filter Status -->
-        <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-          <button class="btn btn-sm btn-outline active-filter" onclick="filterContentStatus('ALL')">Tất cả</button>
-          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('IDEA')">Ý tưởng (Idea)</button>
-          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('SCRIPT_GENERATED')">Đã có kịch bản</button>
-          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('READY')">Sẵn sàng đăng</button>
-          <button class="btn btn-sm btn-outline" onclick="filterContentStatus('PUBLISHED')">Đã xuất bản</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn btn-sm btn-outline active-filter" onclick="filterContentStatus('ALL')">Tất cả</button>
+            <button class="btn btn-sm btn-outline" onclick="filterContentStatus('IDEA')">Ý tưởng (Idea)</button>
+            <button class="btn btn-sm btn-outline" onclick="filterContentStatus('SCRIPT_GENERATED')">Đã có kịch bản</button>
+            <button class="btn btn-sm btn-outline" onclick="filterContentStatus('READY')">Sẵn sàng đăng</button>
+            <button class="btn btn-sm btn-outline" onclick="filterContentStatus('PUBLISHED')">Đã xuất bản</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" id="btn-bulk-delete-content" class="btn btn-sm btn-danger-outline" onclick="deleteSelectedContentProjects()" style="display:none; font-size:0.76rem; padding:4px 10px;">
+              🗑️ Xóa đã chọn (<span id="selected-content-count">0</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- Bulk Selection Bar -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; background:#0c101a; padding:8px 14px; border-radius:6px; border:1px solid #1e293b;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; cursor:pointer; color:#e2e8f0; margin:0; user-select:none;">
+            <input type="checkbox" id="content-select-all-check" onchange="toggleSelectAllContentProjects(this.checked)" style="cursor:pointer; width:16px; height:16px;">
+            <span><strong>Chọn tất cả</strong> nội dung trong danh sách hiện tại</span>
+          </label>
+          <span id="content-total-stat-text" style="font-size:0.75rem; color:var(--text-muted);">Đang hiển thị: 0 mục</span>
         </div>
 
         <div id="content-projects-grid" class="grid-3"></div>
@@ -1326,6 +1342,60 @@
         <div style="margin-top: 16px; display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="btn btn-outline btn-sm" onclick="closeBrandModal()">Hủy</button>
           <button type="submit" class="btn btn-primary btn-sm" id="btn-save-brand">Lưu Thương Hiệu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CHỈNH SỬA KỊCH BẢN TRONG KHO NỘI DUNG (CONTENT VAULT EDIT MODAL) -->
+  <div class="modal-backdrop" id="edit-script-modal">
+    <div class="modal-dialog" style="max-width:680px;">
+      <div class="panel-header">
+        <h3 class="panel-title">✏️ Chỉnh Sửa Kịch Bản Trước Khi Đăng (Content Vault Editor)</h3>
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeEditScriptModal()">✕</button>
+      </div>
+
+      <form id="edit-script-form" onsubmit="handleSaveEditedScript(event)" style="margin-top: 12px;">
+        <input type="hidden" id="edit-script-id">
+
+        <div class="form-group">
+          <label class="form-label" for="edit-script-title">Tiêu Đề Video *</label>
+          <input type="text" id="edit-script-title" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-script-hook" style="color:#fbbf24; font-weight:600;">⚡ Hook Thu Hút (0–3 Giây Đầu) *</label>
+          <textarea id="edit-script-hook" class="form-textarea" style="min-height:55px;" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-script-body" style="color:#38bdf8; font-weight:600;">📝 Nội Dung Chi Tiết (Body Content) *</label>
+          <textarea id="edit-script-body" class="form-textarea" style="min-height:90px;" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-script-cta" style="color:#34d399; font-weight:600;">📣 Lời Kêu Gọi Hành Động (CTA)</label>
+          <input type="text" id="edit-script-cta" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-script-desc">Mô Tả Chuẩn SEO</label>
+          <textarea id="edit-script-desc" class="form-textarea" style="min-height:65px;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-script-tags">Thẻ Từ Khóa (Cách nhau bởi dấu phẩy)</label>
+          <input type="text" id="edit-script-tags" class="form-input" placeholder="dulich, sinhthai, khampha...">
+        </div>
+
+        <div style="margin-top: 16px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="editCurrentModalInAiStudio()" style="color:#38bdf8; border-color:#38bdf8;">
+            🤖 Chuyển Sang AI Studio Viết Lại
+          </button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeEditScriptModal()">Hủy</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="btn-save-edited-script">💾 Lưu Thay Đổi</button>
+          </div>
         </div>
       </form>
     </div>

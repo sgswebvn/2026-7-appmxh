@@ -61,4 +61,21 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// 5. Xóa hàng loạt Content Projects (Bulk Delete)
+router.post('/bulk-delete', authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp danh sách ID cần xóa.' });
+    }
+
+    const ContentProject = require('../models/ContentProject');
+    await ContentProject.deleteMany({ _id: { $in: ids }, userId: req.user.id });
+
+    res.json({ success: true, message: `Đã xóa thành công ${ids.length} nội dung khỏi Kho Lưu Trữ!` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi xóa hàng loạt: ' + err.message });
+  }
+});
+
 module.exports = router;

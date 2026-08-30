@@ -2495,14 +2495,21 @@ function filterContentStatus(status) {
 function renderContentProjectsGrid(projects) {
   const grid = document.getElementById('content-projects-grid');
   const empty = document.getElementById('empty-content-state');
+  const statText = document.getElementById('content-total-stat-text');
+  const selectAllCheck = document.getElementById('content-select-all-check');
   if (!grid) return;
+
+  if (selectAllCheck) selectAllCheck.checked = false;
+  updateSelectedContentCount();
 
   grid.innerHTML = '';
   if (!projects || projects.length === 0) {
     if (empty) empty.style.display = 'block';
+    if (statText) statText.textContent = 'Đang hiển thị: 0 mục';
     return;
   }
   if (empty) empty.style.display = 'none';
+  if (statText) statText.textContent = `Đang hiển thị: ${projects.length} mục`;
 
   projects.forEach(p => {
     const card = document.createElement('div');
@@ -2513,6 +2520,7 @@ function renderContentProjectsGrid(projects) {
     card.style.display = 'flex';
     card.style.flexDirection = 'column';
     card.style.justifyContent = 'space-between';
+    card.style.position = 'relative';
 
     const statusBadge = (p.status === 'READY' || p.status === 'MEDIA_READY')
       ? '<span class="status-badge status-success" style="font-size:0.7rem;">Sẵn sàng đăng</span>'
@@ -2528,8 +2536,11 @@ function renderContentProjectsGrid(projects) {
 
     card.innerHTML = `
       <div>
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <h4 style="font-size:0.88rem; font-weight:600; color:#fff; flex:1; margin-right:6px;">${p.title}</h4>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex:1;">
+            <input type="checkbox" class="content-item-check" value="${p._id || p.id}" onchange="updateSelectedContentCount()" style="cursor:pointer; width:16px; height:16px;">
+            <h4 style="font-size:0.88rem; font-weight:600; color:#fff; margin:0;">${p.title}</h4>
+          </div>
           ${statusBadge}
         </div>
         <p style="font-size:0.75rem; color:var(--text-muted); line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
@@ -2561,6 +2572,57 @@ function renderContentProjectsGrid(projects) {
     `;
     grid.appendChild(card);
   });
+}
+
+// ==================== TÁC VỤ CHỌN TẤT CẢ & XÓA HÀNG LOẠT (BULK DELETE) ====================
+function toggleSelectAllContentProjects(checked) {
+  const checkboxes = document.querySelectorAll('.content-item-check');
+  checkboxes.forEach(cb => cb.checked = checked);
+  updateSelectedContentCount();
+}
+
+function updateSelectedContentCount() {
+  const checkboxes = document.querySelectorAll('.content-item-check:checked');
+  const count = checkboxes.length;
+  const countEl = document.getElementById('selected-content-count');
+  const btnBulk = document.getElementById('btn-bulk-delete-content');
+
+  if (countEl) countEl.textContent = count;
+  if (btnBulk) {
+    btnBulk.style.display = count > 0 ? 'inline-block' : 'none';
+  }
+}
+
+async function deleteSelectedContentProjects() {
+  const checkboxes = document.querySelectorAll('.content-item-check:checked');
+  const ids = Array.from(checkboxes).map(cb => cb.value);
+
+  if (ids.length === 0) {
+    showToast('Chưa chọn mục nào để xóa!', 'warning');
+    return;
+  }
+
+  if (!confirm(`Bạn có chắc chắn muốn xóa ${ids.length} mục đã chọn khỏi Kho Nội Dung?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/content/bulk-delete', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ ids })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || `Đã xóa ${ids.length} mục thành công!`, 'success');
+      loadContentProjects();
+    } else {
+      showToast(data.message || 'Lỗi xóa hàng loạt', 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
 }
 
 // ==================== MODAL CHỈNH SỬA KỊCH BẢN TRỰC TIẾP ====================
@@ -2647,6 +2709,14 @@ async function handleSaveEditedScript(e) {
     }
   } catch (err) {
     showToast('Lỗi kết nối: ' + err.message, 'error');
+  }
+}
+
+function editCurrentModalInAiStudio() {
+  const id = document.getElementById('edit-script-id').value;
+  closeEditScriptModal();
+  if (id) {
+    editContentProjectInAiStudio(id);
   }
 }
 
