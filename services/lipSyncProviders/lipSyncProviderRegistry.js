@@ -62,8 +62,9 @@ class LipSyncProviderRegistry {
     let fallbackReason = null;
 
     for (const providerId of chain) {
-      if (providerId === 'mock-test-lipsync-provider' && options.preferredProvider !== 'mock-test-lipsync-provider' && process.env.ALLOW_MOCK_LIPSYNC !== 'true') {
-        continue;
+      if (providerId === 'mock-test-lipsync-provider') {
+        const allowMock = options.preferredProvider === 'mock-test-lipsync-provider' || process.env.ALLOW_MOCK_LIPSYNC === 'true';
+        if (!allowMock) continue;
       }
 
       const provider = this.get(providerId);
@@ -72,6 +73,7 @@ class LipSyncProviderRegistry {
       const status = await provider.getStatus();
       if (!status.ready) {
         if (!fallbackReason) fallbackReason = `${providerId}: Provider not ready (${status.details})`;
+        lastError = { code: 'LIPSYNC_PROVIDER_NOT_CONFIGURED', message: status.details };
         continue;
       }
 

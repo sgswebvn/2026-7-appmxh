@@ -110,6 +110,10 @@ class VisualGenerationService {
       width: genResult.width,
       height: genResult.height,
       metadata: {
+        mode: genResult.actualProvider?.includes('mock') ? 'mock' : 'real',
+        assetType: 'character-reference',
+        characterId,
+        generatedAt: new Date().toISOString(),
         characterName: character.name,
         age: character.age,
         gender: character.gender,

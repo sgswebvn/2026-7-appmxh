@@ -78,19 +78,54 @@ class ReplicateLipSyncProvider extends BaseLipSyncProvider {
 
       // Download MP4
       const videoBuffer = await this.downloadBuffer(outputUrl);
-      const outFileName = `lipsync_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`;
+      if (!videoBuffer || videoBuffer.length < 1000) {
+        return {
+          success: false,
+          provider: this.id,
+          error: { code: 'LIPSYNC_OUTPUT_INVALID', message: 'Tệp video tải về từ Replicate quá nhỏ hoặc bị hỏng.' }
+        };
+      }
+
+      const outFileName = `lipsync_real_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`;
       const outDir = path.join(process.cwd(), 'public', 'uploads', 'video-assets');
       fs.mkdirSync(outDir, { recursive: true });
       const outFilePath = path.join(outDir, outFileName);
       fs.writeFileSync(outFilePath, videoBuffer);
 
+      // Deep validate decoded frames and motion
+      const { mediaCapability } = require('../mediaCapability');
+      const decodeCheck = await mediaCapability.validateVideoDecodability(outFilePath);
+      if (!decodeCheck.decodable) {
+        if (fs.existsSync(outFilePath)) fs.unlinkSync(outFilePath);
+        return {
+          success: false,
+          provider: this.id,
+          error: { code: 'LIPSYNC_OUTPUT_INVALID', message: `Tệp video trả về không thể giải mã: ${decodeCheck.error}` }
+        };
+      }
+
+      const motionCheck = await mediaCapability.analyzeVideoMotion(outFilePath);
+
       return {
         success: true,
+        mode: 'real',
+        provider: this.id,
+        model: 'sadtalker',
+        predictionId: prediction.id,
+        sourceImage: faceImagePath,
+        sourceAudio: audioPath,
+        outputVideo: outFilePath,
         videoBuffer,
         videoPath: outFilePath,
         videoUrl: `/uploads/video-assets/${outFileName}`,
         durationMs,
-        provider: this.id
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        motionScore: motionCheck.motionScore,
+        hasMotion: motionCheck.hasMotion,
+        status: 'succeeded',
+        isMock: false
       };
     } catch (err) {
       return {

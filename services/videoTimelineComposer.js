@@ -114,21 +114,32 @@ class VideoTimelineComposer {
         let motionProviderUsed = null;
         let lipSyncProviderUsed = null;
 
-        // Route: Lip-sync for speaking shots vs Motion for wide/reaction shots
-        if (shot.isLipSyncRequired && shot.audioPath && fs.existsSync(shot.audioPath)) {
-          shotResult = await this.lipSyncRegistry.generateWithFallback({
-            faceImagePath: visualImagePath,
-            audioPath: shot.audioPath,
-            durationMs: shot.durationMs,
-            preferredProvider: preferredLipSyncProvider
-          });
-          if (shotResult && shotResult.success) {
-            isLipSync = true;
-            lipSyncProviderUsed = shotResult.actualProvider;
+        // Route: Lip-sync for speaking shots
+        if (shot.isLipSyncRequired && shot.audioPath && visualImagePath) {
+          try {
+            shotResult = await this.lipSyncRegistry.generateWithFallback({
+              faceImagePath: visualImagePath,
+              audioPath: shot.audioPath,
+              durationMs: shot.durationMs,
+              preferredProvider: preferredLipSyncProvider
+            });
+            if (shotResult && shotResult.success) {
+              isLipSync = true;
+              lipSyncProviderUsed = shotResult.actualProvider;
+            }
+          } catch (e) {
+            console.warn(`[Video Composer] LipSync attempt failed for shot ${shot.shotId}: ${e.message}`);
           }
         }
 
-        // If LipSync was not requested or returned a graceful fallback/not configured
+        // If LipSync was required but failed in strict real mode without fallback permission
+        if (shot.isLipSyncRequired && (!shotResult || !shotResult.success) && options.strictReal && !options.allowMotionFallback) {
+          const err = new Error(`LIPSYNC_REQUIRED_BUT_FAILED: Lip-sync provider không khả dụng cho shot [${shot.shotId}] (${shotResult?.error?.message || 'Chưa cấu hình'})`);
+          err.code = 'LIPSYNC_REQUIRED_BUT_FAILED';
+          throw err;
+        }
+
+        // If LipSync was not requested or fallback to camera motion
         if (!shotResult || !shotResult.success) {
           isLipSync = false;
           shotResult = await this.motionRegistry.generateWithFallback({
@@ -157,12 +168,16 @@ class VideoTimelineComposer {
           shotType: shot.shotType,
           cameraMotion: shot.cameraMotion,
           characterIds: shot.activeSpeakerId ? [shot.activeSpeakerId] : [],
+          characterId: shot.activeSpeakerId || null,
           activeSpeakerId: shot.activeSpeakerId,
           activeSpeakerName: shot.activeSpeakerName,
           dialogueId: shot.dialogueId,
           dialogueIds: shot.dialogueId ? [shot.dialogueId] : [],
           sourceImageAssetId: sourceImageAssetId || null,
+          imageAsset: visualImagePath || null,
+          audioAsset: shot.audioPath || null,
           audioAssetIds: shot.audioPath ? [shot.audioPath] : [],
+          lipSyncAsset: isLipSync ? assetId : null,
           motionProvider: motionProviderUsed,
           lipSyncProvider: lipSyncProviderUsed,
           outputVideoAssetId: assetId,
@@ -187,13 +202,20 @@ class VideoTimelineComposer {
         storyId,
         sceneId: shot.sceneId,
         shotId: shot.shotId,
+        characterId: shot.activeSpeakerId || null,
         characterIds: shot.activeSpeakerId ? [shot.activeSpeakerId] : [],
+        dialogueId: shot.dialogueId || null,
         dialogueIds: shot.dialogueId ? [shot.dialogueId] : [],
+        imageAsset: shotAsset.imageAsset || null,
+        audioAsset: shotAsset.audioAsset || null,
+        lipSyncAsset: shotAsset.lipSyncAsset || null,
         sourceImageAssetId: shotAsset.sourceImageAssetId,
         audioAssetIds: shotAsset.audioAssetIds,
         motionProvider: shotAsset.motionProvider,
         lipSyncProvider: shotAsset.lipSyncProvider,
-        outputVideoAssetId: shotAsset.assetId
+        outputVideoAssetId: shotAsset.assetId,
+        finalShot: shotAsset.filePath,
+        isLipSync: shotAsset.isLipSync
       };
 
       renderedShotArtifacts.push(shotAsset);

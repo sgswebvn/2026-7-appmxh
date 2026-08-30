@@ -151,7 +151,18 @@ class RealVideoQA {
       }
     }
 
-    // 7. Shot count check
+    // 7. Motion & Frame Variation Analysis (Phase 3E)
+    const motionAnalysis = await mediaCapability.analyzeVideoMotion(videoPath);
+    if (options.requireMotion && motionAnalysis.isStaticVideo) {
+      errors.push('STATIC_VIDEO_DETECTED: Video frames are completely static with 0 pixel variance.');
+      score -= 50;
+    } else if (motionAnalysis.hasMotion) {
+      details.push(`Frame Motion Analysis: PASS (Motion score: ${motionAnalysis.motionScore}, Frames: ${motionAnalysis.frameCount})`);
+    } else {
+      details.push(`Frame Motion: Minimal or static (${motionAnalysis.details})`);
+    }
+
+    // 8. Shot count check
     if (shots.length > 0) {
       details.push(`Total Cinematic Shots: ${shots.length} shots planned and rendered`);
     }
@@ -163,6 +174,11 @@ class RealVideoQA {
       approved,
       videoArtifactScore: finalScore,
       codeTestScore: 100,
+      qualityGates: {
+        videoEncodingValid: !errors.some(e => e.includes('Video stream') || e.includes('decoding failed')),
+        characterMotionValid: motionAnalysis.hasMotion,
+        lipSyncProviderValid: options.isLipSyncProven || false
+      },
       metrics: {
         resolution: videoStream ? `${videoStream.width}x${videoStream.height}` : 'unknown',
         aspectRatio: '9:16',
@@ -173,7 +189,10 @@ class RealVideoQA {
         audioDurationMs,
         avSyncDifferenceMs: avDiffMs,
         shotCount: shots.length,
-        fps: videoStream ? 30 : 0
+        fps: videoStream ? 30 : 0,
+        frameCount: motionAnalysis.frameCount,
+        motionScore: motionAnalysis.motionScore,
+        hasMotion: motionAnalysis.hasMotion
       },
       details,
       errors
