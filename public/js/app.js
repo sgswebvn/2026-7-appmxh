@@ -5826,7 +5826,11 @@ function renderDirectorWorkspace(planData) {
 
   // 6. Voice Timeline & Multi-Track Audio (Phase 3C)
   renderVoiceTimeline(planData);
+
+  // 7. Video Assembly & Lip-Sync Workspace (Phase 3D)
+  renderVideoAssemblyWorkspace(planData);
 }
+
 
 
 // Visual Generation UI Handlers
@@ -6130,6 +6134,170 @@ function playMasterAudioFromUI() {
     masterAudioElem.play();
   }
 }
+
+// ============================================================================
+// PHASE 3D: REAL CHARACTER MOTION + LIP-SYNC + VIDEO ASSEMBLY UI HANDLERS
+// ============================================================================
+
+function renderVideoAssemblyWorkspace(planData) {
+  const shotsGrid = document.getElementById('director-video-shots-grid');
+  const masterBar = document.getElementById('director-master-video-bar');
+  const masterVideoElem = document.getElementById('director-master-video-element');
+  const durationText = document.getElementById('director-video-duration-text');
+  const qaBadge = document.getElementById('director-video-qa-badge');
+
+  if (!shotsGrid) return;
+
+  const shots = planData?.videoShots || [];
+  const masterVideo = planData?.masterVideo;
+  const qa = planData?.videoQA;
+
+  // Master Video Bar
+  if (masterVideo && masterVideo.videoUrl) {
+    if (masterBar) masterBar.style.display = 'block';
+    if (masterVideoElem) masterVideoElem.src = masterVideo.videoUrl;
+    if (durationText) durationText.textContent = `${masterVideo.durationSec || 0}s (${shots.length} góc quay)`;
+
+    if (qaBadge) {
+      if (qa && qa.approved) {
+        qaBadge.style.background = '#065f46';
+        qaBadge.style.color = '#34d399';
+        qaBadge.textContent = `QA SCORE: ${qa.videoArtifactScore}/100 (APPROVED)`;
+      } else {
+        qaBadge.style.background = '#881337';
+        qaBadge.style.color = '#f43f5e';
+        qaBadge.textContent = `QA SCORE: ${qa?.videoArtifactScore || 0}/100 (NEEDS REVIEW)`;
+      }
+    }
+  } else {
+    if (masterBar) masterBar.style.display = 'none';
+  }
+
+  // Individual Shot Artifacts Grid
+  if (!shots || shots.length === 0) {
+    shotsGrid.innerHTML = `
+      <div style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:12px 0; grid-column:1/-1;">
+        Chưa có góc quay video. Bấm <strong>"🎥 Render Toàn Bộ Video 9:16"</strong> để bắt đầu lắp ráp.
+      </div>
+    `;
+    return;
+  }
+
+  shotsGrid.innerHTML = '';
+
+  shots.forEach((shot, idx) => {
+    const card = document.createElement('div');
+    card.style.background = '#111624';
+    card.style.border = '1px solid #1e293b';
+    card.style.borderRadius = '8px';
+    card.style.padding = '10px';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.gap = '6px';
+
+    const motionBadge = `<span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-size:0.68rem; padding:2px 6px; border-radius:3px;">🎥 ${shot.cameraMotion || 'push_in'}</span>`;
+    const typeBadge = `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; font-size:0.68rem; padding:2px 6px; border-radius:3px;">${shot.shotType || 'Close-Up'}</span>`;
+    const speakerBadge = shot.activeSpeakerName
+      ? `<span style="background:rgba(244,63,94,0.15); color:#f43f5e; font-size:0.68rem; padding:2px 6px; border-radius:3px; font-weight:600;">🗣️ ${shot.activeSpeakerName}</span>`
+      : `<span style="background:rgba(148,163,184,0.15); color:#94a3b8; font-size:0.68rem; padding:2px 6px; border-radius:3px;">👥 Two-Shot</span>`;
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong style="color:#fff; font-size:0.8rem;">Góc Quay #${idx + 1} (${shot.shotId})</strong>
+        <span style="color:#a855f7; font-size:0.72rem; font-weight:600;">⏱️ ${shot.durationSec}s</span>
+      </div>
+
+      <div style="display:flex; gap:4px; flex-wrap:wrap; margin:2px 0;">
+        ${typeBadge}
+        ${motionBadge}
+        ${speakerBadge}
+      </div>
+
+      <div style="border-radius:6px; overflow:hidden; border:1px solid #334155; background:#000; aspect-ratio:9/16; max-height:220px; display:flex; align-items:center; justify-content:center;">
+        ${shot.videoUrl
+          ? `<video src="${shot.videoUrl}" controls playsinline style="width:100%; height:100%; object-fit:cover;"></video>`
+          : `<div style="color:#64748b; font-size:0.75rem; text-align:center; padding:10px;">Chưa render</div>`
+        }
+      </div>
+
+      ${shot.dialogueText ? `<div style="font-size:0.72rem; color:#e2e8f0; font-style:italic; line-height:1.3; margin-top:2px;">"${shot.dialogueText}"</div>` : ''}
+    `;
+
+    shotsGrid.appendChild(card);
+  });
+}
+
+async function generateStoryVideoFromUI() {
+  if (!currentStoryPlan) {
+    showToast('Vui lòng chọn hoặc tạo StoryPlan trước!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-director-generate-video');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '⏳ Đang render & lắp ráp video 9:16...';
+    btn.disabled = true;
+  }
+
+  try {
+    showToast('🎬 Bắt đầu tiến trình Render góc quay, Lip-Sync & Lắp Ráp Video...', 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/video/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ enableSubtitles: true, forceRegenerate: false })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const planRes = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}`, { headers: getAuthHeaders() });
+      const planData = await planRes.json();
+      if (planData.success && planData.data) {
+        currentStoryPlan = planData.data;
+        renderDirectorWorkspace(currentStoryPlan);
+      }
+      showToast(`🎉 Đã render thành công Master Video 9:16 (${data.data.shotCount} shots, ${data.data.totalDurationSec}s)!`, 'success');
+    } else {
+      showToast(`❌ ${data.code || 'VIDEO_FAILED'}: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh render video: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function evaluateVideoQAFromUI() {
+  if (!currentStoryPlan) return;
+
+  try {
+    showToast('📊 Đang thẩm định chất lượng tệp Video (A/V Sync, Resolution, Streams)...', 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/video/qa`, {
+      headers: getAuthHeaders()
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const score = data.data.videoArtifactScore;
+      const status = data.data.approved ? 'APPROVED' : 'NEEDS_REVISION';
+      showToast(`✅ Thẩm định Video QA Hoàn Tất: Điểm số ${score}/100 [${status}]`, data.data.approved ? 'success' : 'warning');
+      const planRes = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}`, { headers: getAuthHeaders() });
+      const planData = await planRes.json();
+      if (planData.success && planData.data) {
+        currentStoryPlan = planData.data;
+        renderDirectorWorkspace(currentStoryPlan);
+      }
+    } else {
+      showToast(`❌ Lỗi QA: ${data.message || data.code}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh thẩm định QA: ' + err.message, 'error');
+  }
+}
+
 
 
 

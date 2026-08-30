@@ -442,6 +442,117 @@ router.post('/story-plan/:storyId/dialogue/:dialogueId/audio/regenerate', authen
   }
 });
 
+// ============================================================================
+// PHASE 3D: REAL CHARACTER MOTION + LIP-SYNC + VIDEO ASSEMBLY ENGINE ROUTES
+// ============================================================================
+const { videoTimelineComposer } = require('../services/videoTimelineComposer');
+const { lipSyncProviderRegistry } = require('../services/lipSyncProviders/lipSyncProviderRegistry');
+const { motionProviderRegistry } = require('../services/motionProviders/motionProviderRegistry');
+const { videoAssetStore } = require('../services/videoAssetStore');
+const RealVideoQA = require('../services/realVideoQA');
+
+// 1. Danh sách Video Providers (LipSync & Motion)
+router.get('/video-providers', authenticateToken, async (req, res) => {
+  try {
+    const lipsyncList = await lipSyncProviderRegistry.list();
+    const motionList = await motionProviderRegistry.list();
+    res.json({
+      success: true,
+      data: {
+        lipSyncProviders: lipsyncList,
+        motionProviders: motionList,
+        defaultLipSync: lipSyncProviderRegistry.getDefaultProviderId(),
+        defaultMotion: motionProviderRegistry.getDefaultProviderId()
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải video providers: ' + err.message });
+  }
+});
+
+// 2. Sinh Video Assembly hoàn chỉnh cho StoryPlan
+router.post('/story-plan/:storyId/video/generate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const { preferredLipSyncProvider, preferredMotionProvider, forceRegenerate, enableSubtitles } = req.body || {};
+
+    const result = await videoTimelineComposer.composeStoryVideo({
+      storyId,
+      preferredLipSyncProvider,
+      preferredMotionProvider,
+      forceRegenerate: Boolean(forceRegenerate),
+      enableSubtitles: enableSubtitles !== false
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã hoàn tất Render & Assembly Video 9:16 thành công',
+      data: result
+    });
+  } catch (err) {
+    res.status(err.code === 'STORY_NOT_FOUND' ? 404 : 500).json({
+      success: false,
+      code: err.code || 'VIDEO_ASSEMBLY_FAILED',
+      message: err.message
+    });
+  }
+});
+
+// 3. Lấy thông tin Video và Shots của StoryPlan
+router.get('/story-plan/:storyId/video', authenticateToken, (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const { storyPlanStore } = require('../services/storyPlanStore');
+    const plan = storyPlanStore.get(storyId);
+
+    if (!plan) {
+      return res.status(404).json({ success: false, code: 'STORY_NOT_FOUND', message: 'Không tìm thấy StoryPlan' });
+    }
+
+    const assets = videoAssetStore.getStoryVideoAssets(storyId);
+    res.json({
+      success: true,
+      data: {
+        storyId,
+        videoShots: plan.videoShots || [],
+        masterVideo: plan.masterVideo || null,
+        subtitles: plan.subtitles || null,
+        videoQA: plan.videoQA || null,
+        assets
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải thông tin video: ' + err.message });
+  }
+});
+
+// 4. Lấy báo cáo kiểm định Real Video QA
+router.get('/story-plan/:storyId/video/qa', authenticateToken, async (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const { storyPlanStore } = require('../services/storyPlanStore');
+    const plan = storyPlanStore.get(storyId);
+
+    if (!plan || !plan.masterVideo?.filePath) {
+      return res.status(404).json({ success: false, code: 'NO_VIDEO_TO_QA', message: 'Chưa có file Master Video để thẩm định QA' });
+    }
+
+    const qaResult = await RealVideoQA.evaluateVideoArtifact({
+      videoPath: plan.masterVideo.filePath,
+      audioDurationMs: plan.masterAudio?.durationMs || 0,
+      shots: plan.videoShots || []
+    });
+
+    res.json({
+      success: true,
+      data: qaResult
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi thẩm định Video QA: ' + err.message });
+  }
+});
+
 module.exports = router;
+
 
 

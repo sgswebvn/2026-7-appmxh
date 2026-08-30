@@ -779,7 +779,7 @@
         </div>
 
         <!-- 5. Voice Timeline & Multi-Track Dialogue Player (Phase 3C) -->
-        <div style="background:#090d16; border:1px solid #c084fc; padding:14px; border-radius:8px;">
+        <div style="background:#090d16; border:1px solid #c084fc; padding:14px; border-radius:8px; margin-bottom:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
             <div>
               <h4 style="color:#c084fc; font-size:0.92rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
@@ -815,6 +815,73 @@
           <div id="director-voice-timeline-container" style="display:flex; flex-direction:column; gap:8px;">
             <div style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:12px 0;">
               Chưa tạo âm thanh hội thoại. Bấm <strong>"🎙️ Lồng Tiếng Toàn Bộ Kịch Bản"</strong> để kích hoạt.
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Phase 3D: Real Character Motion, Lip-Sync & Video Assembly Engine -->
+        <div id="director-video-assembly-section" style="background:#090d16; border:1px solid #38bdf8; padding:14px; border-radius:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <div>
+              <h4 style="color:#38bdf8; font-size:0.92rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+                <span>🎬</span> VIDEO ASSEMBLY & REAL LIP-SYNC ENGINE (1080x1920 9:16)
+              </h4>
+              <span style="font-size:0.75rem; color:var(--text-muted);">
+                Tạo chuyển động camera 60FPS, khớp khẩu hình Lip-Sync từng nhân vật và ghép Master Video
+              </span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" id="btn-director-evaluate-video-qa" class="btn btn-sm btn-outline" onclick="evaluateVideoQAFromUI()" style="border-color:#10b981; color:#10b981;">
+                📊 Thẩm Định Real Video QA
+              </button>
+              <button type="button" id="btn-director-generate-video" class="btn btn-sm btn-primary" onclick="generateStoryVideoFromUI()" style="background:#0284c7; border-color:#0284c7;">
+                🎥 Render Toàn Bộ Video 9:16
+              </button>
+            </div>
+          </div>
+
+          <!-- 10-Stage Pipeline Status Tracker -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; background:#070a12; padding:8px 12px; border-radius:6px; border:1px solid #1e293b; font-size:0.68rem;">
+            <span style="color:#34d399; font-weight:600;">STORY ✓</span> ➔
+            <span style="color:#34d399; font-weight:600;">CHARACTERS ✓</span> ➔
+            <span style="color:#34d399; font-weight:600;">REFERENCES ✓</span> ➔
+            <span style="color:#34d399; font-weight:600;">VOICE ✓</span> ➔
+            <span id="pipeline-badge-shots" style="color:#38bdf8; font-weight:600;">SHOTS</span> ➔
+            <span id="pipeline-badge-motion" style="color:#fbbf24; font-weight:600;">MOTION</span> ➔
+            <span id="pipeline-badge-lipsync" style="color:#c084fc; font-weight:600;">LIP-SYNC</span> ➔
+            <span id="pipeline-badge-render" style="color:#f43f5e; font-weight:600;">RENDER</span> ➔
+            <span id="pipeline-badge-qa" style="color:#10b981; font-weight:600;">QA</span> ➔
+            <span id="pipeline-badge-final" style="color:#a855f7; font-weight:700;">FINAL MP4</span>
+          </div>
+
+          <!-- Master Video Player & QA Score Bar -->
+          <div id="director-master-video-bar" style="display:none; background:#111624; border:1px solid #0284c7; padding:14px; border-radius:8px; margin-bottom:14px;">
+            <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+              <div style="max-width:200px; width:100%; border-radius:8px; overflow:hidden; border:2px solid #0284c7; background:#000;">
+                <video id="director-master-video-element" controls playsinline style="width:100%; display:block; aspect-ratio:9/16; object-fit:cover;"></video>
+              </div>
+              <div style="flex:1; min-width:240px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <strong style="color:#38bdf8; font-size:0.95rem;">Master Video 9:16 (Hoàn Chỉnh)</strong>
+                  <span id="director-video-qa-badge" style="background:#065f46; color:#34d399; font-size:0.75rem; padding:3px 10px; border-radius:4px; font-weight:700;">
+                    QA SCORE: 100/100 (APPROVED)
+                  </span>
+                </div>
+                <div id="director-video-meta-info" style="font-size:0.75rem; color:#cbd5e1; display:flex; flex-direction:column; gap:4px;">
+                  <span>📐 Độ phân giải: <strong>1080 x 1920 (Vertical 9:16)</strong> | 30 FPS</span>
+                  <span>⏱️ Thời lượng: <strong id="director-video-duration-text">0s</strong></span>
+                  <span>🎞️ Mã hóa: <strong>H.264 (Video) / AAC (Audio)</strong></span>
+                  <span>💬 Phụ đề: <strong style="color:#34d399;">Đã nhúng Subtitles 9:16 Safe-Area</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Individual Shot Artifacts Grid -->
+          <h5 style="color:#cbd5e1; font-size:0.82rem; margin:10px 0 8px 0; font-weight:600;">🎞️ DANH SÁCH GÓC QUAY ĐỘC LẬP (SHOT ARTIFACTS):</h5>
+          <div id="director-video-shots-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+            <div style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:12px 0; grid-column:1/-1;">
+              Chưa có góc quay video. Bấm <strong>"🎥 Render Toàn Bộ Video 9:16"</strong> để bắt đầu lắp ráp.
             </div>
           </div>
         </div>
