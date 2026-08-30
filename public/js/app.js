@@ -5635,6 +5635,7 @@ function renderDirectorWorkspace(planData) {
   const scenes = planData.scenes || [];
   const dialogues = planData.dialogues || planData.dialogueScript || [];
   const shots = planData.shots || [];
+  const charRefs = planData.characterReferences || [];
 
   const castGrid = document.getElementById('director-cast-grid');
   const relContainer = document.getElementById('director-relationships-container');
@@ -5642,13 +5643,17 @@ function renderDirectorWorkspace(planData) {
   const scenesContainer = document.getElementById('director-scenes-container');
   const dialoguesStream = document.getElementById('director-dialogues-stream');
 
-  // 1. Dàn Diễn Viên (Character Cast Matrix)
+  // 1. Dàn Diễn Viên & Ảnh Nhận Diện (Character Cast & Visual Identity)
   if (castGrid) {
     castGrid.innerHTML = '';
     if (characters.length === 0) {
-      castGrid.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem;">Chưa có nhân vật nào. Nhập chủ đề và bấm "Tạo StoryPlan Bằng AI" phía trên.</div>';
+      castGrid.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; padding:10px;">Chưa có nhân vật nào. Nhập chủ đề và bấm "Tạo StoryPlan Bằng AI" phía trên.</div>';
     } else {
       characters.forEach(actor => {
+        const refProfile = charRefs.find(r => r.characterId === actor.id) || {};
+        const refStatus = refProfile.status || (actor.avatarUrl ? 'ready' : 'not_generated');
+        const refImg = actor.avatarUrl || refProfile.imageUrl || null;
+
         const card = document.createElement('div');
         card.style.background = '#111624';
         card.style.border = '1px solid #1e293b';
@@ -5661,22 +5666,41 @@ function renderDirectorWorkspace(planData) {
         const voiceId = actor.voice?.voiceId || actor.voiceKey || actor.voice || 'vi-female';
         const voiceLabel = voiceId === 'vi-male' ? 'Nam Minh (Nam)' : voiceId === 'vi-female' ? 'Hoài My (Nữ)' : voiceId;
 
+        const statusBadge = refStatus === 'ready'
+          ? '<span style="background:#065f46; color:#34d399; font-size:0.65rem; padding:2px 6px; border-radius:3px; font-weight:700;">READY (ĐÃ CÓ ẢNH)</span>'
+          : refStatus === 'failed'
+          ? '<span style="background:#7f1d1d; color:#f87171; font-size:0.65rem; padding:2px 6px; border-radius:3px; font-weight:700;">FAILED</span>'
+          : '<span style="background:#1e293b; color:#94a3b8; font-size:0.65rem; padding:2px 6px; border-radius:3px; font-weight:600;">CHƯA TẠO ẢNH</span>';
+
         card.innerHTML = `
-          <div style="display:flex; gap:10px; align-items:center;">
-            <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #38bdf8, #6366f1); display:flex; align-items:center; justify-content:center; font-size:1.4rem; border:2px solid #38bdf8; flex-shrink:0;">
-              ${actor.gender === 'male' ? (actor.age > 55 ? '👴' : actor.age < 12 ? '👦' : '👨') : (actor.age > 55 ? '👵' : actor.age < 12 ? '👧' : '👩')}
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:68px; height:68px; border-radius:6px; overflow:hidden; background:#070a12; border:1px solid #38bdf8; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+              ${refImg
+                ? `<img src="${refImg}" alt="${actor.name}" style="width:100%; height:100%; object-fit:cover;">`
+                : `<div style="font-size:1.8rem;">${actor.gender === 'male' ? (actor.age > 55 ? '👴' : actor.age < 12 ? '👦' : '👨') : (actor.age > 55 ? '👵' : actor.age < 12 ? '👧' : '👩')}</div>`
+              }
             </div>
             <div style="flex:1; min-width:0;">
-              <strong style="color:#fff; font-size:0.86rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${actor.name} (${actor.age}t)</strong>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                <strong style="color:#fff; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${actor.name} (${actor.age}t)</strong>
+                <button type="button" class="btn btn-xs btn-outline" onclick="openEditCharacterModal('${actor.id}')" style="border-color:#38bdf8; color:#38bdf8; padding:2px 6px; font-size:0.68rem;">
+                  ✏️ Sửa
+                </button>
+              </div>
               <span style="color:#38bdf8; font-size:0.72rem; display:block;">${actor.role || 'Nhân vật'}</span>
+              <div style="margin-top:4px;">${statusBadge}</div>
             </div>
-            <button type="button" class="btn btn-xs btn-outline" onclick="openEditCharacterModal('${actor.id}')" style="border-color:#38bdf8; color:#38bdf8; padding:3px 8px; font-size:0.7rem;">
-              ✏️ Sửa
-            </button>
           </div>
+
           <div style="font-size:0.7rem; color:#94a3b8; line-height:1.4; border-top:1px solid #1e293b; padding-top:6px;">
             <div>🎙️ <strong>Giọng:</strong> <span style="color:#a855f7;">${voiceLabel}</span></div>
             <div>🎨 <strong>Visual:</strong> <span style="color:#cbd5e1;">${actor.visualPrompt || actor.appearance?.face || 'Realism AI Portrait'}</span></div>
+          </div>
+
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button type="button" class="btn btn-xs btn-primary" id="btn-gen-ref-${actor.id}" onclick="generateCharacterReferenceFromUI('${actor.id}', ${refStatus === 'ready'})" style="flex:1; background:linear-gradient(135deg, #38bdf8, #2563eb); font-size:0.7rem; padding:4px 8px;">
+              ${refStatus === 'ready' ? '🔄 Tạo Lại Ảnh' : '🎨 Tạo Ảnh Nhận Diện'}
+            </button>
           </div>
         `;
         castGrid.appendChild(card);
@@ -5711,7 +5735,7 @@ function renderDirectorWorkspace(planData) {
     `;
   }
 
-  // 4. Danh Sách Phân Cảnh (Scenes & Shots)
+  // 4. Danh Sách Phân Cảnh & Visuals (Scenes & Shots)
   if (scenesContainer) {
     scenesContainer.innerHTML = '';
     if (scenes.length === 0) {
@@ -5729,13 +5753,18 @@ function renderDirectorWorkspace(planData) {
         card.style.fontSize = '0.75rem';
 
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <strong style="color:#a855f7;">Scene ${idx + 1}: ${sc.location || 'Địa điểm'}</strong>
             <span style="color:#94a3b8; font-size:0.7rem;">🕒 ${sc.time || 'Ban ngày'}</span>
           </div>
           <div style="color:#cbd5e1; margin-bottom:4px;">👥 Diễn viên: <span style="color:#38bdf8;">${charNames || 'Tất cả'}</span></div>
-          <div style="color:#94a3b8; margin-bottom:4px;">🎬 Hành động: ${sc.action || sc.environment || 'Diễn biến câu chuyện'}</div>
-          <div style="color:#34d399; font-size:0.7rem;">🎥 Gồm ${sceneShots.length || 1} góc quay (Shots)</div>
+          <div style="color:#94a3b8; margin-bottom:8px;">🎬 Hành động: ${sc.action || sc.environment || 'Diễn biến câu chuyện'}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:6px;">
+            <span style="color:#34d399; font-size:0.7rem;">🎥 Gồm ${sceneShots.length || 1} góc quay</span>
+            <button type="button" class="btn btn-xs btn-outline" onclick="generateSceneVisualFromUI('${sc.id}')" style="border-color:#a855f7; color:#c084fc; font-size:0.68rem; padding:2px 8px;">
+              🎨 Tạo Visual Cảnh
+            </button>
+          </div>
         `;
         scenesContainer.appendChild(card);
       });
@@ -5754,6 +5783,7 @@ function renderDirectorWorkspace(planData) {
         const speakerRole = speaker?.role || '';
         const voiceId = d.voiceId || speaker?.voice?.voiceId || (speaker?.gender === 'male' ? 'vi-male' : 'vi-female');
         const voiceTag = voiceId === 'vi-male' ? '🎙️ Nam Minh' : '🎙️ Hoài My';
+        const avatarImg = speaker?.avatarUrl || null;
 
         const row = document.createElement('div');
         row.style.background = '#111624';
@@ -5765,8 +5795,11 @@ function renderDirectorWorkspace(planData) {
         row.style.alignItems = 'flex-start';
 
         row.innerHTML = `
-          <div style="width:36px; height:36px; border-radius:50%; background:#1e293b; display:flex; align-items:center; justify-content:center; font-size:1.1rem; border:1px solid #38bdf8; flex-shrink:0;">
-            ${speaker?.gender === 'male' ? (speaker?.age > 55 ? '👴' : '👨') : (speaker?.age > 55 ? '👵' : '👩')}
+          <div style="width:40px; height:40px; border-radius:50%; background:#1e293b; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:1.1rem; border:1px solid #38bdf8; flex-shrink:0;">
+            ${avatarImg
+              ? `<img src="${avatarImg}" alt="${speakerName}" style="width:100%; height:100%; object-fit:cover;">`
+              : (speaker?.gender === 'male' ? (speaker?.age > 55 ? '👴' : '👨') : (speaker?.age > 55 ? '👵' : '👩'))
+            }
           </div>
           <div style="flex:1;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
@@ -5791,6 +5824,140 @@ function renderDirectorWorkspace(planData) {
     }
   }
 }
+
+// Visual Generation UI Handlers
+async function generateCharacterReferenceFromUI(charId, forceRegenerate = false) {
+  if (!currentStoryPlan) {
+    showToast('Vui lòng tạo hoặc chọn một StoryPlan trước!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById(`btn-gen-ref-${charId}`);
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '⏳ Đang tạo ảnh...';
+    btn.disabled = true;
+  }
+
+  try {
+    showToast(`🎨 Đang sinh ảnh nhận diện nhân vật...`, 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/character/${charId}/reference/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ forceRegenerate })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const asset = data.data;
+      // Update local character object
+      const char = (currentStoryPlan.characters || []).find(c => c.id === charId);
+      if (char) {
+        char.avatarUrl = asset.imageUrl;
+        char.referenceId = asset.assetId;
+      }
+      renderDirectorWorkspace(currentStoryPlan);
+      showToast(`🎉 Đã sinh ảnh nhận diện thành công cho nhân vật (${asset.actualProvider || asset.provider})!`, 'success');
+    } else {
+      const errCode = data.code || 'IMAGE_GENERATION_FAILED';
+      showToast(`❌ ${errCode}: ${data.message || 'Lỗi sinh ảnh'}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi kết nối sinh ảnh: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function generateAllCharacterReferencesFromUI() {
+  if (!currentStoryPlan || !(currentStoryPlan.characters || []).length) {
+    showToast('Chưa có danh sách nhân vật nào để sinh ảnh!', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-director-generate-all-refs');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '⏳ Đang sinh ảnh toàn bộ...';
+    btn.disabled = true;
+  }
+
+  try {
+    showToast(`⚡ Đang tạo ảnh nhận diện cho toàn bộ ${currentStoryPlan.characters.length} nhân vật...`, 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/character-references/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ forceRegenerate: false })
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      const summary = data.data;
+      // Reload story plan
+      const planRes = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}`, { headers: getAuthHeaders() });
+      const planData = await planRes.json();
+      if (planData.success && planData.data) {
+        currentStoryPlan = planData.data;
+        renderDirectorWorkspace(currentStoryPlan);
+      }
+      showToast(`🎉 Hoàn tất: ${summary.completed}/${summary.total} nhân vật đã có ảnh nhận diện!`, 'success');
+    } else {
+      showToast(`❌ Lỗi sinh ảnh: ${data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh sinh ảnh hàng loạt: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function generateSceneVisualFromUI(sceneId) {
+  if (!currentStoryPlan) return;
+
+  try {
+    showToast(`🎬 Đang tạo visual phân cảnh ${sceneId} với nhất quán nhân vật...`, 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/scene/${sceneId}/image/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      showToast(`🎉 Đã tạo ảnh phân cảnh thành công (${data.data.actualProvider || data.data.provider})!`, 'success');
+    } else {
+      showToast(`❌ Lỗi: ${data.message || data.code}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh sinh ảnh cảnh: ' + err.message, 'error');
+  }
+}
+async function generateShotVisualFromUI(shotId) {
+  if (!currentStoryPlan) return;
+
+  try {
+    showToast(`🎥 Đang tạo visual góc quay ${shotId} với camera framing & nhất quán nhân vật...`, 'info');
+    const res = await fetch(`/api/factory/story-plan/${currentStoryPlan.storyId}/shot/${shotId}/image/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+
+    const data = await res.json();
+    if (data.success && data.data) {
+      showToast(`🎉 Đã tạo ảnh góc quay thành công (${data.data.actualProvider || data.data.provider})!`, 'success');
+    } else {
+      showToast(`❌ Lỗi: ${data.message || data.code}`, 'error');
+    }
+  } catch (err) {
+    showToast('Lỗi gửi lệnh sinh ảnh shot: ' + err.message, 'error');
+  }
+}
+
 
 function openEditCharacterModal(charId) {
   if (!currentStoryPlan) return;

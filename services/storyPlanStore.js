@@ -64,10 +64,20 @@ function remove(storyId) {
   return true;
 }
 
-module.exports = {
+const storyPlanStore = {
   save,
   get,
   getAll,
   update,
   remove
 };
+
+module.exports = {
+  save,
+  get,
+  getAll,
+  update,
+  remove,
+  storyPlanStore
+};
+

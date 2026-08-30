@@ -170,17 +170,150 @@ router.get('/project/:id', authenticateToken, (req, res) => {
   }
 });
 
-// Lấy toàn bộ Cơ sở Dữ liệu Tri thức (Memory Database)
-router.get('/memory', authenticateToken, (req, res) => {
+// ============================================================================
+// PHASE 3B: VISUAL GENERATION & CHARACTER CONSISTENCY ROUTES
+// ============================================================================
+const { visualGenerationService } = require('../services/visualGenerationService');
+const { imageProviderRegistry } = require('../services/imageProviders/imageProviderRegistry');
+const { visualAssetStore } = require('../services/visualAssetStore');
+
+// 1. Danh sách Image Providers & Capabilities
+router.get('/image-providers', authenticateToken, async (req, res) => {
   try {
-    const memory = factoryService.getMemoryDatabase();
+    const list = await imageProviderRegistry.list();
+    const defaultProvider = imageProviderRegistry.getDefault();
     res.json({
       success: true,
-      data: memory
+      data: {
+        defaultProviderId: defaultProvider.id,
+        providers: list
+      }
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Lỗi tải Memory Database: ' + err.message });
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách provider: ' + err.message });
+  }
+});
+
+// 2. Sinh ảnh nhận diện nhân vật (Character Reference Portrait)
+router.post('/story-plan/:storyId/character/:charId/reference/generate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId, charId } = req.params;
+    const { preferredProvider, forceRegenerate } = req.body || {};
+
+    const result = await visualGenerationService.generateCharacterReference({
+      storyId,
+      characterId: charId,
+      preferredProvider,
+      forceRegenerate: Boolean(forceRegenerate)
+    });
+
+    res.json({
+      success: true,
+      message: result.cached ? 'Lấy ảnh nhận diện từ cache thành công' : 'Đã sinh ảnh nhận diện nhân vật mới',
+      data: result.asset,
+      cached: result.cached
+    });
+  } catch (err) {
+    res.status(err.code === 'STORY_NOT_FOUND' || err.code === 'CHARACTER_NOT_FOUND' ? 404 : 500).json({
+      success: false,
+      code: err.code || 'IMAGE_GENERATION_FAILED',
+      message: err.message,
+      details: err.details || null
+    });
+  }
+});
+
+// 3. Sinh ảnh nhận diện hàng loạt cho toàn bộ diễn viên trong StoryPlan
+router.post('/story-plan/:storyId/character-references/generate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const { preferredProvider, forceRegenerate } = req.body || {};
+
+    const summary = await visualGenerationService.generateAllCharacterReferences({
+      storyId,
+      preferredProvider,
+      forceRegenerate: Boolean(forceRegenerate)
+    });
+
+    res.json({
+      success: true,
+      message: `Đã xử lý sinh ảnh cho ${summary.total} nhân vật (Thành công: ${summary.completed}, Thất bại: ${summary.failed})`,
+      data: summary
+    });
+  } catch (err) {
+    res.status(err.code === 'STORY_NOT_FOUND' ? 404 : 500).json({
+      success: false,
+      code: err.code || 'IMAGE_GENERATION_FAILED',
+      message: err.message
+    });
+  }
+});
+
+// 4. Sinh ảnh cho phân cảnh (Scene Visual Generation with Consistency)
+router.post('/story-plan/:storyId/scene/:sceneId/image/generate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId, sceneId } = req.params;
+    const { preferredProvider } = req.body || {};
+
+    const asset = await visualGenerationService.generateSceneVisual({
+      storyId,
+      sceneId,
+      preferredProvider
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã sinh ảnh phân cảnh thành công',
+      data: asset
+    });
+  } catch (err) {
+    res.status(err.code === 'STORY_NOT_FOUND' || err.code === 'SCENE_NOT_FOUND' ? 404 : 500).json({
+      success: false,
+      code: err.code || 'IMAGE_GENERATION_FAILED',
+      message: err.message
+    });
+  }
+});
+
+// 5. Sinh ảnh cho góc quay (Shot Visual Generation with Camera Framing & Consistency)
+router.post('/story-plan/:storyId/shot/:shotId/image/generate', authenticateToken, async (req, res) => {
+  try {
+    const { storyId, shotId } = req.params;
+    const { preferredProvider } = req.body || {};
+
+    const asset = await visualGenerationService.generateShotVisual({
+      storyId,
+      shotId,
+      preferredProvider
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã sinh ảnh góc quay thành công',
+      data: asset
+    });
+  } catch (err) {
+    res.status(err.code === 'STORY_NOT_FOUND' || err.code === 'SHOT_NOT_FOUND' ? 404 : 500).json({
+      success: false,
+      code: err.code || 'IMAGE_GENERATION_FAILED',
+      message: err.message
+    });
+  }
+});
+
+// 6. Lấy danh sách Visual Assets của StoryPlan
+router.get('/story-plan/:storyId/visual-assets', authenticateToken, (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const assets = visualAssetStore.getAssetsByStory(storyId);
+    res.json({
+      success: true,
+      data: assets
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải visual assets: ' + err.message });
   }
 });
 
 module.exports = router;
+
