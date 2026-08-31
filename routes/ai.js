@@ -217,4 +217,30 @@ router.post('/autonomous-train', authenticateToken, async (req, res) => {
   }
 });
 
+// 13. Tự động Phân tích Ngữ nghĩa Tiêu đề, Auto-Cast & 6-Shot Blueprint
+router.post('/topic-intelligence', authenticateToken, (req, res) => {
+  try {
+    const { topic } = req.body;
+    const topicEngine = require('../services/topicIntelligenceEngine');
+    const analysis = topicEngine.analyzeTopic(topic || '');
+    res.json({
+      success: true,
+      data: analysis
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi phân tích tiêu đề: ' + err.message });
+  }
+});
+
+// 14. Quét Trend Tập Trung Chính Xác Theo Niche Chủ Đề
+router.post('/scan-niche-trends', authenticateToken, async (req, res) => {
+  try {
+    const { topic, platform } = req.body;
+    const result = await aiTrendAgentService.scanFocusedNicheTrends(topic || '', platform || 'TIKTOK');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi quét trend ngách: ' + err.message });
+  }
+});
+
 module.exports = router;

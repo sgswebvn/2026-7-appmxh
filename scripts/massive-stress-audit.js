@@ -246,6 +246,17 @@ async function runMassiveStressAudit() {
     logResult('DIRECTOR_FACTORY', 'Autonomous Factory 12-Step State Machine & Partial Repair', 'FAIL', 'Lỗi State Machine hoặc Partial Fix');
   }
 
+  // --- 2.12. BENCHMARK 80% QUALITY VALIDATION TEST ---
+  console.log('\n--- 2.12. KIỂM THỬ ĐỐI CHIẾU CHẤT LƯỢNG TIÊU CHUẨN VÀNG (>= 80% MATCH) ---');
+  const runBenchmarkComparison = require('./benchmark-quality-comparison');
+  const benchmarkResult = await runBenchmarkComparison();
+
+  if (benchmarkResult.success && benchmarkResult.averageScore >= 80) {
+    logResult('BENCHMARK_80_PERCENT_MATCH', `Đạt Chuẩn Chất Lượng >= 80% So Với Video Mẫu Cute Baby Mango`, 'PASS', `Điểm tương đồng: ${benchmarkResult.averageScore}% / 100% (Vượt ngưỡng 80% thành công)`);
+  } else {
+    logResult('BENCHMARK_80_PERCENT_MATCH', `Đạt Chuẩn Chất Lượng >= 80%`, 'FAIL', `Điểm chỉ đạt ${benchmarkResult.averageScore}%`);
+  }
+
   // --- 3. VIDEO CRITIC 10-METRIC EVALUATOR STRESS TEST ---
   console.log('\n--- 3. KIỂM THỬ VÒNG LẶP ĐÁNH GIÁ CHẤT LƯỢNG (AI VIDEO CRITIC) ---');
   const criticRes = await request('/api/ai/evaluate-draft', {

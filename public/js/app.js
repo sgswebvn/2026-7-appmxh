@@ -1336,6 +1336,96 @@ function initGeminiStudio() {
   });
 }
 
+// ==================== ZERO-CONFIG TOPIC INTELLIGENCE & AUTO-CAST UI ====================
+let topicAnalyzeTimeout = null;
+let currentTopicAnalysis = null;
+
+function selectQuickTopic(topicText) {
+  const topicInput = document.getElementById('ai-topic');
+  if (topicInput) {
+    topicInput.value = topicText;
+    handleTopicInputAutoAnalyze();
+  }
+}
+
+function handleTopicInputAutoAnalyze() {
+  clearTimeout(topicAnalyzeTimeout);
+  const topicInput = document.getElementById('ai-topic');
+  const topic = topicInput ? topicInput.value.trim() : '';
+
+  const summaryText = document.getElementById('topic-intel-summary-text');
+  const castChips = document.getElementById('topic-intel-cast-chips');
+
+  if (!topic) {
+    if (summaryText) summaryText.textContent = 'Đang chờ nhập chủ đề để tự động khớp Khán giả, Diễn viên & Giọng đọc...';
+    if (castChips) castChips.innerHTML = '';
+    return;
+  }
+
+  if (summaryText) summaryText.textContent = '🔍 Đang phân tích ngữ nghĩa tiêu đề & tuyển chọn dàn diễn viên phù hợp 100%...';
+
+  topicAnalyzeTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/ai/topic-intelligence', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ topic })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        currentTopicAnalysis = data.data;
+        const analysis = data.data;
+
+        if (summaryText) {
+          summaryText.innerHTML = `
+            🎯 <strong>Ngách:</strong> <span style="color:#fbbf24;">${analysis.nicheId.toUpperCase()}</span> | 
+            👥 <strong>Khán giả:</strong> <span style="color:#34d399;">${analysis.audience}</span> | 
+            🎙️ <strong>Tông giọng:</strong> <span style="color:#f472b6;">${analysis.tone}</span>
+          `;
+        }
+
+        if (castChips && analysis.cast) {
+          castChips.innerHTML = analysis.cast.map(c => `
+            <div style="background:#111624; border:1px solid #38bdf8; border-radius:4px; padding:2px 8px; font-size:0.72rem; display:flex; align-items:center; gap:5px;">
+              <span style="color:#fff; font-weight:700;">${c.name}</span>
+              <span style="color:#94a3b8;">(${c.voiceKey})</span>
+            </div>
+          `).join('');
+        }
+      }
+    } catch(e) {}
+  }, 400);
+}
+
+async function scanFocusedTrendsForCurrentTopic(platform = 'TIKTOK') {
+  const topicInput = document.getElementById('ai-topic');
+  const topic = topicInput ? topicInput.value.trim() : 'Mì ramen ngon';
+
+  showToast(`🔍 Đang quét trend viral chuyên biệt cho ngách "${topic}" trên ${platform}...`, 'info');
+  try {
+    const res = await fetch('/api/ai/scan-niche-trends', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ topic, platform })
+    });
+    const data = await res.json();
+    if (data.success && data.data?.trends) {
+      const trends = data.data.trends;
+      const chipsContainer = document.getElementById('trending-quick-chips');
+      if (chipsContainer) {
+        chipsContainer.innerHTML = trends.map(t => `
+          <button type="button" class="btn btn-sm btn-outline" onclick="selectQuickTopic('${t.hookPattern}')" style="border-color:#38bdf8; color:#38bdf8; font-size:0.75rem; padding:4px 10px;">
+            🔥 ${t.trendName} (${t.estimatedViews || 'Triệu view'})
+          </button>
+        `).join('');
+      }
+      showToast(`Đã tìm thấy ${trends.length} xu hướng viral nóng nhất cho ngách "${topic}"!`, 'success');
+    }
+  } catch(e) {
+    showToast('Lỗi quét trend: ' + e.message, 'error');
+  }
+}
+
 // ==================== AUTO TRAIN & TEST SELF-IMPROVEMENT LOOP ====================
 async function triggerAutonomousTrainingLoop() {
   const topic = document.getElementById('ai-topic')?.value?.trim();
