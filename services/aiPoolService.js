@@ -65,9 +65,10 @@ class AIPoolEngine {
     const models = [
       'openai/gpt-oss-120b',
       'qwen/qwen3.8-27b',
-      'groq/compound',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.6-27b',
       'allam-2-7b',
-      'openai/gpt-oss-20b'
+      'groq/compound'
     ];
     let lastErr = null;
 

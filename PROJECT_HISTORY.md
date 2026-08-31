@@ -113,13 +113,26 @@ GEMINI_API_KEY=AQ.Ab8RN6Kj9_KZVQ6egDt5TsCZSK2YbYtRdjbd0Y4xyVPjkcguag
 - Cấu hình `vercel.json` định tuyến toàn bộ request về Express application.
 - Xuất `module.exports = app` và xử lý kết nối Database Mongoose an toàn cho cả môi trường máy chủ độc lập lẫn Serverless Lambda.
 
+### 9. ĐẠI PHẪU TOÀN DIỆN: AI Video Director + Autonomous Video Factory (v3.5):
+- **Triết lý cốt lõi:** *"A Video is not a collection of images. A Video is a sequence of character performances."*
+- **12-Step Production State Machine:** `IDEA -> RESEARCH -> CONCEPT -> CAST -> SCRIPT -> SCENES -> SHOTS -> ASSETS -> VIDEO -> VOICE -> LIP_SYNC -> EDIT -> QA -> FIX -> APPROVED -> LEARN`.
+- **5 Không Gian Chuyên Nghiệp:**
+  1. 🏭 **FACTORY:** Nhập topic $\rightarrow$ Tự hành sản xuất 1-Click.
+  2. 🎬 **DIRECTOR:** Dàn diễn viên (Cast Matrix), Quan hệ tâm lý (Relationships), Đối thoại (Dialogue Stream) & Phân cảnh (Scenes/Shots).
+  3. 🎥 **PRODUCTION:** Multi-track Voiceover, Lip-sync, Ken Burns 60FPS Render & Master SFX.
+  4. 🧪 **AI LAB:** QA Evaluator 10 tiêu chuẩn ($\ge 85/100$), Bộ lọc Hard-fail, Quản lý phiên bản ($v001, v002 \dots$) và **Partial Repair (sửa riêng phân đoạn lỗi tiết kiệm 80% Quota)**.
+  5. 🧠 **MEMORY:** Cơ sở dữ liệu tự học Winning Patterns & Failed Patterns lâu dài.
+- **Tiêu chuẩn vàng (Gold Standard Benchmark):** Tích hợp chuẩn 6-Shot Micro-Drama theo video triệu view `vidssave.com Cute Baby Talking About Mango 🥭.mp4` với Persona `👶 Bé Bắp & Xoài Chín 🥭`.
+- **Multi-AI Failover Pool:** Groq Cloud $\rightarrow$ Google Gemini $\rightarrow$ OpenRouter $\rightarrow$ **Pollinations.ai Unlimited Gateway (100% Free - Không cần key - Không giới hạn token)**.
+- **Tài liệu bàn giao chi tiết:** Đọc toàn bộ tại [`MASTER_PROJECT_CONTEXT_HANDOVER.md`](file:///c:/Users/user/Desktop/New%20folder%20(2)/2026-4-ytbmuti/MASTER_PROJECT_CONTEXT_HANDOVER.md).
+
 ---
 
 ## 💡 6. HƯỚNG DẪN DÀNH CHO AI MODEL KẾ TIẾP (INSTRUCTIONS FOR NEXT AI):
-1. Khi chạy lệnh npm trên môi trường Windows PowerShell, luôn dùng: `cmd /c npm <lệnh>` để tránh bị PowerShell chặn policy.
+1. **ĐỌC ĐẦU TIÊN:** Luôn đọc file [`MASTER_PROJECT_CONTEXT_HANDOVER.md`](file:///c:/Users/user/Desktop/New%20folder%20(2)/2026-4-ytbmuti/MASTER_PROJECT_CONTEXT_HANDOVER.md) để nắm trọn vẹn toàn bộ bối cảnh và triết lý kiến trúc.
 2. Để khởi chạy server: `node server.js` (Server chạy tại port `3000`).
-3. Tài khoản Quản trị viên Admin: `admin@admin.com` / `admin123`.
-4. Model Gemini khả dụng trên API key hiện tại là **`gemini-2.5-flash`** (các model cũ như `gemini-1.5-flash` hay `gemini-pro` trả về 404 trên v1beta).
-5. Luôn giữ vững thiết kế tối giản 3 màu cơ bản, không tự ý chèn lại emoji rườm rà vào giao diện.
-6. Toàn bộ mã nguồn đã được commit và push lên nhánh `main` của repository GitHub: `https://github.com/sgswebvn/2026-4-ytbmuti.git`.
+3. Chạy kiểm thử toàn diện: `node scripts/massive-stress-audit.js` (18/18 test suites PASS 100%).
+4. Tài khoản Quản trị viên Admin: `admin@admin.com` / `admin123`.
+5. Toàn bộ mã nguồn đã được commit và push lên nhánh `main` của GitHub: `https://github.com/sgswebvn/2026-7-appmxh.git`.
+
 

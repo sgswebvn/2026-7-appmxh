@@ -266,13 +266,6 @@ function normalizeStoryPlan(rawPlan, topic, style, durationTarget) {
 }
 
 async function callLlmForStoryPlan(topic, style, durationTarget, apiKey) {
-  const effectiveKey = apiKey || process.env.GEMINI_API_KEY;
-  if (!effectiveKey || effectiveKey.trim().length < 10) {
-    const error = new Error('LLM API key is not configured. StoryPlan generation requires an active Gemini API key.');
-    error.code = 'GENERATION_UNAVAILABLE';
-    throw error;
-  }
-
   const prompt = `Bạn là một Đạo diễn & Biên kịch video AI hàng đầu chuyên về YouTube Shorts, TikTok, và Instagram Reels.
 Hãy tạo ra một bản Kế hoạch Kịch bản (StoryPlan) đối thoại đa nhân vật hoàn chỉnh, chặt chẽ, cuốn hút cho chủ đề sau:
 
@@ -290,29 +283,64 @@ YÊU CẦU BẮT BUỘC:
 
 ${STORY_PLAN_JSON_SCHEMA}`;
 
-  const genAI = new GoogleGenerativeAI(effectiveKey.trim());
-  const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
-  let lastErr = null;
-
-  for (const modelName of models) {
+  // 1. Try Groq Cloud (Ultra fast, high rate limit)
+  const groqKey = apiKey || process.env.GROQ_API_KEY;
+  if (groqKey && groqKey.trim().length > 10) {
     try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: 'application/json'
-        }
-      });
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      const rawPlan = extractJson(text);
-      return rawPlan;
-    } catch (err) {
-      lastErr = err;
-      console.warn(`[StoryPlan Service] Model ${modelName} call failed:`, err.message);
+      const aiPool = require('./aiPoolService');
+      console.log('🤖 [StoryPlan Service] Đang tạo kịch bản qua Groq AI...');
+      const groqRes = await aiPool.callGroq(prompt, groqKey);
+      if (groqRes && groqRes.content) {
+        const parsed = extractJson(groqRes.content);
+        if (parsed) return parsed;
+      }
+    } catch (gErr) {
+      console.warn('[StoryPlan Service] Groq failed:', gErr.message);
     }
   }
 
-  throw new Error(`Tất cả model Gemini đều không thể xử lý: ${lastErr?.message || 'Unknown error'}`);
+  // 2. Try OpenRouter
+  const openRouterKey = apiKey || process.env.OPENROUTER_API_KEY;
+  if (openRouterKey && openRouterKey.trim().length > 10) {
+    try {
+      const aiPool = require('./aiPoolService');
+      console.log('🤖 [StoryPlan Service] Đang tạo kịch bản qua OpenRouter AI...');
+      const orRes = await aiPool.callOpenRouter(prompt, openRouterKey);
+      if (orRes && orRes.content) {
+        const parsed = extractJson(orRes.content);
+        if (parsed) return parsed;
+      }
+    } catch (orErr) {
+      console.warn('[StoryPlan Service] OpenRouter failed:', orErr.message);
+    }
+  }
+
+  // 3. Try Gemini (if valid AI Studio key starts with AIzaSy)
+  const effectiveKey = apiKey || process.env.GEMINI_API_KEY;
+  if (effectiveKey && effectiveKey.trim().startsWith('AIzaSy')) {
+    try {
+      const genAI = new GoogleGenerativeAI(effectiveKey.trim());
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+      for (const modelName of models) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { responseMimeType: 'application/json' }
+          });
+          const result = await model.generateContent(prompt);
+          const text = result.response.text();
+          const rawPlan = extractJson(text);
+          if (rawPlan) return rawPlan;
+        } catch (mErr) {
+          console.warn(`[StoryPlan Service] Gemini ${modelName} failed:`, mErr.message);
+        }
+      }
+    } catch (geminiErr) {
+      console.warn('[StoryPlan Service] Gemini init error:', geminiErr.message);
+    }
+  }
+
+  throw new Error('Tất cả các mô hình AI (Groq, OpenRouter, Gemini) đều không thể xử lý. Vui lòng kiểm tra lại API Key trong .env.');
 }
 
 async function generateStoryPlan({
